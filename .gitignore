@@ -68,6 +68,9 @@ coverage/
 # Bun
 bun.lock
 
+# npm
+package-lock.json
+
 # Android IDE/build extras
 android/.idea/
 android/.kotlin/
