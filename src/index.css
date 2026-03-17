@@ -1,0 +1,385 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* EPUB Reader Design System - Warm, readable book aesthetic */
+
+@layer base {
+  :root, .theme-light {
+    /* Warm cream/sepia tones for comfortable reading */
+    --background: 40 30% 96%;
+    --foreground: 30 20% 15%;
+    --card: 40 25% 98%;
+    --card-foreground: 30 20% 15%;
+    --popover: 40 25% 98%;
+    --popover-foreground: 30 20% 15%;
+    --primary: 25 60% 30%;
+    --primary-foreground: 40 30% 96%;
+    --secondary: 35 20% 90%;
+    --secondary-foreground: 30 20% 20%;
+    --muted: 35 15% 92%;
+    --muted-foreground: 30 10% 45%;
+    --accent: 35 25% 88%;
+    --accent-foreground: 25 40% 25%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 35 20% 85%;
+    --input: 35 20% 85%;
+    --ring: 25 50% 40%;
+    --radius: 0.5rem;
+    --reader-bg: 40 30% 96%;
+    --reader-text: 30 20% 15%;
+    --reader-page: 40 25% 98%;
+  }
+
+  .theme-sepia {
+    --background: 38 45% 90%;
+    --foreground: 25 35% 20%;
+    --card: 38 40% 92%;
+    --card-foreground: 25 35% 20%;
+    --popover: 38 40% 92%;
+    --popover-foreground: 25 35% 20%;
+    --primary: 25 50% 35%;
+    --primary-foreground: 38 45% 95%;
+    --secondary: 35 30% 85%;
+    --secondary-foreground: 25 30% 25%;
+    --muted: 35 25% 88%;
+    --muted-foreground: 25 20% 45%;
+    --accent: 35 35% 82%;
+    --accent-foreground: 25 40% 25%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 35 30% 80%;
+    --input: 35 30% 80%;
+    --ring: 25 45% 45%;
+    --reader-bg: 38 45% 90%;
+    --reader-text: 25 35% 20%;
+    --reader-page: 38 40% 92%;
+  }
+
+  .theme-dark, .dark {
+    --background: 30 15% 8%;
+    --foreground: 35 15% 85%;
+    --card: 30 15% 10%;
+    --card-foreground: 35 15% 85%;
+    --popover: 30 15% 10%;
+    --popover-foreground: 35 15% 85%;
+    --primary: 35 50% 65%;
+    --primary-foreground: 30 15% 8%;
+    --secondary: 30 10% 18%;
+    --secondary-foreground: 35 15% 85%;
+    --muted: 30 10% 15%;
+    --muted-foreground: 35 10% 55%;
+    --accent: 30 15% 18%;
+    --accent-foreground: 35 40% 75%;
+    --destructive: 0 65% 55%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 90%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 90%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 12%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 0%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 100%;
+    --reader-bg: 0 0% 0%;
+    --reader-text: 0 0% 90%;
+    --reader-page: 0 0% 0%;
+  }
+
+  /* Day Theme - Clean, bright white theme */
+  .theme-day {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --reader-bg: 0 0% 100%;
+    --reader-text: 0 0% 3.9%;
+    --reader-page: 0 0% 98%;
+  }
+
+  /* Parchment Theme - Warm aged paper for classic reading */
+  .theme-parchment {
+    --background: 42 35% 88%;
+    --foreground: 30 25% 15%;
+    --card: 42 30% 85%;
+    --card-foreground: 30 25% 15%;
+    --popover: 42 35% 88%;
+    --popover-foreground: 30 25% 15%;
+    --primary: 38 70% 45%;
+    --primary-foreground: 42 35% 95%;
+    --secondary: 35 25% 70%;
+    --secondary-foreground: 30 25% 15%;
+    --muted: 35 20% 75%;
+    --muted-foreground: 30 20% 30%;
+    --accent: 38 60% 55%;
+    --accent-foreground: 30 25% 15%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 35 25% 65%;
+    --input: 35 25% 65%;
+    --ring: 38 70% 45%;
+    --reader-bg: 42 35% 88%;
+  }
+
+  /* Neon Theme - Neon and dark */
+  .theme-neon {
+    --background: 280 60% 8%;
+    --foreground: 180 100% 75%;
+    --card: 280 50% 12%;
+    --card-foreground: 180 100% 75%;
+    --popover: 280 60% 8%;
+    --popover-foreground: 180 100% 75%;
+    --primary: 320 100% 55%;
+    --primary-foreground: 280 60% 8%;
+    --secondary: 180 100% 45%;
+    --secondary-foreground: 280 60% 8%;
+    --muted: 280 30% 20%;
+    --muted-foreground: 180 50% 60%;
+    --accent: 320 100% 55%;
+    --accent-foreground: 280 60% 8%;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 280 40% 25%;
+    --input: 280 40% 25%;
+    --ring: 320 100% 55%;
+    --reader-bg: 280 60% 8%;
+  }
+
+  /* 60s Noir Theme - Black and white with amber accents */
+  .theme-noir {
+    --background: 0 0% 12%;
+    --foreground: 45 15% 85%;
+    --card: 0 0% 15%;
+    --card-foreground: 45 15% 85%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 45 15% 85%;
+    --primary: 45 85% 55%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 25%;
+    --secondary-foreground: 45 15% 85%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 45 10% 65%;
+    --accent: 45 85% 55%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 45 85% 55%;
+    --reader-bg: 0 0% 12%;
+  }
+
+  /* Meadow Theme - Light green natural tones */
+  .theme-meadow {
+    --background: 140 30% 95%;
+    --foreground: 140 20% 20%;
+    --card: 140 25% 92%;
+    --card-foreground: 140 20% 20%;
+    --popover: 140 30% 95%;
+    --popover-foreground: 140 20% 20%;
+    --primary: 140 40% 35%;
+    --primary-foreground: 140 30% 95%;
+    --secondary: 140 20% 85%;
+    --secondary-foreground: 140 20% 20%;
+    --muted: 140 15% 88%;
+    --muted-foreground: 140 10% 40%;
+    --accent: 140 25% 82%;
+    --accent-foreground: 140 20% 20%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 140 20% 80%;
+    --input: 140 20% 80%;
+    --ring: 140 40% 35%;
+    --reader-bg: 140 30% 95%;
+  }
+
+  /* Coast Theme - Light sky blue and sandy tones */
+  .theme-coast {
+    --background: 200 30% 95%;
+    --foreground: 200 20% 20%;
+    --card: 200 25% 92%;
+    --card-foreground: 200 20% 20%;
+    --popover: 200 30% 95%;
+    --popover-foreground: 200 20% 20%;
+    --primary: 200 40% 50%;
+    --primary-foreground: 200 30% 95%;
+    --secondary: 200 20% 85%;
+    --secondary-foreground: 200 20% 20%;
+    --muted: 200 15% 88%;
+    --muted-foreground: 200 10% 45%;
+    --accent: 200 25% 80%;
+    --accent-foreground: 200 20% 20%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 20% 82%;
+    --input: 200 20% 82%;
+    --ring: 200 40% 50%;
+    --reader-bg: 200 30% 95%;
+  }
+
+  /* Noir Theme - Black and white with amber highlights */
+  .theme-noir {
+    --background: 0 0% 5%;
+    --foreground: 45 15% 85%;
+    --card: 0 0% 8%;
+    --card-foreground: 45 15% 85%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 45 15% 85%;
+    --primary: 45 85% 55%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 45 15% 85%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 45 10% 60%;
+    --accent: 45 70% 40%;
+    --accent-foreground: 45 15% 85%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 45 85% 55%;
+    --reader-bg: 0 0% 5%;
+  }
+
+  /* Storm Theme - VS Code inspired dark theme */
+  .theme-storm {
+    --background: 222 84% 5%;
+    --foreground: 217 91% 83%;
+    --card: 222 84% 7%;
+    --card-foreground: 217 91% 83%;
+    --popover: 222 84% 5%;
+    --popover-foreground: 217 91% 83%;
+    --primary: 217 91% 78%;
+    --primary-foreground: 222 84% 5%;
+    --secondary: 222 84% 12%;
+    --secondary-foreground: 217 91% 83%;
+    --muted: 222 84% 10%;
+    --muted-foreground: 215 28% 65%;
+    --accent: 217 91% 78%;
+    --accent-foreground: 222 84% 5%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 222 84% 95%;
+    --border: 222 84% 15%;
+    --input: 222 84% 15%;
+    --ring: 217 91% 78%;
+    --reader-bg: 222 84% 5%;
+  }
+
+  /* Support for shadcn/tailwind variable names */
+  .theme-day, .theme-parchment, .theme-meadow, .theme-coast, .theme-night, .theme-neon, .theme-noir, .theme-storm {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Prevent scrolling on the main page */
+    overflow: hidden;
+    /* Reserve scrollbar space to prevent layout shift when scrollbars appear/disappear */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    /* Prevent scrolling - let the reader manage its own layout */
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+}
+
+/* Typography custom properties with defaults */
+:root {
+  --reader-font-size: 100%;
+  --reader-line-height: 1.6;
+  --reader-margin-width: 20%;
+  --reader-paragraph-spacing: 1em;
+}
+
+/* Foliate view styling */
+foliate-view {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: hidden;
+  background: hsl(var(--reader-bg));
+  font-size: var(--reader-font-size);
+  line-height: var(--reader-line-height);
+}
+
+/* Ensure consistent background for all content within Foliate view */
+foliate-view::part(view) {
+  background: hsl(var(--reader-bg)) !important;
+  padding: 0 var(--reader-margin-width);
+}
+
+foliate-view::part(page) {
+  background: hsl(var(--reader-bg)) !important;
+}
+
+/* Force consistent background for all elements */
+foliate-view * {
+  background-color: hsl(var(--reader-bg)) !important;
+}
+
+/* Apply paragraph spacing */
+foliate-view p {
+  margin-bottom: var(--reader-paragraph-spacing);
+}
+
+/* Ensure proper scaling on mobile */
+@media (max-width: 768px) {
+  foliate-view {
+    width: 100vw;
+    height: 100vh;
+  }
+}
+
+/* Dark mode filter for book content */
+.dark foliate-view::part(filter) {
+  filter: invert(0.9) hue-rotate(180deg);
+}
+
+/* Style the reader container */
+.reader-container {
+  background: hsl(var(--reader-bg));
+  color: hsl(var(--reader-text));
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}

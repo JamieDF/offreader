@@ -1,0 +1,98 @@
+import { Book } from "@/types/book";
+import { fileStorage } from "./fileStorage";
+import { storageService } from "./storage";
+
+class LibraryService {
+  private static instance: LibraryService;
+  private books: Book[] = [];
+  private isLoading: boolean = true;
+  private error: string | null = null;
+  private listeners: Set<() => void> = new Set();
+  
+  // Singleton pattern for global state
+  static getInstance(): LibraryService {
+    if (!LibraryService.instance) {
+      LibraryService.instance = new LibraryService();
+    }
+    return LibraryService.instance;
+  }
+  
+  // Load books once on app start
+  async initialize(): Promise<void> {
+    try {
+      this.isLoading = true;
+      this.error = null;
+      this.notifyListeners();
+
+      // Load from Capacitor storage
+      const storedFiles = await fileStorage.listStoredFiles();
+
+      const storedBooksData = await storageService.getItem('tome-reader-books');
+      const storedBooks: Book[] = storedBooksData ? JSON.parse(storedBooksData) : [];
+
+      // Rehydrate file URLs and verify files exist
+      const validBooks = await Promise.all(
+        storedBooks.map(async (book) => {
+          try {
+            // Check if file actually exists
+            const exists = await fileStorage.fileExists(book.id);
+            if (!exists) {
+              console.warn(`File missing for book ${book.id} (${book.title}), skipping`);
+              return null;
+            }
+
+            const fileUrl = await fileStorage.retrieveFile(book.id, book.title);
+            return { ...book, filePath: fileUrl };
+          } catch (error) {
+            console.error(`Failed to retrieve file for book ${book.id}:`, error);
+            return null;
+          }
+        })
+      );
+
+      const loadedBooks = validBooks.filter((book): book is Book => book !== null);
+
+      // Clean up orphaned files (files with no metadata)
+      const validBookIds = loadedBooks.map(b => b.id);
+      await fileStorage.cleanupOrphanFiles(validBookIds);
+
+      this.books = loadedBooks;
+      this.isLoading = false;
+      this.notifyListeners();
+    } catch (error) {
+      console.error('LibraryService initialization failed:', error);
+      this.error = 'Failed to load library';
+      this.isLoading = false;
+      this.notifyListeners();
+    }
+  }
+  
+  // Update books (for imports)
+  updateBooks(newBooks: Book[]): void {
+    this.books = newBooks;
+    this.notifyListeners();
+  }
+  
+  // Update books silently (for progress updates - no notification)
+  updateBooksSilent(newBooks: Book[]): void {
+    this.books = newBooks;
+    // Don't notify listeners to prevent loops
+  }
+  
+  // Getters
+  getBooks(): Book[] { return this.books; }
+  getIsLoading(): boolean { return this.isLoading; }
+  getError(): string | null { return this.error; }
+  
+  // Subscribe to changes
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+  
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => listener());
+  }
+}
+
+export const libraryService = LibraryService.getInstance();

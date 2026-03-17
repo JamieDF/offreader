@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- CSP: required by foliate-js to prevent script execution in EPUB content.
+         EPUB files can contain JavaScript which would otherwise run in the same origin. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' blob: data:; connect-src 'self' blob:" />
+    <title>TomeReader - Offline Ebook Reader</title>
+    <meta name="description" content="Offline ebook reader for Android. No account, no cloud, just your books." />
+    <meta name="author" content="TomeReader" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Google Fonts for themed reading experiences -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Uncial+Antiqua&family=Cinzel:wght@400;600&family=Special+Elite&family=Courier+Prime:wght@400;700&family=Space+Mono:wght@400;700&family=Roboto+Mono:wght@400;500&family=Merriweather:wght@400;700&family=Crimson+Text:wght@400;600&family=Playfair+Display:wght@400;700&family=JetBrains+Mono:wght@400;500&family=Syne+Mono:wght@400;500&family=Old+Standard+TT:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Source+Sans+Pro:wght@400;700&display=swap" rel="stylesheet" />
+
+    <meta property="og:title" content="TomeReader - Offline Ebook Reader" />
+    <meta property="og:description" content="Offline ebook reader for Android. No account, no cloud, just your books." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" href="/tomeReader.png" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
