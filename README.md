@@ -1,394 +1,133 @@
-# 📚 eTome - Premium Ebook Reader
+<p align="center">
+  <img src="public/tomeReader.svg" width="120" alt="TomeReader logo" />
+</p>
 
-A modern, feature-rich digital ebook reader for web and mobile platforms built with React, Vite, and Foliate-js.
+<h1 align="center">TomeReader</h1>
 
-## 🎯 Quick Overview
+<p align="center">
+  An offline ebook reader for web and Android. No account. No cloud. Just your books.
+</p>
 
-**eTome** is a professional-grade ebook reader application that supports EPUB and MOBI formats with advanced features like bookmarks, reading progress tracking, customizable typography, multiple themes, and cross-session persistence.
-
-- **Platforms**: Web (Vite/React) + Android (Capacitor)
-- **Formats**: EPUB, MOBI with automatic format detection
-- **Status**: ✅ Production-ready (72 tests, all passing)
-
----
-
-## ✨ Core Features
-
-### 📖 Reading Experience
-- **Foliate-js Engine**: Modern EPUB rendering with no iframe overhead
-- **Direct DOM Rendering**: Premium styling and performance
-- **Full-Screen Mode**: Immersive reading on mobile and desktop
-- **Responsive Layout**: Optimized for all screen sizes
-- **Stable Viewport**: Non-scrollable fixed layout to prevent shifting during overlay interactions
-
-### 🎨 Customization
-- **7 Themes**: Light, Dark, Sepia, OLED + 3 genre themes (Fantasy, Cyberpunk, Noir)
-- **Typography Controls**: Font families (7), size, line height, margins, paragraph spacing
-- **Real-time Application**: Changes apply instantly to book content
-- **Persistent Settings**: All preferences saved across sessions
-
-### 📑 Navigation & Interaction
-- **Page Turning**: Buttons, swipe/drag gestures with foliate-js animations
-- **Smart Tap-to-Toggle**: Single tap anywhere on book content to show/hide UI overlay
-- **Foliate Overlayer Integration**: Proper integration with foliate-js overlay system
-- **Touch-Friendly**: Mobile-optimized interface with proper viewport scaling
-- **Chapter Navigation**: Quick jump to chapters
-- **Title Formatting**: Professional title case for all book titles (with proper stop word handling)
-
-### 📚 Content Management
-- **Book Library**: Grid view with cover images and progress indicators
-- **Book Import**: File picker for EPUB/MOBI files with auto-detection
-- **Book Details**: Hero section with metadata, reading stats, publication info
-- **Resume Reading**: Jump back to last read location or specific chapter
-
-### 🔖 Bookmarks
-- **Create & Manage**: Add bookmarks while reading with timestamps
-- **Navigation**: Jump to bookmarked locations from reader or book details
-- **Persistent Storage**: Bookmarks saved to localStorage
-- **Mobile-First UI**: Always-visible delete buttons (no hover needed)
-
-### 📊 Reading Progress
-- **Automatic Tracking**: CFI-based location tracking with 0-100% progress
-- **Resume Functionality**: "Read Now" resumes from exact saved position
-- **Progress Display**: Clean percentage formatting (49% vs 49.01%)
-- **Dual Systems**: Both library and book details show synchronized progress
-
-### 📖 Metadata Extraction
-- **EPUB Support**: Comprehensive OPF parsing for title, author, publisher, publication date, language, ISBN
-- **MOBI Support**: Binary EXTH header parsing with proper endianness handling
-- **Smart Descriptions**: Multiple fallback methods with informative defaults
-- **Subject Tags**: Genre/subject tags displayed as styled badges
-- **Cover Extraction**: 4-tier fallback strategy for both EPUB and MOBI (100% coverage)
-
-### 📊 Reading Statistics & Analytics
-- **Time Tracking**: Automatic session duration and total reading time
-- **Activity Heatmap**: Visual representation of reading patterns
-- **Reading Streaks**: Current streak and longest streak tracking
-- **Daily Stats**: Aggregated reading data by day
-- **Session Details**: Start/end times, locations, progress tracking
-- **Insights Dashboard**: Total time, streaks, session count, recent activity
-
-### 🔍 Library Management
-- **Search**: Search books by title or author name
-- **Sorting**: Multiple sort options (Recently Read, Title, Author, Progress)
-- **Smart Filtering**: Results update in real-time as you search/sort
-
-### 🛠️ Technical Features
-- **Dual Format Support**: EPUB and MOBI with automatic detection
-- **Cross-Session Persistence**: Capacitor Filesystem for stable storage
-- **UUID System**: Stable book identification independent of file paths
-- **Proper Text Cleaning**: Null byte and control character removal
-- **Error Handling**: Graceful fallbacks for non-standard file structures
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
+</p>
 
 ---
 
-## 🏗️ Architecture
+TomeReader is a personal ebook reader built around one idea: your books should live on your device, not a server. Import an EPUB or MOBI file, read it, and everything — progress, bookmarks, reading history — stays local.
 
-### State Management Pattern
-```
-App.tsx (Route Guard) → LibraryService (Singleton) 
-  → useLibrary (Subscribers) → Components
-```
+It runs in the browser and can be installed as an Android app via Capacitor.
 
-**Key Components:**
-- **LibraryService**: Centralized singleton managing all book state
-- **updateBooks()**: Notifies all subscribers (imports/deletions)
-- **updateBooksSilent()**: No notifications (prevents infinite loops on progress updates)
-- **useLibrary Hook**: Subscribes to changes, breaks circular dependencies
+## Why
 
-### Progress Tracking
-```
-Foliate relocate event → EpubReader 
-  → updateProgress (useBookTracker) + updateLibraryProgress (useLibrary)
-```
-
-- **useBookTracker**: CFI locations, bookmarks, reading stats per book
-- **useLibrary**: Book percentages for library view
-- **Synchronization**: Both systems stay in sync automatically
-
-### Storage Architecture
-- **Books**: `"etome-books"` (localStorage) + Capacitor Filesystem (persistent files)
-- **Progress**: `"book-tracker-data"` (single localStorage object for all books)
-- **Settings**: `"reader-settings"` (theme, typography, preferences)
-- **Rehydration**: File URLs rehydrated on app start via Capacitor
-
-### Anti-Patterns Avoided
-- ✅ No multiple useLibrary instances (single source of truth)
-- ✅ No progress updates triggering re-initialization (silent updates)
-- ✅ No circular dependencies (removed state dependencies in callbacks)
-- ✅ No inconsistent storage keys (standardized patterns)
-- ✅ No binary data corruption (proper text cleaning)
-- ✅ No metadata extraction failures (multiple fallback strategies)
+There are other great projects that do something similar, but I wanted to build my own — a simple, focused reading experience where you open a book and read it. No accounts, no cloud, no setup. Just you and the page. The whole point is the reading.
 
 ---
 
-## 🚀 Getting Started
+## Features
+
+- Import EPUB and MOBI files from your device
+- Themes and typography controls (font, size, line height, spacing)
+- Per-chapter page tracking and overall progress
+- Bookmarks with jump-to navigation
+- Reading time tracking, streaks, and activity history
+- Persistent library — your books survive a refresh or reboot
+- CSP-enforced EPUB script blocking for security
+- Works fully offline; nothing is sent anywhere
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Node.js 18+ with npm
+
+- [Node.js](https://nodejs.org/) 18 or later
+- npm (bundled with Node)
 
 ### Installation
+
 ```bash
-# Clone the repository
-git clone <YOUR_GIT_URL>
-cd foliate-reader-test
-
-# Install dependencies
+git clone https://github.com/jamiedf/tome-reader.git
+cd tome-reader
 npm install
-
-# Start development server
 npm run dev
 ```
 
-### Development Commands
-```bash
-npm run dev           # Start development server
-npm run build         # Build for production
-npm run test          # Run test suite
-npm test -- --watch  # Run tests in watch mode
-npm run lint          # Run ESLint
-
-# Mobile (Capacitor)
-npm run cap:build    # Build for Capacitor
-npm run cap:sync     # Sync to native platform
-npm run cap:android  # Run on Android
-```
+Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Import Book** and select an EPUB or MOBI file to get started.
 
 ---
 
-## 🧪 Testing
+## Usage
 
-**72 tests against real source code:**
-- Pure utility functions (statsCalculator, titleCase) - 31 tests
-- Hook behaviour (useReadingStats, useBookTracker) - 25 tests
-- Service layer (LibraryService, fileStorage) - 15 tests
-- Example - 1 test
+| Action | How |
+|---|---|
+| Import a book | Tap the **Import Book** button and pick a file |
+| Open a book | Tap its card in the library |
+| Navigate pages | Arrow keys, swipe, or the on-screen buttons |
+| Show controls | Tap anywhere on the page |
+| Change theme / font | Open settings from the reader toolbar |
+| View reading stats | Open the book detail page |
 
-**All tests passing ✅**
+---
+
+## Running the Tests
 
 ```bash
-npm test
-# Test Files: 7 passed (7)
-# Tests: 72 passed (72)
-# Duration: ~1.5s
+npm test              # Unit tests (Vitest)
+npm run test:e2e      # End-to-end browser tests (Playwright)
+npm run test:all      # Both suites
 ```
 
-See **Tests.md** for comprehensive test documentation.
+Unit tests cover utility functions, service layer, and hook behaviour.
+E2E tests run against a real browser — Chromium is required (`npx playwright install chromium`).
 
 ---
 
-## 📦 Technology Stack
+## Built With
 
-### Frontend
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite (fast, modern)
-- **UI Components**: Shadcn UI (Radix + Tailwind CSS)
-- **Styling**: Tailwind CSS with custom themes
-- **Icons**: Lucide React
-- **Routing**: React Router DOM
-
-### EPUB/MOBI Processing
-- **EPUB Engine**: Foliate-js (no iframe rendering)
-- **ZIP Parsing**: JSZip for EPUB file handling
-- **Binary Parsing**: Custom MOBI header/EXTH tag extraction
-- **XML Parsing**: Built-in XML APIs for OPF metadata
-
-### Storage & Platform
-- **Mobile Bridge**: Capacitor (Android native bridge)
-- **File Storage**: Capacitor Filesystem (web + native)
-- **Preferences**: Capacitor Preferences (web + native)
-- **Metadata**: localStorage for rapid access
-
-### Development
-- **Testing**: Vitest with comprehensive test utilities
-- **Linting**: ESLint
-- **Type Safety**: Full TypeScript support
+- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) — UI framework
+- [Vite](https://vitejs.dev/) — build tool
+- [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) — styling and components
+- [foliate-js](https://github.com/johnfactotum/foliate-js) — EPUB/MOBI rendering engine
+- [Capacitor](https://capacitorjs.com/) — Android bridge and native file storage
+- [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) — testing
 
 ---
 
-## 📋 Project Structure
+## Contributing
 
-```
-src/
-├── hooks/
-│   ├── useLibrary.ts (1,661 lines - main state management)
-│   ├── useBookTracker.ts (progress & bookmarks)
-│   ├── useReadingStats.ts (session tracking with race condition prevention)
-│   └── use-mobile.tsx (responsive helper)
-├── services/
-│   ├── LibraryService.ts (singleton state with orphan cleanup)
-│   ├── fileStorage.ts (file persistence with quota checking)
-│   ├── storage.ts (localStorage abstraction)
-│   └── sessionService.ts (session management)
-├── components/
-│   ├── EpubReader.tsx (820+ lines - main reader UI with foliate overlayer integration)
-│   ├── ReaderHeader.tsx (controls & buttons)
-│   ├── ReaderFooter.tsx (progress bar)
-│   ├── reader/ (bookmarks, settings, navigation)
-│   ├── library/ (grid view, cards, controls)
-│   ├── book-details/ (hero, metadata, stats)
-│   └── ui/ (shadcn components)
-├── pages/
-│   ├── Library.tsx (main library view)
-│   ├── Reader.tsx (reading route)
-│   ├── BookDetails.tsx (book information)
-│   └── Index.tsx (landing page)
-├── contexts/
-│   └── ReaderSettingsContext.tsx (global theme & typography)
-├── types/
-│   └── book.ts (TypeScript interfaces)
-├── utils/
-│   ├── titleCase.ts (title formatting utility)
-│   └── statsCalculator.ts (reading metrics)
-├── test/
-│   ├── hooks/ (feature tests)
-│   ├── services/ (service tests)
-│   ├── utils/ (test data generators)
-│   └── setup.ts (test configuration)
-└── index.css (themes, CSS variables, viewport lock)
-```
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ---
 
-## 🎯 Key Implementation Details
+## Versioning
 
-### EPUB Metadata Extraction
-1. Parse OPF file from `META-INF/container.xml`
-2. Extract comprehensive metadata (title, author, publisher, ISBN, etc.)
-3. Parse description with multiple fallback methods
-4. Extract subject tags and copyright information
-5. Estimate chapters from spine items (60% heuristic)
-
-### MOBI Binary Parsing
-1. Read Palm Header at Record 0, offset 80
-2. Find MOBI header position in PalmDOC structure
-3. Validate MOBI signature at Start + 16
-4. Check EXTH flag (bit 6) at Start + 128
-5. Extract tags with proper 4-byte alignment
-6. Clean null bytes and control characters
-
-### Cover Extraction (4-Tier Fallback)
-1. **Tier 1**: EPUB3 `properties="cover-image"` in OPF
-2. **Tier 2**: EPUB2 `<meta name="cover">` tag
-3. **Tier 3**: Fuzzy filename matching (cover*, front*, title*)
-4. **Tier 4**: First single image on content page
-5. **Output**: Base64 data URLs for persistent storage
-
-### Foliate Overlayer Integration
-1. **Event Hijacking**: Intercepts touch/click events inside foliate's document
-2. **Smart Detection**: Distinguishes between taps (200ms, <10px movement) and drags
-3. **Capture Phase**: Uses event capture to intercept before foliate processes events
-4. **Cross-Platform**: Works with both touch events (mobile) and mouse events (desktop)
-5. **Non-Intrusive**: Preserves foliate's native drag gestures for page turning
-
-### Typography System
-- CSS custom properties for real-time application
-- Foliate-js renderer integration for instant updates
-- 7 font families with fine-tuned controls
-- Persistent settings with proper loading sequence
-
-### Theme System
-- HSL-based CSS variables for consistency
-- Theme-aware toast notifications
-- 3 immersive genre themes (Fantasy, Cyberpunk, Noir)
-- Dynamic color schemes per theme
+TomeReader uses [Semantic Versioning](https://semver.org/). For available releases, see the [tags on this repository](../../tags).
 
 ---
 
-## 🔧 Configuration
+## Authors
 
-### Capacitor Setup
-- **App ID**: `com.etome.reader`
-- **Platforms**: Android (iOS ready)
-- **Plugins**: Filesystem, Preferences, Android
+- **JamieDF** — initial development
 
-### Environment
-```typescript
-// src/types/book.ts
-interface Book {
-  id: string;
-  file: File | Blob;
-  fileURL: string;
-  title: string;
-  author: string;
-  progress: number;
-  currentLocation: string;
-  chapters: number;
-  format: 'epub' | 'mobi';
-  // ... metadata fields
-}
-```
+See also the list of [contributors](../../contributors) who have participated in this project.
+
+## Acknowledgments
+
+- [foliate-js](https://github.com/johnfactotum/foliate-js) by johnfactotum — the rendering engine that makes this possible
+- [Project Gutenberg](https://www.gutenberg.org/) — public domain ebooks used in tests
+- [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2) — README template
 
 ---
 
-## ✅ Production Readiness Checklist
+## License
 
-- ✅ Core reading experience fully implemented
-- ✅ All 16 major features complete
-- ✅ 72 tests, all passing
-- ✅ 3 P1 critical fixes implemented (race condition, quota checking, metadata sync)
-- ✅ Comprehensive error handling
-- ✅ Mobile optimization
-- ✅ Cross-session persistence
-- ✅ Professional UI/UX (title case formatting, fixed viewport)
-- ✅ Performance optimized
-- ✅ Architecture stable (no infinite loops, no layout shifts)
-- ✅ Documentation accurate
-
-**Status**: 🟢 **READY FOR PRODUCTION**
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 📊 Feature Coverage Status
+## Project Status
 
-**Core Features**: ✅ 100% Complete
-- Reading engine, bookmarks, progress tracking, metadata extraction, customization
-
-**Library Management**: ✅ 100% Complete  
-- Search, sorting, book import/removal
-
-**Reading Statistics**: ✅ 100% Complete
-- Time tracking, activity heatmap, streaks, daily stats
-
-**Planned Enhancements**: Organized by priority
-- See Future Enhancements section below
-
----
-
-## 📚 Future Enhancements
-
-### Short-term
-- [ ] Component integration tests (EpubReader component)
-- [ ] End-to-end workflow tests (import → library → read flow)
-- [ ] Advanced search (full-text search within book content)
-- [ ] Error recovery testing (corrupted files, storage quota)
-
-### Medium-term
-- [ ] Collection management (folders/tags for book organization)
-- [ ] Performance optimization (large libraries, memory profiling)
-- [ ] Metadata editing (allow users to edit book information)
-
-### Long-term
-- [ ] Cloud sync (cross-device reading progress)
-- [ ] Social features (share highlights, reading progress)
-- [ ] PDF support (in addition to EPUB/MOBI)
-- [ ] Calibre library integration
-- [ ] Advanced full-text search indexing
-
----
-
-## 📄 License
-
-[Add your license here]
-
----
-
-## 🤝 Contributing
-
-[Add contributing guidelines here]
-
----
-
-**Last Updated**: March 2, 2026  
-**Version**: 1.1 (Enhanced with Foliate Overlayer Integration)  
-**Status**: ✅ All systems operational
+Active development. Core reading experience is stable. See [open issues](../../issues) for known limitations and planned work.
