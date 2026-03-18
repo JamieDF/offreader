@@ -1,6 +1,6 @@
 {
   "name": "tome-reader",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "TomeReader — offline ebook reader. No account, no cloud, just your books.",
   "license": "MIT",
