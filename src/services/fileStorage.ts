@@ -76,12 +76,14 @@ class CapacitorFileStorage {
   async getStorageInfo(): Promise<StorageInfo> {
     try {
       // Try StorageManager API on web
-      if (!Capacitor.isNativePlatform() && 'storage' in navigator && 'estimate' in (navigator as any).storage) {
-        const estimate = await (navigator as any).storage.estimate();
+      if (!Capacitor.isNativePlatform() && 'storage' in navigator && 'estimate' in (navigator.storage as StorageManager)) {
+        const estimate = await (navigator.storage as StorageManager).estimate();
+        const quota = estimate.quota ?? 1024 * 1024 * 1024;
+        const usage = estimate.usage ?? 0;
         return {
-          available: Math.max(0, estimate.quota - estimate.usage),
-          total: estimate.quota,
-          used: estimate.usage,
+          available: Math.max(0, quota - usage),
+          total: quota,
+          used: usage,
         };
       }
       
@@ -161,7 +163,7 @@ class CapacitorFileStorage {
     }
   }
   
-  async retrieveFile(id: string, filename: string): Promise<string> {
+  async retrieveFile(id: string, _filename: string): Promise<string> {
     try {
       // Retrieve using Capacitor Filesystem (works on both web and native)
       const filePath = `${this.BOOKS_DIR}/${id}.epub`;

@@ -37,11 +37,25 @@ interface LocationInfo {
   totalPagesInChapter: number;
 }
 
+const FONT_FAMILY_MAP: Record<string, string> = {
+  'Georgia': 'Georgia, "Times New Roman", serif',
+  'Playfair Display': '"Playfair Display", "Crimson Text", Georgia, serif',
+  'JetBrains Mono': '"JetBrains Mono", "Courier New", monospace',
+  'Fira Code': '"Syne Mono", "Space Mono", "Courier New", monospace',
+  'Uncial Antiqua': '"Uncial Antiqua", "Cinzel", "Merriweather", serif',
+  'Special Elite': '"Special Elite", "Courier Prime", "Courier New", monospace',
+  'Lato': '"Lato", "Helvetica Neue", Arial, sans-serif',
+  'Montserrat': '"Montserrat", "Helvetica Neue", Arial, sans-serif',
+  'Source Sans Pro': '"Source Sans Pro", "Helvetica Neue", Arial, sans-serif'
+};
+
 const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubReaderProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const viewRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const overlayerRef = useRef<any>(null);
   const rendererPagesRef = useRef<{ currentPage: number; totalPages: number }>({ currentPage: 1, totalPages: 1 });
   const [isLoading, setIsLoading] = useState(true);
@@ -63,19 +77,6 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
     currentPage: 1,
     totalPagesInChapter: 1
   });
-  
-  // Define font family map once at component level
-  const fontFamilyMap: Record<string, string> = {
-    'Georgia': 'Georgia, "Times New Roman", serif',
-    'Playfair Display': '"Playfair Display", "Crimson Text", Georgia, serif',
-    'JetBrains Mono': '"JetBrains Mono", "Courier New", monospace',
-    'Fira Code': '"Syne Mono", "Space Mono", "Courier New", monospace',
-    'Uncial Antiqua': '"Uncial Antiqua", "Cinzel", "Merriweather", serif',
-    'Special Elite': '"Special Elite", "Courier Prime", "Courier New", monospace',
-    'Lato': '"Lato", "Helvetica Neue", Arial, sans-serif',
-    'Montserrat': '"Montserrat", "Helvetica Neue", Arial, sans-serif',
-    'Source Sans Pro': '"Source Sans Pro", "Helvetica Neue", Arial, sans-serif'
-  };
 
   // Reading Session Tracking State
   const { addSession } = useReadingStats();
@@ -90,7 +91,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
   const { updateProgress, updateLocation, addBookmark, removeBookmark, getBookmarks } = useBookTracker(propBookId);
   
   // Get reader settings for typography
-  const { settings, isLoaded: settingsLoaded } = useReaderSettings();
+  const { settings } = useReaderSettings();
 
   // --- Session Tracking Logic ---
   // Use refs for location state to avoid triggering useEffect cleanups on every page turn
@@ -238,16 +239,8 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
     setShowOverlay(prev => !prev);
   }, []);
 
-  const handleOpenSettings = useCallback(() => {
-    setShowSettings(true);
-  }, []);
-
   const handleOpenToc = useCallback(() => {
     setShowToc(true);
-  }, []);
-
-  const handleOpenBookmarks = useCallback(() => {
-    setShowBookmarks(true);
   }, []);
 
   const handleAddBookmark = useCallback(() => {
@@ -347,6 +340,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       containerRef.current.innerHTML = '';
       
       // Create foliate view element (custom element is now registered)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const view = document.createElement('foliate-view') as any;
       viewRef.current = view;
       
@@ -358,6 +352,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       containerRef.current.appendChild(view);
 
       // Set up event listener for progress tracking
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       view.addEventListener('relocate', (event: any) => {
         const detail = event.detail;
         
@@ -369,6 +364,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
         if (detail.tocItem && detail.tocItem.label) {
           // Find the chapter in the TOC that matches the current location
           const currentChapterLabel = detail.tocItem.label;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const tocChapter = view.book.toc?.findIndex((item: any) => item.label === currentChapterLabel);
           if (tocChapter !== -1) {
             currentChapterIndex = tocChapter;
@@ -420,8 +416,9 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       });
       
       // Set up event listener for overlay creation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       view.addEventListener('create-overlayer', (event: any) => {
-        const { doc, index, attach } = event.detail;
+        const { doc, attach } = event.detail as { doc: Document; attach: (overlayer: Overlayer) => void };
         
         // Create overlay using foliate's Overlayer class
         const overlayer = new Overlayer(doc);
@@ -432,7 +429,8 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       });
       
       // Wait for the view to load and then hijack touch events
-      view.addEventListener('load', ({ detail: { doc } }) => {
+      view.addEventListener('load', (e: Event) => {
+        const { doc } = (e as CustomEvent<{ doc: Document }>).detail;
         let touchStartTime = 0;
         let touchStartX = 0;
         let touchStartY = 0;
@@ -567,6 +565,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       //   size     = 1 / (pages - 2)          (one page as fraction of section)
       // This fires before the view's `relocate` event, so the ref is ready in time.
       if (view.renderer) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         view.renderer.addEventListener('relocate', (e: any) => {
           const { fraction, size } = e.detail;
           if (typeof size === 'number' && size > 0) {
@@ -606,14 +605,14 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
           body {
             font-size: ${fontSize} !important;
             line-height: ${lineHeight} !important;
-            font-family: ${fontFamilyMap[fontFamilyKey] || fontFamilyMap['Georgia']} !important;
+            font-family: ${FONT_FAMILY_MAP[fontFamilyKey] || FONT_FAMILY_MAP['Georgia']} !important;
             padding-left: ${marginWidth} !important;
             padding-right: ${marginWidth} !important;
           }
           
           /* Ensure fonts are applied to all text elements */
           body, p, div, span, h1, h2, h3, h4, h5, h6 {
-            font-family: ${fontFamilyMap[fontFamilyKey] || fontFamilyMap['Georgia']} !important;
+            font-family: ${FONT_FAMILY_MAP[fontFamilyKey] || FONT_FAMILY_MAP['Georgia']} !important;
           }
           p {
             margin-bottom: ${paragraphSpacing} !important;
@@ -663,6 +662,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       
       // Extract Table of Contents
       if (bookData?.toc && Array.isArray(bookData.toc)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const extractedChapters: Chapter[] = bookData.toc.map((item: any, index: number) => ({
           label: item.label || item.title || `Chapter ${index + 1}`,
           href: item.href || '',
@@ -673,6 +673,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       } else {
         // Fallback: use view.book.toc if bookData.toc is not available
         const viewToc = view.book.toc || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fallbackChapters: Chapter[] = viewToc.map((item: any, index: number) => ({
           label: item.label || item.title || `Chapter ${index + 1}`,
           href: item.href || '',
@@ -690,6 +691,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       setIsLoading(false);
       isInitializedRef.current = false; // Reset on error
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- toggleOverlay/updateLibraryProgress intentionally excluded; adding them would re-trigger full book initialization
   }, [propBookId, searchParams, updateProgress, updateLocation, book]);
 
   useEffect(() => {
@@ -734,7 +736,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       const paragraphSpacing = document.documentElement.style.getPropertyValue('--reader-paragraph-spacing') || '1em';
       const fontFamilyKey = document.documentElement.style.getPropertyValue('--reader-font-family') || 'Georgia';
       
-      const fontFamily = fontFamilyMap[fontFamilyKey] || fontFamilyMap['Georgia'];
+      const fontFamily = FONT_FAMILY_MAP[fontFamilyKey] || FONT_FAMILY_MAP['Georgia'];
 
       // Create CSS stylesheet string for foliate-js
       const stylesheet = `

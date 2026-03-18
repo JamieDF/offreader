@@ -1,17 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { BookDetailsHeader } from "./BookDetailsHeader";
 import { BookHero } from "./BookHero";
@@ -36,7 +32,6 @@ export function BookDetailsView({ book, onRemove }: BookDetailsViewProps) {
     stats,
     isLoading,
     getBookmarks,
-    updateProgress,
     markAsFinished,
     getResumeLabel,
     formatLastRead,
@@ -91,7 +86,7 @@ export function BookDetailsView({ book, onRemove }: BookDetailsViewProps) {
     }
   };
 
-  const handleBookmarkSelect = (bookmarkItem: any) => {
+  const handleBookmarkSelect = (bookmarkItem: { location: string }) => {
     const location = bookmarkItem.location;
     // Use bookId instead of filePath for consistency with reader navigation
     const baseUrl = `/reader?bookId=${encodeURIComponent(book.id)}`;

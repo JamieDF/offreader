@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { useReadingStats } from "@/hooks/useReadingStats";
-import { generateHeatmapData, formatDuration, ActivityLevel } from "@/utils/statsCalculator";
+import { generateHeatmapData, formatDuration, ActivityLevel, HeatmapDay } from "@/utils/statsCalculator";
 import {
   Tooltip,
   TooltipContent,
@@ -34,7 +34,7 @@ export function ActivityHeatmap() {
   const days = heatmapData.days;
 
   // Split into weeks (columns)
-  const weeks = [];
+  const weeks: HeatmapDay[][] = [];
   for (let i = 0; i < days.length; i += 7) {
     weeks.push(days.slice(i, i + 7));
   }
@@ -122,7 +122,7 @@ export function ActivityHeatmap() {
                 <div className="flex gap-[3px] md:gap-[4px]">
                   {weeks.map((week, weekIndex) => (
                     <div key={weekIndex} className="flex flex-col gap-[3px] md:gap-[4px]">
-                      {week.map((day, dayIndex) => (
+                      {week.map((day) => (
                         <TooltipProvider key={day.date} delayDuration={0}>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -138,7 +138,7 @@ export function ActivityHeatmap() {
                               align="center"
                               sideOffset={6}
                               collisionPadding={8}
-                              collisionBoundary={{ root: scrollRef }}
+                              collisionBoundary={scrollRef.current}
                               className="z-[99999] bg-popover text-popover-foreground shadow-md px-2 py-1 max-w-[150px] break-words"
                             >
                               <div className="text-center">

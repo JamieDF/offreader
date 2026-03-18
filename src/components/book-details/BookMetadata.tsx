@@ -29,7 +29,7 @@ interface BookMetadataProps {
   onBookmarkDelete?: (bookmarkId: string) => void;
 }
 
-export function BookMetadata({ book, stats, bookmarks = [], bookFilePath = "", onBookmarkSelect, onBookmarkDelete }: BookMetadataProps) {
+export function BookMetadata({ book, stats, bookmarks = [], bookFilePath: _bookFilePath = "", onBookmarkSelect, onBookmarkDelete }: BookMetadataProps) {
   const description = book.description || "No description available.";
   const hasExtraMetadata = book.publisher || book.pubDate || book.language || book.subjects?.length || book.rights;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -235,7 +235,7 @@ export function BookMetadata({ book, stats, bookmarks = [], bookFilePath = "", o
             </div>
           ) : (
             <div className="space-y-3">
-              {bookmarks.map((bookmark, index) => (
+              {bookmarks.map((bookmark) => (
                 <div
                   key={bookmark.id}
                   className="group rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors cursor-pointer"

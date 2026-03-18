@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +8,6 @@ import { useReadingStats } from "@/hooks/useReadingStats";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 import { formatDuration } from "@/utils/statsCalculator";
 import { Flame, Clock, Calendar, BookOpen } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { libraryService } from "@/services/LibraryService";
 
 interface ReadingInsightsProps {

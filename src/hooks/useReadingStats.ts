@@ -112,7 +112,7 @@ class SessionWriteQueue {
     // Calculate streaks
     const today = new Date().toISOString().split('T')[0];
     let currentStreak = 0;
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
 
     if (!newDailyStats[today]) {
       checkDate.setDate(checkDate.getDate() - 1);
