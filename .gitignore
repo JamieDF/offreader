@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+.vite
 dist-ssr
 *.local
 
@@ -70,6 +71,11 @@ bun.lock
 
 # npm
 package-lock.json
+
+# Playwright
+/tests/results/
+/playwright-report/
+/blob-report/
 
 # Android IDE/build extras
 android/.idea/

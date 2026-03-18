@@ -17,6 +17,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:all": "vitest run && playwright test",
     "cap:sync": "cap sync",
     "cap:android": "cap run android",
     "cap:build": "npm run build && npm run cap:sync",
@@ -79,7 +82,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.0.2",
     "@eslint/js": "^9.32.0",
-    "@testing-library/jest-dom": "^6.6.0",
+    "@playwright/test": "^1.58.2",
     "@testing-library/react": "^16.0.0",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
