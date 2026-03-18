@@ -133,6 +133,6 @@ export const migrateFromLocalStorage = async (keys: string[]): Promise<void> => 
 // Extend Window interface for Capacitor
 declare global {
   interface Window {
-    Capacitor: any;
+    Capacitor: { isNativePlatform(): boolean; getPlatform(): string };
   }
 }

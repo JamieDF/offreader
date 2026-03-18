@@ -1,7 +1,6 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { storageService } from "@/services/storage";
 import { libraryService } from "@/services/LibraryService";
-import { Book } from "@/types/book";
 
 export interface Bookmark {
   id: string;
@@ -219,7 +218,7 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
     if (stats.isFinished) {
       return "Read Again";
     }
-    return `Resume at Chapter ${stats.currentChapter + 1}`;
+    return `Resume at Chapter ${(stats.currentChapter ?? 0) + 1}`;
   }, [stats.progress, stats.currentChapter, stats.isFinished]);
 
   const formatLastRead = useCallback(() => {
@@ -259,8 +258,8 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
     }
     
     // Fallback to old calculation
-    const hours = Math.floor(stats.estimatedTimeLeft / 60);
-    const minutes = stats.estimatedTimeLeft % 60;
+    const hours = Math.floor((stats.estimatedTimeLeft ?? 0) / 60);
+    const minutes = (stats.estimatedTimeLeft ?? 0) % 60;
     
     if (hours === 0) return `${minutes}m left`;
     if (minutes === 0) return `${hours}h left`;

@@ -8,9 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Type, Minus, Plus, Sun, Monitor } from "lucide-react";
+import { Type, Minus, Plus, Monitor } from "lucide-react";
 import { ThemeOption, FontFamily } from "@/contexts/ReaderSettingsContext";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const themeOptions: { id: ThemeOption; label: string; bg: string; text: string; border: string }[] = [
   // Light Themes
   { id: "day", label: "Day", bg: "bg-white", text: "text-black", border: "border-gray-300" },
@@ -35,7 +36,7 @@ interface SharedSettingsProps {
     paragraphSpacing: number;
     useReaderFontForSystem: boolean;
   };
-  updateSettings: (updates: any) => void;
+  updateSettings: (updates: Partial<SharedSettingsProps['settings']>) => void;
 }
 
 export function SharedSettings({ settings, updateSettings }: SharedSettingsProps) {

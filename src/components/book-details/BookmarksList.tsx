@@ -12,7 +12,7 @@ interface BookmarksListProps {
   onBookmarkDelete: (bookmarkId: string) => void;
 }
 
-export function BookmarksList({ bookmarks, bookFilePath, onBookmarkSelect, onBookmarkDelete }: BookmarksListProps) {
+export function BookmarksList({ bookmarks, bookFilePath: _bookFilePath, onBookmarkSelect, onBookmarkDelete }: BookmarksListProps) {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -69,7 +69,7 @@ export function BookmarksList({ bookmarks, bookFilePath, onBookmarkSelect, onBoo
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {bookmarks.map((bookmark, index) => (
+            {bookmarks.map((bookmark) => (
               <div
                 key={bookmark.id}
                 className="group rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors cursor-pointer"

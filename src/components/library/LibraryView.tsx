@@ -26,7 +26,6 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     setSortBy,
     importBooks,
     isEmpty,
-    isLoading,
   } = useLibrary();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { storageService } from '@/services/storage';
 
 export type ThemeOption = "day" | "parchment" | "meadow" | "coast" | "night" | "neon" | "noir" | "storm";
@@ -120,6 +120,7 @@ export function ReaderSettingsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useReaderSettings() {
   const context = useContext(ReaderSettingsContext);
   if (context === undefined) {

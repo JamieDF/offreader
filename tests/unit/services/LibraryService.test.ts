@@ -1,12 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { libraryService } from '@/services/LibraryService';
-import { fileStorage } from '@/services/fileStorage';
-import { storageService } from '@/services/storage';
 import { Book } from '@/types/book';
 
 // Mock the dependencies
 vi.mock('@/services/fileStorage');
 vi.mock('@/services/storage');
+
+const makeBook = (overrides: Partial<Book> = {}): Book => ({
+  id: '1',
+  title: 'Test',
+  author: 'Author',
+  coverImage: '',
+  filePath: '/path',
+  progress: 0,
+  ...overrides,
+});
 
 describe('LibraryService', () => {
   beforeEach(() => {
@@ -14,21 +22,12 @@ describe('LibraryService', () => {
     libraryService.updateBooksSilent([]);
   });
 
-describe('updateBooks vs updateBooksSilent', () => {
+  describe('updateBooks vs updateBooksSilent', () => {
     it('should notify listeners on updateBooks', () => {
       const listener = vi.fn();
       const unsub = libraryService.subscribe(listener);
 
-      const books: Book[] = [{
-        id: '1',
-        title: 'Test',
-        author: 'Author',
-        filePath: '/path',
-        progress: 0.5,
-        lastReadDate: null
-      }];
-
-      libraryService.updateBooks(books);
+      libraryService.updateBooks([makeBook({ progress: 0.5 })]);
       expect(listener).toHaveBeenCalled();
       unsub();
     });
@@ -37,16 +36,7 @@ describe('updateBooks vs updateBooksSilent', () => {
       const listener = vi.fn();
       const unsub = libraryService.subscribe(listener);
 
-      const books: Book[] = [{
-        id: '1',
-        title: 'Test',
-        author: 'Author',
-        filePath: '/path',
-        progress: 0.5,
-        lastReadDate: null
-      }];
-
-      libraryService.updateBooksSilent(books);
+      libraryService.updateBooksSilent([makeBook({ progress: 0.5 })]);
       expect(listener).not.toHaveBeenCalled();
       unsub();
     });
@@ -84,14 +74,7 @@ describe('updateBooks vs updateBooksSilent', () => {
 
   describe('Getters', () => {
     it('should return current books', () => {
-      const books: Book[] = [{
-        id: '1',
-        title: 'Test',
-        author: 'Author',
-        filePath: '/path',
-        progress: 0,
-        lastReadDate: null
-      }];
+      const books: Book[] = [makeBook()];
       libraryService.updateBooks(books);
       expect(libraryService.getBooks()).toEqual(books);
     });
