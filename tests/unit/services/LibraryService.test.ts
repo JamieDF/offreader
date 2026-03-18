@@ -14,15 +14,7 @@ describe('LibraryService', () => {
     libraryService.updateBooksSilent([]);
   });
 
-  describe('Singleton Pattern', () => {
-    it('should return the same instance', () => {
-      const inst1 = libraryService;
-      const inst2 = libraryService;
-      expect(inst1).toBe(inst2);
-    });
-  });
-
-  describe('updateBooks vs updateBooksSilent', () => {
+describe('updateBooks vs updateBooksSilent', () => {
     it('should notify listeners on updateBooks', () => {
       const listener = vi.fn();
       const unsub = libraryService.subscribe(listener);
