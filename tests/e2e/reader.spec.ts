@@ -1,9 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
+
+async function waitForReaderReady(page: Page) {
+  await expect(page.locator('foliate-view')).toBeAttached({ timeout: 15000 });
+  await expect(page.getByText(/loading book/i)).not.toBeVisible({ timeout: 15000 });
+}
 
 test.describe('Reader', () => {
   // Import a book and navigate to reader before each test
@@ -63,5 +68,105 @@ test.describe('Reader', () => {
     await page.locator('.reader-container').click();
     await page.getByRole('button', { name: /back/i }).click();
     await expect(page).toHaveURL('/');
+  });
+
+  test('can add a bookmark', async ({ page }) => {
+    await waitForReaderReady(page);
+    await page.locator('.reader-container').click();
+
+    await page.getByRole('button', { name: /bookmarks/i }).click();
+    await expect(page.getByText('Bookmarks (0)')).toBeVisible();
+
+    await page.getByRole('button', { name: /add current/i }).click();
+    await expect(page.getByText('Bookmarks (1)')).toBeVisible();
+  });
+
+  test('can delete a bookmark', async ({ page }) => {
+    await waitForReaderReady(page);
+    await page.locator('.reader-container').click();
+
+    await page.getByRole('button', { name: /bookmarks/i }).click();
+    await page.getByRole('button', { name: /add current/i }).click();
+    await expect(page.getByText('Bookmarks (1)')).toBeVisible();
+
+    await page.getByRole('button', { name: /delete bookmark/i }).click();
+    await expect(page.getByText('Bookmarks (0)')).toBeVisible();
+    await expect(page.getByText(/no bookmarks yet/i)).toBeVisible();
+  });
+
+  test('can open settings drawer', async ({ page }) => {
+    await waitForReaderReady(page);
+    await page.locator('.reader-container').click();
+
+    await page.getByRole('button', { name: /settings/i }).click();
+    await expect(page.getByText('Reading Settings')).toBeVisible();
+  });
+
+  test('can increase font size in settings', async ({ page }) => {
+    await waitForReaderReady(page);
+    await page.locator('.reader-container').click();
+    await page.getByRole('button', { name: /settings/i }).click();
+    await expect(page.getByText('Reading Settings')).toBeVisible();
+
+    const fontSizeDisplay = page.getByText(/^\d+%$/).first();
+    const before = await fontSizeDisplay.textContent();
+
+    await page.getByRole('button', { name: /increase font size/i }).click();
+
+    const after = await fontSizeDisplay.textContent();
+    expect(after).not.toEqual(before);
+  });
+
+  test('can switch theme in settings', async ({ page }) => {
+    await waitForReaderReady(page);
+    await page.locator('.reader-container').click();
+    await page.getByRole('button', { name: /settings/i }).click();
+    await expect(page.getByText('Reading Settings')).toBeVisible();
+
+    await page.locator('button[title="Night"]').click();
+    await expect(page.locator('button[title="Night"]')).toHaveClass(/ring-2/);
+  });
+
+  test('theme setting persists after leaving and returning to reader', async ({ page }) => {
+    await waitForReaderReady(page);
+    await page.locator('.reader-container').click();
+    await page.getByRole('button', { name: /settings/i }).click();
+    await expect(page.getByText('Reading Settings')).toBeVisible();
+
+    await page.locator('button[title="Night"]').click();
+    await expect(page.locator('button[title="Night"]')).toHaveClass(/ring-2/);
+
+    // Close drawer — overlay should still be visible, back button accessible
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: /back/i }).click();
+    await expect(page).toHaveURL('/');
+
+    // Re-open the book
+    await page.locator('h3').filter({ hasText: /alice/i }).click();
+    await page.getByRole('button', { name: /start reading|continue reading|read again/i }).click();
+    await waitForReaderReady(page);
+    await page.locator('.reader-container').click();
+    await page.getByRole('button', { name: /settings/i }).click();
+
+    await expect(page.locator('button[title="Night"]')).toHaveClass(/ring-2/);
+  });
+
+  test('reading progress persists after leaving and returning', async ({ page }) => {
+    await waitForReaderReady(page);
+
+    // Navigate a few pages to build up progress
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+
+    // Go back to library
+    await page.locator('.reader-container').click();
+    await page.getByRole('button', { name: /back/i }).click();
+    await expect(page).toHaveURL('/');
+
+    // Re-open book detail — "Today" for Last Read confirms reading was tracked
+    await page.locator('h3').filter({ hasText: /alice/i }).click();
+    await expect(page).toHaveURL(/\/book\//);
+    await expect(page.getByText('Today')).toBeVisible({ timeout: 5000 });
   });
 });

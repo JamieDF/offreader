@@ -59,6 +59,7 @@ export function SharedSettings({ settings, updateSettings }: SharedSettingsProps
               variant="outline"
               size="icon"
               className="h-8 w-8"
+              aria-label="Decrease font size"
               onClick={() => handleFontSizeChange(-10)}
             >
               <Minus className="h-4 w-4" />
@@ -68,6 +69,7 @@ export function SharedSettings({ settings, updateSettings }: SharedSettingsProps
               variant="outline"
               size="icon"
               className="h-8 w-8"
+              aria-label="Increase font size"
               onClick={() => handleFontSizeChange(10)}
             >
               <Plus className="h-4 w-4" />
