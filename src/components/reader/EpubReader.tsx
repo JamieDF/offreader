@@ -1,0 +1,384 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
+import 'foliate-js/view.js';
+import { Overlayer } from 'foliate-js/overlayer.js';
+import { fileStorage } from '@/services/fileStorage';
+import { storageService } from '@/services/storage';
+import { titleCase } from '@/utils/titleCase';
+import { buildReaderStylesheet } from '@/utils/readerStyles';
+import ReaderOverlay, { ReaderOverlayHandle, LocationInfo } from './ReaderOverlay';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Chapter, Book } from '@/types/book';
+import { useBookTracker, Bookmark } from '@/hooks/useBookTracker';
+import { useReaderSettings } from '@/hooks/useReaderSettings';
+import { useReadingStats } from '@/hooks/useReadingStats';
+import { useReadingSession } from '@/hooks/useReadingSession';
+
+interface EpubReaderProps {
+  bookId: string;
+  book: Book;
+  updateLibraryProgress: (bookId: string, progress: number) => void;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapTocItems(toc: any[]): Chapter[] {
+  return toc.map((item, index) => ({
+    label: item.label || item.title || `Chapter ${index + 1}`,
+    href: item.href || '',
+    cfi: item.cfi || '',
+    index,
+  }));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function resolveLocation(detail: any): string | null {
+  if (detail.cfi) return detail.cfi;
+  if (detail.location?.cfi) return detail.location.cfi;
+  if (detail.location?.href) return detail.location.href;
+  return null;
+}
+
+function showSingleTapHint() {
+  const hint = document.createElement('div');
+  hint.textContent = 'Tap to toggle menu';
+  hint.style.cssText = `
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8); color: white;
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 14px; z-index: 1000;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.3s ease;
+  `;
+  document.body.appendChild(hint);
+  setTimeout(() => hint.style.opacity = '1', 100);
+  setTimeout(() => {
+    hint.style.opacity = '0';
+    setTimeout(() => document.body.removeChild(hint), 300);
+  }, 2000);
+}
+
+const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubReaderProps) => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const containerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const viewRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const overlayerRef = useRef<any>(null);
+  const overlayRef = useRef<ReaderOverlayHandle>(null);
+  const rendererPagesRef = useRef({ currentPage: 1, totalPages: 1 });
+  const isInitializedRef = useRef(false);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [bookTitle, setBookTitle] = useState('');
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [lastKnownLocation, setLastKnownLocation] = useState('');
+  const [locationInfo, setLocationInfo] = useState<LocationInfo>({
+    current: 1, total: 1, currentChapter: 1, totalChapters: 1,
+    fraction: 0, currentPage: 1, totalPagesInChapter: 1,
+  });
+
+  const { addSession } = useReadingStats();
+  const { updateProgress, updateLocation, addBookmark, removeBookmark, getBookmarks } = useBookTracker(propBookId);
+  const { settings, isLoaded } = useReaderSettings();
+
+  // Stable ref for settings — lets initReader use current settings without being a dep
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+
+  // Stable ref for updateLibraryProgress — prop may change identity on parent re-renders
+  const updateLibraryProgressRef = useRef(updateLibraryProgress);
+  useEffect(() => { updateLibraryProgressRef.current = updateLibraryProgress; }, [updateLibraryProgress]);
+
+  const { commitSession } = useReadingSession({
+    bookId: propBookId,
+    addSession,
+    currentProgress: locationInfo.fraction,
+    currentLocation: lastKnownLocation,
+  });
+
+  const handleAddBookmark = useCallback(() => {
+    if (!viewRef.current || !propBookId) return;
+    const currentChapter = chapters[locationInfo.currentChapter - 1];
+    const chapterTitle = currentChapter?.label || `Chapter ${locationInfo.currentChapter}`;
+    const currentLocation = lastKnownLocation
+      || viewRef.current.location?.cfi
+      || viewRef.current.location?.href
+      || currentChapter?.href
+      || '';
+
+    if (currentLocation) {
+      addBookmark(currentLocation, chapterTitle, locationInfo.fraction);
+      toast.success(`Bookmark saved in "${chapterTitle}"`);
+    } else {
+      toast.error('Could not save bookmark. Please try navigating to a different page first.');
+    }
+  }, [propBookId, chapters, locationInfo, addBookmark, lastKnownLocation]);
+
+  const handleBookmarkSelect = useCallback(async (bookmark: Bookmark) => {
+    try {
+      await viewRef.current?.goTo(bookmark.location);
+    } catch (err) {
+      console.error('Failed to navigate to bookmark:', err);
+    }
+  }, []);
+
+  const handleBookmarkDelete = useCallback((bookmarkId: string) => {
+    removeBookmark(bookmarkId);
+    toast.success('Bookmark deleted');
+  }, [removeBookmark]);
+
+  const handleChapterSelect = useCallback(async (chapter: Chapter) => {
+    try {
+      const location = chapter.cfi || chapter.href;
+      if (location) await viewRef.current?.goTo(location);
+    } catch (err) {
+      console.error('Failed to navigate to chapter:', err);
+    }
+  }, []);
+
+  const handlePrev = async () => {
+    try { await viewRef.current?.prev(); } catch (err) { console.error('Failed to go to previous page:', err); }
+  };
+
+  const handleNext = async () => {
+    try { await viewRef.current?.next(); } catch (err) { console.error('Failed to go to next page:', err); }
+  };
+
+  const handleBack = useCallback(() => {
+    commitSession();
+    navigate('/');
+  }, [navigate, commitSession]);
+
+  const initReader = useCallback(async () => {
+    if (isInitializedRef.current || !containerRef.current || !isLoaded) return;
+
+    try {
+      if (!book || book.id !== propBookId) {
+        setError(`Book with ID ${propBookId} not found`);
+        setIsLoading(false);
+        return;
+      }
+
+      setBookTitle(titleCase(book.title));
+      containerRef.current.innerHTML = '';
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const view = document.createElement('foliate-view') as any;
+      viewRef.current = view;
+      view.style.cssText = 'width:100%;height:100%;display:block;';
+      containerRef.current.appendChild(view);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      view.addEventListener('relocate', (event: any) => {
+        const detail = event.detail;
+        const totalChapters = view.book.toc?.length || 1;
+        let currentChapterIndex = 0;
+
+        if (detail.tocItem?.label) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const idx = view.book.toc?.findIndex((item: any) => item.label === detail.tocItem.label) ?? -1;
+          if (idx !== -1) currentChapterIndex = idx;
+        }
+
+        const progressPercentage = Math.round((detail.fraction || 0) * 100);
+        const { currentPage, totalPages: totalPagesInChapter } = rendererPagesRef.current;
+
+        setLocationInfo({
+          current: progressPercentage,
+          total: 100,
+          currentChapter: currentChapterIndex + 1,
+          totalChapters: Math.max(1, totalChapters),
+          fraction: progressPercentage,
+          currentPage,
+          totalPagesInChapter,
+        });
+
+        updateProgress(progressPercentage, currentChapterIndex, currentPage, totalPagesInChapter);
+        updateLibraryProgressRef.current(propBookId, progressPercentage);
+
+        const location = resolveLocation(detail);
+        if (location) {
+          updateLocation(location);
+          setLastKnownLocation(location);
+        }
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      view.addEventListener('create-overlayer', (event: any) => {
+        const { doc, attach } = event.detail as { doc: Document; attach: (o: Overlayer) => void };
+        const overlayer = new Overlayer(doc);
+        overlayerRef.current = overlayer;
+        attach(overlayer);
+      });
+
+      // Re-runs per section load — tap listeners must be re-attached each time
+      view.addEventListener('load', (e: Event) => {
+        const { doc } = (e as CustomEvent<{ doc: Document }>).detail;
+        let t0 = 0, x0 = 0, y0 = 0, moved = false;
+        const isTap = (t: number) => t - t0 < 200 && !moved;
+
+        doc.addEventListener('touchstart', (ev: Event) => {
+          const te = ev as TouchEvent;
+          t0 = te.timeStamp; x0 = te.changedTouches[0].screenX; y0 = te.changedTouches[0].screenY; moved = false;
+        }, { capture: true, passive: false });
+
+        doc.addEventListener('touchmove', (ev: Event) => {
+          const te = ev as TouchEvent;
+          const d = Math.hypot(te.changedTouches[0].screenX - x0, te.changedTouches[0].screenY - y0);
+          if (d > 10) moved = true;
+        }, { capture: true, passive: false });
+
+        doc.addEventListener('touchend', (ev: Event) => {
+          if (isTap((ev as TouchEvent).timeStamp)) { overlayRef.current?.toggle(); ev.preventDefault(); ev.stopPropagation(); }
+        }, { capture: true, passive: false });
+
+        doc.addEventListener('mousedown', (ev: MouseEvent) => {
+          t0 = ev.timeStamp; x0 = ev.screenX; y0 = ev.screenY; moved = false;
+        }, { capture: true });
+
+        doc.addEventListener('mousemove', (ev: MouseEvent) => {
+          if (Math.hypot(ev.screenX - x0, ev.screenY - y0) > 10) moved = true;
+        }, { capture: true });
+
+        doc.addEventListener('mouseup', (ev: MouseEvent) => {
+          if (isTap(ev.timeStamp)) { overlayRef.current?.toggle(); ev.preventDefault(); ev.stopPropagation(); }
+        }, { capture: true });
+      });
+
+      if (!localStorage.getItem('epub-single-tap-hint-shown')) {
+        setTimeout(showSingleTapHint, 1000);
+        localStorage.setItem('epub-single-tap-hint-shown', 'true');
+      }
+
+      const fileUrl = await fileStorage.retrieveFile(book.id, book.title);
+      await view.open(fileUrl);
+
+      if (view.renderer) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        view.renderer.addEventListener('relocate', (e: any) => {
+          const { fraction, size } = e.detail;
+          if (typeof size === 'number' && size > 0) {
+            rendererPagesRef.current = {
+              currentPage: Math.round(fraction / size) + 1,
+              totalPages: Math.round(1 / size),
+            };
+          }
+        });
+        view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
+      }
+
+      // Restore saved location
+      const initialLocation = searchParams.get('location');
+      let targetLocation: string | number = initialLocation ?? 0;
+      if (!initialLocation) {
+        try {
+          const saved = await storageService.getItem(`book-tracker-${propBookId}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed?.currentLocation) targetLocation = parsed.currentLocation;
+          }
+        } catch (err) {
+          console.error('Failed to load saved location:', err);
+        }
+      }
+      await view.goTo(targetLocation);
+
+      const bookData = view.book;
+      if (bookData?.metadata?.title) setBookTitle(bookData.metadata.title);
+
+      const toc = bookData?.toc;
+      setChapters(mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : (view.book.toc ?? [])));
+
+      setIsLoading(false);
+      isInitializedRef.current = true;
+    } catch (err) {
+      console.error('Failed to initialize reader:', err);
+      setError('Failed to load book. Please try again.');
+      setIsLoading(false);
+      isInitializedRef.current = false;
+    }
+  }, [propBookId, searchParams, book, isLoaded, updateProgress, updateLocation]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const cleanup = () => {
+      if (viewRef.current?.parentNode && mounted) {
+        viewRef.current.parentNode.removeChild(viewRef.current);
+      }
+      viewRef.current = null;
+      overlayerRef.current = null;
+      isInitializedRef.current = false;
+    };
+
+    if (mounted) initReader();
+
+    return () => { mounted = false; cleanup(); };
+  }, [initReader]);
+
+  // Re-apply typography when settings change after initialization
+  useEffect(() => {
+    const renderer = viewRef.current?.renderer;
+    if (!renderer || typeof renderer.setStyles !== 'function') return;
+    renderer.setStyles(buildReaderStylesheet(settings));
+  }, [settings]);
+
+  return (
+    <div className="flex flex-col h-screen bg-background relative">
+      <ReaderOverlay
+        ref={overlayRef}
+        bookTitle={bookTitle}
+        bookId={propBookId}
+        locationInfo={locationInfo}
+        chapters={chapters}
+        onBack={handleBack}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        isLoading={isLoading}
+        hasError={!!error}
+        bookmarks={getBookmarks()}
+        onBookmarkSelect={handleBookmarkSelect}
+        onBookmarkDelete={handleBookmarkDelete}
+        onAddBookmark={handleAddBookmark}
+        onChapterSelect={handleChapterSelect}
+      />
+
+      <div className="flex-1 relative overflow-hidden">
+        <div ref={containerRef} className="reader-container absolute inset-0" />
+
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background z-20">
+            <div className="flex flex-col items-center gap-4">
+              <Button variant="outline" onClick={() => navigate('/')} className="absolute top-4 left-4">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Loading book...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background z-20">
+            <div className="text-center p-8">
+              <Button variant="outline" onClick={() => navigate('/')} className="absolute top-4 left-4">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <p className="text-destructive font-medium mb-2">Error loading book</p>
+              <p className="text-muted-foreground text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default EpubReader;

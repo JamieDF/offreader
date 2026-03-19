@@ -5,7 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SharedSettings } from "../reader/SharedSettings";
-import { useReaderSettings } from "@/contexts/ReaderSettingsContext";
+import { useReaderSettings } from "@/hooks/useReaderSettings";
 import { Settings2 } from "lucide-react";
 
 interface ThemeSettingsDialogProps {
