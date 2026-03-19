@@ -9,7 +9,7 @@ import BookDetails from "./pages/BookDetails";
 import Reader from "./pages/Reader";
 import NotFound from "./pages/NotFound";
 import { libraryService } from "@/services/LibraryService";
-import { ReaderSettingsProvider } from "@/contexts/ReaderSettingsContext";
+import { ReaderSettingsProvider } from "@/hooks/useReaderSettings";
 
 const queryClient = new QueryClient();
 

@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Type, Minus, Plus, Monitor } from "lucide-react";
-import { ThemeOption, FontFamily } from "@/contexts/ReaderSettingsContext";
+import { ThemeOption, FontFamily } from "@/hooks/useReaderSettings";
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const themeOptions: { id: ThemeOption; label: string; bg: string; text: string; border: string }[] = [

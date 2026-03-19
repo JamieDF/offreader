@@ -1,5 +1,5 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
-import EpubReader from "@/components/EpubReader";
+import EpubReader from "@/components/reader/EpubReader";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useEffect, useState } from "react";
 

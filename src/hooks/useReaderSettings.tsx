@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { storageService } from '@/services/storage';
+import { FONT_FAMILY_MAP } from '@/utils/readerStyles';
 
 export type ThemeOption = "day" | "parchment" | "meadow" | "coast" | "night" | "neon" | "noir" | "storm";
 export type FontFamily = "Georgia" | "Playfair Display" | "JetBrains Mono" | "Fira Code" | "Uncial Antiqua" | "Special Elite" | "Lato" | "Montserrat" | "Source Sans Pro";
@@ -16,12 +17,12 @@ interface ReaderSettings {
 
 const DEFAULT_SETTINGS: ReaderSettings = {
   fontSize: 100,
-  selectedTheme: "day",
-  fontFamily: "Georgia",
-  lineHeight: 1.5,
-  marginWidth: 20,
+  selectedTheme: "parchment",
+  fontFamily: "Montserrat",
+  lineHeight: 1.2,
+  marginWidth: 0,
   paragraphSpacing: 1.0,
-  useReaderFontForSystem: false,
+  useReaderFontForSystem: true,
 };
 
 const SETTINGS_KEY = "reader-settings";
@@ -89,18 +90,7 @@ export function ReaderSettingsProvider({ children }: { children: ReactNode }) {
     
     // Apply reader font to system UI if enabled
     if (settings.useReaderFontForSystem) {
-      const fontFamilyMap: Record<string, string> = {
-        'Georgia': 'Georgia, "Times New Roman", serif',
-        'Playfair Display': '"Playfair Display", "Crimson Text", Georgia, serif',
-        'JetBrains Mono': '"JetBrains Mono", "Courier New", monospace',
-        'Fira Code': '"Syne Mono", "Space Mono", "Courier New", monospace',
-        'Uncial Antiqua': '"Uncial Antiqua", "Cinzel", "Merriweather", serif',
-        'Special Elite': '"Special Elite", "Courier Prime", "Courier New", monospace',
-        'Lato': '"Lato", "Helvetica Neue", Arial, sans-serif',
-        'Montserrat': '"Montserrat", "Helvetica Neue", Arial, sans-serif',
-        'Source Sans Pro': '"Source Sans Pro", "Helvetica Neue", Arial, sans-serif'
-      };
-      document.body.style.fontFamily = fontFamilyMap[settings.fontFamily] || fontFamilyMap['Georgia'];
+      document.body.style.fontFamily = FONT_FAMILY_MAP[settings.fontFamily] ?? FONT_FAMILY_MAP['Georgia'];
     } else {
       document.body.style.fontFamily = 'Roboto, "Helvetica Neue", Arial, sans-serif';
     }

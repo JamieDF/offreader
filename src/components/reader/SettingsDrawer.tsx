@@ -12,7 +12,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { SharedSettings } from "./SharedSettings";
-import { useReaderSettings } from "@/contexts/ReaderSettingsContext";
+import { useReaderSettings } from "@/hooks/useReaderSettings";
 import { useNavigate } from "react-router-dom";
 
 interface SettingsDrawerProps {
