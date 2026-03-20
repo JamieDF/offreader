@@ -5,7 +5,7 @@
 <h1 align="center">OffReader</h1>
 
 <p align="center">
-  An offline ebook reader for web and Android. No account. No cloud. Just your books.
+  An offline ebook reader for web and Android. No account. Just your books.
 </p>
 
 <p align="center">
