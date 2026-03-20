@@ -1,4 +1,4 @@
-package com.jamiedf.tomereader;
+package com.offreader.reader;
 
 import android.os.Build;
 import android.view.View;

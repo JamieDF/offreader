@@ -27,7 +27,7 @@ export async function getStoredTrackerData(): Promise<StoredBookData> {
 
 export const saveStoredBooks = async (books: Book[]): Promise<void> => {
   try {
-    await storageService.setItem('tome-reader-books', JSON.stringify(books));
+    await storageService.setItem('offreader-books', JSON.stringify(books));
   } catch (error) {
     console.error('Failed to save books:', error);
   }

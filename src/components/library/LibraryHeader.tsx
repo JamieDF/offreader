@@ -58,8 +58,8 @@ export function LibraryHeader({
             />
           ) : (
             <div className="flex items-center gap-2">
-              <img src="/tomeReader.svg" alt="TomeReader" className="h-12 w-12" />
-              <h1 className="text-xl font-semibold text-foreground">TomeReader</h1>
+              <img src="/offReader.svg" alt="OffReader" className="h-12 w-12" />
+              <h1 className="text-xl font-semibold text-foreground">OffReader</h1>
             </div>
           )}
         </div>

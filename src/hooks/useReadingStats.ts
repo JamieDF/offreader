@@ -29,7 +29,7 @@ export interface ReadingStats {
   lastReadDate: string | null;
 }
 
-const STORAGE_KEY = "tome-reader-reading-stats";
+const STORAGE_KEY = "offreader-reading-stats";
 
 const DEFAULT_STATS: ReadingStats = {
   sessions: [],

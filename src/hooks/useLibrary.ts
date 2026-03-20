@@ -253,7 +253,7 @@ export function useLibrary() {
       }
 
       // Clean up any other stored data for this book
-      await storageService.removeItem(`tome-reader-book-${bookId}`);
+      await storageService.removeItem(`offreader-book-${bookId}`);
     } catch (error) {
       console.error('Failed to remove book:', error);
     }

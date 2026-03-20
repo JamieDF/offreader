@@ -57,7 +57,7 @@ describe('useReadingStats', () => {
 
     expect(mockSetItem).toHaveBeenCalledTimes(1);
     const [key, json] = mockSetItem.mock.calls[0];
-    expect(key).toBe('tome-reader-reading-stats');
+    expect(key).toBe('offreader-reading-stats');
     const saved = JSON.parse(json);
     expect(saved.sessions).toHaveLength(1);
     expect(saved.sessions[0].id).toBe('session-1');
