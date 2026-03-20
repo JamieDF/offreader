@@ -22,13 +22,13 @@ It runs in the browser and can be installed as an Android app via Capacitor.
 
 ## Why
 
-There are other great projects that do something similar, but I wanted to build my own — a simple, focused reading experience where you open a book and read it. No accounts, no cloud, no setup. Just you and the page. The whole point is the reading.
+There are other great projects that do something similar, but I wanted to build my own — a simple, focused reading experience where you open a book and read it. No accounts, no setup. Just you and the page. The whole point is the reading.
 
 ---
 
 ## Features
 
-- Import EPUB and MOBI files from your device
+- Import EPUB and MOBI files from your device (plan to cover more types in the future, PDFs too)
 - Themes and typography controls (font, size, line height, spacing)
 - Per-chapter page tracking and overall progress
 - Bookmarks with jump-to navigation
@@ -110,7 +110,7 @@ OffReader uses [Semantic Versioning](https://semver.org/). For available release
 
 ## Authors
 
-- **JamieDF** — initial development
+- **JamieDF** — development
 
 See also the list of [contributors](../../contributors) who have participated in this project.
 
