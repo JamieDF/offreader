@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.jamiedf.tomereader"
+    namespace = "com.offreader.reader"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.jamiedf.tomereader"
+        applicationId "com.offreader.reader"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -18,9 +18,9 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file(System.getenv("KEYSTORE_PATH") ?: System.getProperty("user.home") + "/.android/tomereader-release.keystore")
+            storeFile file(System.getenv("KEYSTORE_PATH") ?: System.getProperty("user.home") + "/.android/offreader-release.keystore")
             storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""
-            keyAlias System.getenv("KEYSTORE_ALIAS") ?: "tomereader-key"
+            keyAlias System.getenv("KEYSTORE_ALIAS") ?: "offreader-key"
             keyPassword System.getenv("KEYSTORE_KEY_PASSWORD") ?: ""
         }
     }

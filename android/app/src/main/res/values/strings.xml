@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TomeReader</string>
-    <string name="title_activity_main">TomeReader</string>
-    <string name="package_name">com.jamiedf.tomereader</string>
-    <string name="custom_url_scheme">com.jamiedf.tomereader</string>
+    <string name="app_name">OffReader</string>
+    <string name="title_activity_main">OffReader</string>
+    <string name="package_name">com.offreader.reader</string>
+    <string name="custom_url_scheme">com.offreader.reader</string>
 </resources>

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/tomeReader.svg" width="120" alt="TomeReader logo" />
+  <img src="public/offReader.svg" width="120" alt="OffReader logo" />
 </p>
 
-<h1 align="center">TomeReader</h1>
+<h1 align="center">OffReader</h1>
 
 <p align="center">
   An offline ebook reader for web and Android. No account. No cloud. Just your books.
@@ -16,7 +16,7 @@
 
 ---
 
-TomeReader is a personal ebook reader built around one idea: your books should live on your device, not a server. Import an EPUB or MOBI file, read it, and everything — progress, bookmarks, reading history — stays local.
+OffReader is a personal ebook reader built around one idea: your books should live on your device, not a server. Import an EPUB or MOBI file, read it, and everything — progress, bookmarks, reading history — stays local.
 
 It runs in the browser and can be installed as an Android app via Capacitor.
 
@@ -49,8 +49,8 @@ There are other great projects that do something similar, but I wanted to build 
 ### Installation
 
 ```bash
-git clone https://github.com/jamiedf/tome-reader.git
-cd tome-reader
+git clone https://github.com/jamiedf/offreader.git
+cd offreader
 npm install
 npm run dev
 ```
@@ -104,7 +104,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 ## Versioning
 
-TomeReader uses [Semantic Versioning](https://semver.org/). For available releases, see the [tags on this repository](../../tags).
+OffReader uses [Semantic Versioning](https://semver.org/). For available releases, see the [tags on this repository](../../tags).
 
 ---
 

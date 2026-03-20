@@ -1,6 +1,6 @@
-# Contributing to TomeReader
+# Contributing to OffReader
 
-Thanks for taking the time to contribute! Every bug report, suggestion, and pull request helps make TomeReader better.
+Thanks for taking the time to contribute! Every bug report, suggestion, and pull request helps make OffReader better.
 
 ## Before You Start
 
@@ -45,7 +45,7 @@ Open an issue describing:
 
 ## What We're Looking For
 
-TomeReader is intentionally simple — offline, no account, no cloud. Contributions that align with that philosophy are most welcome. Features that require accounts, tracking, or external services are unlikely to be accepted.
+OffReader is intentionally simple — offline, no account, no cloud. Contributions that align with that philosophy are most welcome. Features that require accounts, tracking, or external services are unlikely to be accepted.
 
 ## Response Time
 

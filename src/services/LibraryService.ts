@@ -27,7 +27,7 @@ class LibraryService {
       // Load from Capacitor storage
       await fileStorage.listStoredFiles();
 
-      const storedBooksData = await storageService.getItem('tome-reader-books');
+      const storedBooksData = await storageService.getItem('offreader-books');
       const storedBooks: Book[] = storedBooksData ? JSON.parse(storedBooksData) : [];
 
       // Rehydrate file URLs and verify files exist

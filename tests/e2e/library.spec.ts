@@ -13,7 +13,7 @@ test.describe('Library', () => {
   });
 
   test('shows empty library on first load', async ({ page }) => {
-    await expect(page.getByText('TomeReader')).toBeVisible();
+    await expect(page.getByText('OffReader')).toBeVisible();
     await expect(page.getByText(/no books|import|add/i).first()).toBeVisible();
   });
 
