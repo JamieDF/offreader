@@ -3,6 +3,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useWelcomeDialog } from "@/hooks/useWelcomeDialog";
+import { WelcomeDialog } from "@/components/library/WelcomeDialog";
 import { Loader2 } from "lucide-react";
 import Library from "./pages/Library";
 import BookDetails from "./pages/BookDetails";
@@ -15,7 +17,8 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [libraryReady, setLibraryReady] = useState(false);
-  
+  const { mode, lastVersion, dismiss } = useWelcomeDialog();
+
   useEffect(() => {
     // Initialize library once on app start
     libraryService.initialize().then(() => {
@@ -42,6 +45,7 @@ const App = () => {
       <ReaderSettingsProvider>
         <TooltipProvider>
           <ToastContainer />
+          <WelcomeDialog mode={mode} lastVersion={lastVersion} onDismiss={dismiss} />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Library />} />
