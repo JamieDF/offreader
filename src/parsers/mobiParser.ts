@@ -156,181 +156,194 @@ const extractMobiCover = async (arrayBuffer: ArrayBuffer): Promise<string> => {
 
 // Helper function to extract MOBI metadata
 export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Filename-based fallback (often most reliable for MOBI)
-    const fileName = file.name.replace(/\.[^/.]+$/, '');
-    let title = fileName;
-    let author = 'Unknown Author';
+  if (arrayBuffer.byteLength < 68) throw new Error('Invalid MOBI file');
+  const sig = String.fromCharCode(...new Uint8Array(arrayBuffer, 60, 8));
+  if (sig !== 'BOOKMOBI') throw new Error('Invalid MOBI file');
 
-    if (fileName.includes(' - ')) {
-      const parts = fileName.split(' - ');
+  // Filename-based fallback (often most reliable for MOBI)
+  const fileName = file.name.replace(/\.[^/.]+$/, '');
+  let title = fileName;
+  let author = 'Unknown Author';
+
+  if (fileName.includes(' - ')) {
+    const parts = fileName.split(' - ');
+    title = parts[0].trim();
+    author = parts.slice(1).join(' - ').trim();
+  } else if (fileName.toLowerCase().includes(' by ')) {
+    const parts = fileName.toLowerCase().split(' by ');
+    title = parts[0].trim();
+    author = parts.slice(1).join(' by ').trim();
+  } else if (fileName.includes('_')) {
+    const parts = fileName.split('_');
+    if (parts.length >= 2) {
       title = parts[0].trim();
-      author = parts.slice(1).join(' - ').trim();
-    } else if (fileName.toLowerCase().includes(' by ')) {
-      const parts = fileName.toLowerCase().split(' by ');
-      title = parts[0].trim();
-      author = parts.slice(1).join(' by ').trim();
-    } else if (fileName.includes('_')) {
-      const parts = fileName.split('_');
-      if (parts.length >= 2) {
-        title = parts[0].trim();
-        author = parts[1].trim();
-      }
-    } else {
-      const authorPatterns = [
-        /(.+?)(?:\s+by\s+|\s*-\s*|\s*_\s*)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*$/,
-        /(.+?)(?:\s+by\s+|\s*-\s*|\s*_\s*)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/,
-      ];
-      for (const pattern of authorPatterns) {
-        const match = fileName.match(pattern);
-        if (match && match[2]) {
-          title = match[1].trim();
-          author = match[2].trim();
-          break;
-        }
+      author = parts[1].trim();
+    }
+  } else {
+    const authorPatterns = [
+      /(.+?)(?:\s+by\s+|\s*-\s*|\s*_\s*)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*$/,
+      /(.+?)(?:\s+by\s+|\s*-\s*|\s*_\s*)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/,
+    ];
+    for (const pattern of authorPatterns) {
+      const match = fileName.match(pattern);
+      if (match && match[2]) {
+        title = match[1].trim();
+        author = match[2].trim();
+        break;
       }
     }
+  }
 
-    title = title.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
-    author = author.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+  title = title.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
+  author = author.replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim();
 
-    try {
-      const dataView = new DataView(arrayBuffer);
+  try {
+    const dataView = new DataView(arrayBuffer);
 
-      if (arrayBuffer.byteLength < 84) throw new Error('File too small for MOBI header');
+    if (arrayBuffer.byteLength < 84) throw new Error('File too small for MOBI header');
 
-      // Find MOBI header — try PDB record 0 offset first, fall back to manual search
-      let mobiHeaderStart = safeReadUint32(dataView, 80, false);
+    // Find MOBI header — try PDB record 0 offset first, fall back to manual search
+    let mobiHeaderStart = safeReadUint32(dataView, 80, false);
 
-      if (!mobiHeaderStart || mobiHeaderStart > arrayBuffer.byteLength || mobiHeaderStart < 100) {
-        const le = safeReadUint32(dataView, 80, true);
-        if (le && le < arrayBuffer.byteLength && le >= 100) mobiHeaderStart = le;
-      }
+    if (!mobiHeaderStart || mobiHeaderStart > arrayBuffer.byteLength || mobiHeaderStart < 100) {
+      const le = safeReadUint32(dataView, 80, true);
+      if (le && le < arrayBuffer.byteLength && le >= 100) mobiHeaderStart = le;
+    }
 
-      if (!mobiHeaderStart || mobiHeaderStart > arrayBuffer.byteLength || mobiHeaderStart < 100) {
-        mobiHeaderStart = -1;
-        const searchLimit = Math.min(arrayBuffer.byteLength - 4, 20000);
-        for (let i = 0; i < searchLimit; i++) {
-          if (uint8Array[i] === 77 && uint8Array[i + 1] === 79 && uint8Array[i + 2] === 66 && uint8Array[i + 3] === 73) {
-            if (i >= 8 && uint8Array[i - 8] === 66 && uint8Array[i - 7] === 79 && uint8Array[i - 6] === 79 && uint8Array[i - 5] === 75) {
-              mobiHeaderStart = i - 8;
-              break;
-            }
-            if (i < 100) { mobiHeaderStart = i; break; }
+    if (!mobiHeaderStart || mobiHeaderStart > arrayBuffer.byteLength || mobiHeaderStart < 100) {
+      mobiHeaderStart = -1;
+      const searchLimit = Math.min(arrayBuffer.byteLength - 4, 20000);
+      for (let i = 0; i < searchLimit; i++) {
+        if (uint8Array[i] === 77 && uint8Array[i + 1] === 79 && uint8Array[i + 2] === 66 && uint8Array[i + 3] === 73) {
+          if (i >= 8 && uint8Array[i - 8] === 66 && uint8Array[i - 7] === 79 && uint8Array[i - 6] === 79 && uint8Array[i - 5] === 75) {
+            mobiHeaderStart = i - 8;
+            break;
           }
+          if (i < 100) { mobiHeaderStart = i; break; }
         }
-        if (mobiHeaderStart === -1) throw new Error('Could not locate MOBI header in file');
       }
+      if (mobiHeaderStart === -1) throw new Error('Could not locate MOBI header in file');
+    }
 
-      // Check MOBI signature at common offsets (+0, +8, +16)
-      const checkMobiSig = (base: number): boolean => {
-        for (const off of [16, 0, 8]) {
-          const o = base + off;
-          if (o + 4 <= arrayBuffer.byteLength &&
-              uint8Array[o] === 77 && uint8Array[o + 1] === 79 && uint8Array[o + 2] === 66 && uint8Array[o + 3] === 73) {
-            return true;
-          }
+    // Check MOBI signature at common offsets (+0, +8, +16)
+    const checkMobiSig = (base: number): boolean => {
+      for (const off of [16, 0, 8]) {
+        const o = base + off;
+        if (o + 4 <= arrayBuffer.byteLength &&
+            uint8Array[o] === 77 && uint8Array[o + 1] === 79 && uint8Array[o + 2] === 66 && uint8Array[o + 3] === 73) {
+          return true;
         }
-        return false;
-      };
-      // isMobi may be false for some files — continue anyway
-      checkMobiSig(mobiHeaderStart);
+      }
+      return false;
+    };
+    // isMobi may be false for some files — continue anyway
+    checkMobiSig(mobiHeaderStart);
 
-      // Find EXTH header — search from end of MOBI header then broadly
-      const headerLength = safeReadUint32(dataView, mobiHeaderStart + 20, false);
-      const exthSearchStart = headerLength ? mobiHeaderStart + headerLength : mobiHeaderStart + 232;
-      const exthSearchEnd = Math.min(exthSearchStart + 5000, arrayBuffer.byteLength - 4);
+    // Find EXTH header — search from end of MOBI header then broadly
+    const headerLength = safeReadUint32(dataView, mobiHeaderStart + 20, false);
+    const exthSearchStart = headerLength ? mobiHeaderStart + headerLength : mobiHeaderStart + 232;
+    const exthSearchEnd = Math.min(exthSearchStart + 5000, arrayBuffer.byteLength - 4);
 
-      let exthOffset = -1;
-      for (let i = exthSearchStart; i < exthSearchEnd; i++) {
+    let exthOffset = -1;
+    for (let i = exthSearchStart; i < exthSearchEnd; i++) {
+      if (uint8Array[i] === 69 && uint8Array[i + 1] === 88 && uint8Array[i + 2] === 84 && uint8Array[i + 3] === 72) {
+        exthOffset = i; break;
+      }
+    }
+    if (exthOffset === -1) {
+      const broadLimit = Math.min(arrayBuffer.byteLength - 4, 50000);
+      for (let i = 0; i < broadLimit; i++) {
         if (uint8Array[i] === 69 && uint8Array[i + 1] === 88 && uint8Array[i + 2] === 84 && uint8Array[i + 3] === 72) {
           exthOffset = i; break;
         }
       }
-      if (exthOffset === -1) {
-        const broadLimit = Math.min(arrayBuffer.byteLength - 4, 50000);
-        for (let i = 0; i < broadLimit; i++) {
-          if (uint8Array[i] === 69 && uint8Array[i + 1] === 88 && uint8Array[i + 2] === 84 && uint8Array[i + 3] === 72) {
-            exthOffset = i; break;
-          }
-        }
-      }
-      if (exthOffset === -1) throw new Error('EXTH header not found');
-
-      const exthStart = exthOffset + 4;
-      const exthHeaderLength = safeReadUint32(dataView, exthStart, false);
-      const tagCount = safeReadUint32(dataView, exthStart + 4, false);
-      if (!exthHeaderLength || !tagCount) throw new Error('EXTH header corrupted');
-
-      let currentOffset = exthStart + 8;
-      let extractedAuthor = '';
-      let extractedDescription = '';
-      let description = '';
-
-      for (let i = 0; i < tagCount && currentOffset < exthStart + exthHeaderLength; i++) {
-        try {
-          const tagId = safeReadUint32(dataView, currentOffset, false);
-          const tagLength = safeReadUint32(dataView, currentOffset + 4, false);
-          if (!tagId || !tagLength) { currentOffset += 8; continue; }
-
-          const tagDataOffset = currentOffset + 8;
-          if (tagLength > 10000 || tagLength < 8 || tagDataOffset + tagLength - 8 > arrayBuffer.byteLength) {
-            currentOffset += 8; continue;
-          }
-
-          const actualDataLength = tagLength - 8;
-          const tagBytes = new Uint8Array(arrayBuffer, tagDataOffset, actualDataLength);
-          const tagText = cleanExtractedText(new TextDecoder('utf-8', { fatal: false }).decode(tagBytes));
-
-          if (isValidText(tagText)) {
-            if (tagId === 100) extractedAuthor = tagText;       // Author
-            else if (tagId === 103) extractedDescription = tagText; // Description
-          }
-
-          currentOffset = tagDataOffset + ((actualDataLength + 3) & ~3);
-        } catch {
-          currentOffset += 8;
-        }
-      }
-
-      if (extractedAuthor) author = extractedAuthor;
-      if (extractedDescription) description = extractedDescription;
-
-      const estimatedChapters = Math.max(1, Math.floor(file.size / 75000));
-      const chapters = Array.from({ length: estimatedChapters }, (_, i) => ({
-        label: `Chapter ${i + 1}`, href: `chapter-${i + 1}`, index: i
-      }));
-
-      const coverImage = await extractMobiCover(arrayBuffer);
-
-      return {
-        title, author, publisher: undefined, pubDate: undefined, language: undefined,
-        identifier: undefined, description, subjects: [], rights: undefined,
-        chapters, totalChapters: estimatedChapters, format: 'MOBI', coverImage
-      };
-
-    } catch {
-      const description = `A MOBI book by ${author}.`;
-      let coverImage = '';
-      try { coverImage = await extractMobiCover(arrayBuffer); } catch { /* proceed without cover */ }
-
-      return {
-        title, author, publisher: undefined, pubDate: undefined, language: undefined,
-        identifier: undefined, description, subjects: [], rights: undefined,
-        chapters: [], totalChapters: 0, format: 'MOBI', coverImage
-      };
     }
-  } catch (error) {
-    console.error('Failed to extract MOBI metadata:', error);
+    if (exthOffset === -1) throw new Error('EXTH header not found');
+
+    const exthStart = exthOffset + 4;
+    const exthHeaderLength = safeReadUint32(dataView, exthStart, false);
+    const tagCount = safeReadUint32(dataView, exthStart + 4, false);
+    if (!exthHeaderLength || !tagCount) throw new Error('EXTH header corrupted');
+
+    let currentOffset = exthStart + 8;
+    let extractedAuthor = '';
+    let extractedDescription = '';
+    let description = '';
+
+    for (let i = 0; i < tagCount && currentOffset < exthStart + exthHeaderLength; i++) {
+      try {
+        const tagId = safeReadUint32(dataView, currentOffset, false);
+        const tagLength = safeReadUint32(dataView, currentOffset + 4, false);
+        if (!tagId || !tagLength) { currentOffset += 8; continue; }
+
+        const tagDataOffset = currentOffset + 8;
+        if (tagLength > 10000 || tagLength < 8 || tagDataOffset + tagLength - 8 > arrayBuffer.byteLength) {
+          currentOffset += 8; continue;
+        }
+
+        const actualDataLength = tagLength - 8;
+        const tagBytes = new Uint8Array(arrayBuffer, tagDataOffset, actualDataLength);
+        const tagText = cleanExtractedText(new TextDecoder('utf-8', { fatal: false }).decode(tagBytes));
+
+        if (isValidText(tagText)) {
+          if (tagId === 100) extractedAuthor = tagText;       // Author
+          else if (tagId === 103) extractedDescription = tagText; // Description
+        }
+
+        currentOffset = tagDataOffset + ((actualDataLength + 3) & ~3);
+      } catch {
+        currentOffset += 8;
+      }
+    }
+
+    if (extractedAuthor) author = extractedAuthor;
+    if (extractedDescription) description = extractedDescription;
+
+    const estimatedChapters = Math.max(1, Math.floor(file.size / 75000));
+    const chapters = Array.from({ length: estimatedChapters }, (_, i) => ({
+      label: `Chapter ${i + 1}`, href: `chapter-${i + 1}`, index: i
+    }));
+
+    const coverImage = await extractMobiCover(arrayBuffer);
+
     return {
-      title: file.name.replace(/\.[^/.]+$/, ''),
-      author: 'Unknown Author',
-      publisher: undefined, pubDate: undefined, language: undefined,
-      identifier: undefined, description: undefined, subjects: [], rights: undefined,
-      chapters: [], totalChapters: 0, format: 'MOBI', coverImage: ''
+      title,
+      author,
+      publisher: undefined,
+      pubDate: undefined,
+      language: undefined,
+      identifier: undefined,
+      description,
+      subjects: [],
+      rights: undefined,
+      chapters,
+      totalChapters: estimatedChapters,
+      format: 'MOBI',
+      coverImage
+    };
+
+  } catch {
+    const description = `A MOBI book by ${author}.`;
+    let coverImage = '';
+    try { coverImage = await extractMobiCover(arrayBuffer); } catch { /* proceed without cover */ }
+
+    return {
+      title,
+      author,
+      publisher: undefined,
+      pubDate: undefined,
+      language: undefined,
+      identifier: undefined,
+      description,
+      subjects: [],
+      rights: undefined,
+      chapters: [],
+      totalChapters: 0,
+      format: 'MOBI',
+      coverImage
     };
   }
 };
