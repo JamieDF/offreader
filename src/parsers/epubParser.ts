@@ -134,129 +134,116 @@ export const extractEpubCover = async (zip: JSZip, opfDoc: Document, opfPath: st
 
 // Helper function to extract chapters and full metadata from an EPUB file
 export const extractChaptersWithFoliate = async (file: File): Promise<EpubMetadata> => {
-  try {
-    // Read the EPUB file as a zip to get spine count
-    const arrayBuffer = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(arrayBuffer);
+  // Read the EPUB file as a zip to get spine count
+  const arrayBuffer = await file.arrayBuffer();
 
-    // Look for the OPF file
-    let opfFile: JSZipObject | null = null;
-    let opfPath = '';
-    const containerXml = await zip.file('META-INF/container.xml')?.async('string');
-    if (containerXml) {
-      const parser = new DOMParser();
-      const containerDoc = parser.parseFromString(containerXml, 'text/xml');
-      const rootfile = containerDoc.querySelector('rootfile');
-      if (rootfile) {
-        opfPath = rootfile.getAttribute('full-path') || '';
-        opfFile = zip.file(opfPath);
-      }
-    }
-
-    if (!opfFile) {
-      // Fallback: look for any .opf file
-      const opfFiles = Object.keys(zip.files).filter(name => name.endsWith('.opf'));
-      if (opfFiles.length > 0) {
-        opfPath = opfFiles[0];
-        opfFile = zip.file(opfPath);
-      }
-    }
-
-    if (!opfFile) {
-      return {
-        title: file.name.replace(/\.[^/.]+$/, ''),
-        author: 'Unknown Author',
-        chapters: [],
-        totalChapters: 0,
-        format: 'EPUB',
-        coverImage: ''
-      };
-    }
-
-    // Parse OPF file
-    const opfContent = await opfFile.async('string');
-    const parser = new DOMParser();
-    const opfDoc = parser.parseFromString(opfContent, 'text/xml');
-
-    // Extract comprehensive metadata
-    const title = opfDoc.querySelector('title')?.textContent || file.name.replace(/\.[^/.]+$/, '');
-    const author = opfDoc.querySelector('creator')?.textContent || 'Unknown Author';
-    const publisher = opfDoc.querySelector('publisher')?.textContent || 'Unknown Publisher';
-    const pubDate = opfDoc.querySelector('date')?.textContent || '';
-    const language = opfDoc.querySelector('language')?.textContent || 'Unknown';
-    const identifier = opfDoc.querySelector('identifier')?.textContent || '';
-
-    // Extract description - try multiple selectors
-    let description = opfDoc.querySelector('description')?.textContent || '';
-    if (!description) {
-      // Try with namespace (use attribute selector)
-      const descWithNs = opfDoc.querySelector('[*|description]')?.textContent || '';
-      if (descWithNs) description = descWithNs;
-    }
-    if (!description) {
-      // Try any element that has 'description' in attribute
-      const descElements = opfDoc.querySelectorAll('*');
-      for (const el of descElements) {
-        if (el.textContent && el.textContent.length > 50 &&
-            (el.tagName.toLowerCase().includes('desc') ||
-             el.getAttribute('property')?.includes('description') ||
-             el.getAttribute('name')?.includes('description'))) {
-          description = el.textContent;
-          break;
-        }
-      }
-    }
-
-    // Extract subject/tags
-    const subjects = Array.from(opfDoc.querySelectorAll('subject')).map(el => el.textContent).filter(Boolean) as string[];
-
-    // Extract rights/copyright
-    const rights = opfDoc.querySelector('rights')?.textContent || '';
-
-    // Get spine items for rough chapter count
-    const spineItems = opfDoc.querySelectorAll('spine itemref');
-    const totalChapters = Math.max(1, Math.floor(spineItems.length * 0.6)); // Estimate 60% are actual chapters
-
-    // Create estimated chapters
-    const chapters = Array.from({ length: totalChapters }, (_, i) => ({
-      label: `Chapter ${i + 1}`,
-      href: `chapter-${i + 1}`,
-      index: i
-    }));
-
-    // If no description, try to create a better fallback
-    if (!description || description.trim().length < 10) {
-      const fallbackDesc = `An EPUB book by ${author}${subjects.length > 0 ? `. Topics include: ${subjects.slice(0, 3).join(', ')}` : ''}.`;
-      description = fallbackDesc;
-    }
-
-    // Extract cover image
-    const coverImage = await extractEpubCover(zip, opfDoc, opfPath);
-
-    return {
-      title,
-      author,
-      publisher,
-      pubDate,
-      language,
-      identifier,
-      description,
-      subjects,
-      rights,
-      chapters,
-      totalChapters,
-      format: 'EPUB',
-      coverImage
-    };
-  } catch (error) {
-    console.error('Failed to extract chapters:', error);
-    return {
-      title: file.name.replace(/\.[^/.]+$/, ''),
-      author: 'Unknown Author',
-      chapters: [],
-      totalChapters: 0,
-      format: 'EPUB',
-      coverImage: ''
-    };
+  const header = new Uint8Array(arrayBuffer, 0, 4);
+  if (header[0] !== 0x50 || header[1] !== 0x4B || header[2] !== 0x03 || header[3] !== 0x04) {
+    throw new Error('Invalid EPUB file');
   }
+
+  const zip = await JSZip.loadAsync(arrayBuffer);
+
+  // Look for the OPF file
+  let opfFile: JSZipObject | null = null;
+  let opfPath = '';
+  const containerXml = await zip.file('META-INF/container.xml')?.async('string');
+  if (containerXml) {
+    const parser = new DOMParser();
+    const containerDoc = parser.parseFromString(containerXml, 'text/xml');
+    const rootfile = containerDoc.querySelector('rootfile');
+    if (rootfile) {
+      opfPath = rootfile.getAttribute('full-path') || '';
+      opfFile = zip.file(opfPath);
+    }
+  }
+
+  if (!opfFile) {
+    // Fallback: look for any .opf file
+    const opfFiles = Object.keys(zip.files).filter(name => name.endsWith('.opf'));
+    if (opfFiles.length > 0) {
+      opfPath = opfFiles[0];
+      opfFile = zip.file(opfPath);
+    }
+  }
+
+  if (!opfFile) {
+    throw new Error('Invalid EPUB file');
+  }
+
+  // Parse OPF file
+  const opfContent = await opfFile.async('string');
+  const parser = new DOMParser();
+  const opfDoc = parser.parseFromString(opfContent, 'text/xml');
+
+  // Extract comprehensive metadata
+  const title = opfDoc.querySelector('title')?.textContent || file.name.replace(/\.[^/.]+$/, '');
+  const author = opfDoc.querySelector('creator')?.textContent || 'Unknown Author';
+  const publisher = opfDoc.querySelector('publisher')?.textContent || 'Unknown Publisher';
+  const pubDate = opfDoc.querySelector('date')?.textContent || '';
+  const language = opfDoc.querySelector('language')?.textContent || 'Unknown';
+  const identifier = opfDoc.querySelector('identifier')?.textContent || '';
+
+  // Extract description - try multiple selectors
+  let description = opfDoc.querySelector('description')?.textContent || '';
+  if (!description) {
+    // Try with namespace (use attribute selector)
+    const descWithNs = opfDoc.querySelector('[*|description]')?.textContent || '';
+    if (descWithNs) description = descWithNs;
+  }
+  if (!description) {
+    // Try any element that has 'description' in attribute
+    const descElements = opfDoc.querySelectorAll('*');
+    for (const el of descElements) {
+      if (el.textContent && el.textContent.length > 50 &&
+          (el.tagName.toLowerCase().includes('desc') ||
+           el.getAttribute('property')?.includes('description') ||
+           el.getAttribute('name')?.includes('description'))) {
+        description = el.textContent;
+        break;
+      }
+    }
+  }
+
+  // Extract subject/tags
+  const subjects = Array.from(opfDoc.querySelectorAll('subject')).map(el => el.textContent).filter(Boolean) as string[];
+
+  // Extract rights/copyright
+  const rights = opfDoc.querySelector('rights')?.textContent || '';
+
+  // Get spine items for rough chapter count
+  const spineItems = opfDoc.querySelectorAll('spine itemref');
+  const totalChapters = Math.max(1, Math.floor(spineItems.length * 0.6)); // Estimate 60% are actual chapters
+
+  // Create estimated chapters
+  const chapters = Array.from({ length: totalChapters }, (_, i) => ({
+    label: `Chapter ${i + 1}`,
+    href: `chapter-${i + 1}`,
+    index: i
+  }));
+
+  // If no description, try to create a better fallback
+  if (!description || description.trim().length < 10) {
+    const fallbackDesc = `An EPUB book by ${author}${subjects.length > 0 ? `. Topics include: ${subjects.slice(0, 3).join(', ')}` : ''}.`;
+    description = fallbackDesc;
+  }
+
+  // Extract cover image
+  const coverImage = await extractEpubCover(zip, opfDoc, opfPath);
+
+  return {
+    title,
+    author,
+    publisher,
+    pubDate,
+    language,
+    identifier,
+    description,
+    subjects,
+    rights,
+    chapters,
+    totalChapters,
+    format: 'EPUB',
+    coverImage
+  };
 };
