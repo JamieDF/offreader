@@ -1,0 +1,20 @@
+[
+  {
+    "version": "0.1.1",
+    "date": "2026-03-31",
+    "items": [
+      "Invalid EPUB/MOBI files are rejected on import with a clear error",
+      "Unsupported file formats now fail gracefully"
+    ]
+  },
+  {
+    "version": "0.1.0",
+    "date": "2026-03-17",
+    "items": [
+      "EPUB and MOBI import",
+      "Per-book progress, bookmarks, and reading streaks",
+      "Font, size, line height, and theme controls",
+      "All data stored locally via Capacitor Preferences"
+    ]
+  }
+]
