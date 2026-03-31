@@ -80,7 +80,7 @@ npm run test:e2e      # End-to-end browser tests (Playwright)
 npm run test:all      # Both suites
 ```
 
-Unit tests cover utility functions, service layer, and hook behaviour.
+Unit tests cover utility functions, parsers, service layer, and hook behaviour.
 E2E tests run against a real browser — Chromium is required (`npx playwright install chromium`).
 
 ---
