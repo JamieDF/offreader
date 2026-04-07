@@ -1,9 +1,10 @@
 [
   {
-    "version": "0.1.2",
+    "version": "0.1.4",
     "date": "2026-04-07",
     "items": [
-      "Reading statistics fixes"
+      "Reading statistics fixes",
+      "Desktop navigation improvemnts"
     ]
   },
   {
