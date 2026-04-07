@@ -304,17 +304,14 @@
   }
 
   html {
-    /* Prevent scrolling on the main page */
     overflow: hidden;
-    /* Reserve scrollbar space to prevent layout shift when scrollbars appear/disappear */
-    scrollbar-gutter: stable;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    /* Prevent scrolling - let the reader manage its own layout */
     overflow: hidden;
+    overflow-x: hidden;
     height: 100vh;
     width: 100vw;
   }
