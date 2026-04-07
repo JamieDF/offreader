@@ -321,6 +321,21 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
     return () => { mounted = false; cleanup(); };
   }, [initReader]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrev();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Re-apply typography when settings change after initialization
   useEffect(() => {
     const renderer = viewRef.current?.renderer;
