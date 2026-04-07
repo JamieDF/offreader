@@ -8,6 +8,10 @@ interface UseReadingSessionOptions {
   currentLocation: string;
 }
 
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const IDLE_CHECK_INTERVAL_MS = 30 * 1000;
+const MIN_SESSION_DURATION_MS = 10 * 1000;
+
 export function useReadingSession({
   bookId,
   addSession,
@@ -16,30 +20,43 @@ export function useReadingSession({
 }: UseReadingSessionOptions) {
   const sessionStartRef = useRef<Date | null>(null);
   const lastInteractionRef = useRef<Date>(new Date());
-  const isActiveRef = useRef<boolean>(true);
+  const isPausedRef = useRef<boolean>(true);
   const accumulatedTimeRef = useRef<number>(0);
   const startProgressRef = useRef<number>(0);
   const startLocationRef = useRef<string>('');
 
-  // Keep refs in sync with latest values so closures always read current state
   const currentProgressRef = useRef(currentProgress);
   const currentLocationRef = useRef(currentLocation);
 
   useEffect(() => { currentProgressRef.current = currentProgress; }, [currentProgress]);
   useEffect(() => { currentLocationRef.current = currentLocation; }, [currentLocation]);
 
-  const commitSession = useCallback(() => {
-    if (!sessionStartRef.current) return;
-
-    let finalDuration = accumulatedTimeRef.current;
-    if (isActiveRef.current) {
-      finalDuration += new Date().getTime() - sessionStartRef.current.getTime();
-    }
-
-    // Skip sessions shorter than 10 seconds
-    if (finalDuration < 10000) {
+  const startSession = useCallback(() => {
+    if (isPausedRef.current) {
+      isPausedRef.current = false;
       sessionStartRef.current = new Date();
+      lastInteractionRef.current = new Date();
+      startProgressRef.current = currentProgressRef.current;
+      startLocationRef.current = currentLocationRef.current;
+    }
+  }, []);
+
+  const pauseSession = useCallback(() => {
+    if (!isPausedRef.current && sessionStartRef.current) {
+      const elapsed = new Date().getTime() - sessionStartRef.current.getTime();
+      accumulatedTimeRef.current += elapsed;
+      isPausedRef.current = true;
+    }
+  }, []);
+
+  const commitSession = useCallback(() => {
+    pauseSession();
+
+    const totalDuration = accumulatedTimeRef.current;
+
+    if (totalDuration < MIN_SESSION_DURATION_MS) {
       accumulatedTimeRef.current = 0;
+      sessionStartRef.current = new Date();
       startProgressRef.current = currentProgressRef.current;
       startLocationRef.current = currentLocationRef.current;
       return;
@@ -48,39 +65,38 @@ export function useReadingSession({
     addSession({
       id: `session-${Date.now()}`,
       bookId,
-      startTime: sessionStartRef.current.toISOString(),
+      startTime: sessionStartRef.current!.toISOString(),
       endTime: new Date().toISOString(),
-      durationMs: finalDuration,
+      durationMs: totalDuration,
       startProgress: startProgressRef.current,
       endProgress: currentProgressRef.current,
       startLocation: startLocationRef.current,
       endLocation: currentLocationRef.current,
     });
 
-    // Reset for next burst
-    sessionStartRef.current = new Date();
     accumulatedTimeRef.current = 0;
+    sessionStartRef.current = new Date();
     startProgressRef.current = currentProgressRef.current;
     startLocationRef.current = currentLocationRef.current;
-  }, [addSession, bookId]);
+  }, [pauseSession, addSession, bookId]);
 
   const handleInteraction = useCallback(() => {
     const now = new Date();
     const idleTime = now.getTime() - lastInteractionRef.current.getTime();
 
-    if (idleTime > 5 * 60 * 1000 && isActiveRef.current) {
-      commitSession();
-    } else if (!isActiveRef.current) {
-      sessionStartRef.current = new Date();
-      startProgressRef.current = currentProgressRef.current;
-      startLocationRef.current = currentLocationRef.current;
-      isActiveRef.current = true;
+    if (isPausedRef.current && idleTime < IDLE_TIMEOUT_MS) {
+      startSession();
     }
 
     lastInteractionRef.current = now;
-  }, [commitSession]);
+  }, [startSession]);
 
-  // Sync start refs once we have an actual position (first relocate)
+  useEffect(() => {
+    if (!sessionStartRef.current) {
+      startSession();
+    }
+  }, [startSession]);
+
   useEffect(() => {
     if (startProgressRef.current === 0 && currentProgress > 0) {
       startProgressRef.current = currentProgress;
@@ -90,25 +106,12 @@ export function useReadingSession({
     }
   }, [currentProgress, currentLocation]);
 
-  // Visibility + interaction + idle tracking
   useEffect(() => {
-    if (!sessionStartRef.current) {
-      sessionStartRef.current = new Date();
-      lastInteractionRef.current = new Date();
-      isActiveRef.current = true;
-      accumulatedTimeRef.current = 0;
-      startProgressRef.current = currentProgressRef.current;
-      startLocationRef.current = currentLocationRef.current;
-    }
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        isActiveRef.current = false;
-        commitSession();
+        pauseSession();
       } else {
-        sessionStartRef.current = new Date();
-        lastInteractionRef.current = new Date();
-        isActiveRef.current = true;
+        startSession();
       }
     };
 
@@ -118,13 +121,11 @@ export function useReadingSession({
     window.addEventListener('keydown', handleInteraction);
 
     const idleInterval = setInterval(() => {
-      if (!isActiveRef.current) return;
       const idleTime = new Date().getTime() - lastInteractionRef.current.getTime();
-      if (idleTime > 5 * 60 * 1000) {
-        isActiveRef.current = false;
-        commitSession();
+      if (idleTime > IDLE_TIMEOUT_MS && !isPausedRef.current) {
+        pauseSession();
       }
-    }, 30000);
+    }, IDLE_CHECK_INTERVAL_MS);
 
     return () => {
       window.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -133,7 +134,7 @@ export function useReadingSession({
       window.removeEventListener('keydown', handleInteraction);
       clearInterval(idleInterval);
     };
-  }, [handleInteraction, commitSession]);
+  }, [handleInteraction, pauseSession, startSession]);
 
   return { commitSession };
 }
