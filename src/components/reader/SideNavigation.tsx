@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface SideNavigationProps {
@@ -14,29 +13,68 @@ const SideNavigation = ({ onPrev, onNext, isVisible, isLoading, hasError }: Side
   
   return (
     <>
-      {/* Left navigation button */}
-      <Button
-        variant="ghost"
-        size="icon"
+      <button
         onClick={onPrev}
         disabled={disabled}
-        className={`absolute left-2 top-1/2 -translate-y-1/2 z-30 h-12 w-10 rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-all duration-300 ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className="side-nav-btn side-nav-prev"
+        style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? 'auto' : 'none' }}
         aria-label="Previous page"
       >
-        <ChevronLeft className="h-6 w-6" />
-      </Button>
+        <div className="h-12 w-12 rounded-full bg-background/40 group-hover:bg-background/90 backdrop-blur-sm flex items-center justify-center transition-all">
+          <ChevronLeft className="h-8 w-8" />
+        </div>
+      </button>
       
-      {/* Right navigation button */}
-      <Button
-        variant="ghost"
-        size="icon"
+      <button
         onClick={onNext}
         disabled={disabled}
-        className={`absolute right-2 top-1/2 -translate-y-1/2 z-30 h-12 w-10 rounded-full bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-all duration-300 ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className="side-nav-btn side-nav-next"
+        style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? 'auto' : 'none' }}
         aria-label="Next page"
       >
-        <ChevronRight className="h-6 w-6" />
-      </Button>
+        <div className="h-12 w-12 rounded-full bg-background/40 group-hover:bg-background/90 backdrop-blur-sm flex items-center justify-center transition-all">
+          <ChevronRight className="h-8 w-8" />
+        </div>
+      </button>
+
+      <style>{`
+        .side-nav-btn {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 80px;
+          display: flex;
+          align-items: center;
+          transition: background 0.2s, opacity 0.3s;
+          z-index: 10;
+        }
+        .side-nav-prev {
+          left: 0;
+          justify-content: flex-start;
+          padding-left: 8px;
+          background: linear-gradient(to right, hsl(var(--primary) / 0.25), transparent);
+        }
+        .side-nav-prev:hover {
+          background: linear-gradient(to right, hsl(var(--primary) / 0.35), transparent);
+        }
+        .side-nav-next {
+          right: 0;
+          justify-content: flex-end;
+          padding-right: 8px;
+          background: linear-gradient(to left, hsl(var(--primary) / 0.25), transparent);
+        }
+        .side-nav-next:hover {
+          background: linear-gradient(to left, hsl(var(--primary) / 0.35), transparent);
+        }
+
+        /* Desktop: always visible and clickable */
+        @media (hover: hover) and (pointer: fine) {
+          .side-nav-btn {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+          }
+        }
+      `}</style>
     </>
   );
 };
