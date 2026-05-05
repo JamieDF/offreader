@@ -1,4 +1,4 @@
-import { Search, Settings2, ArrowUpDown, LineChart } from "lucide-react";
+import { Search, Settings2, ArrowUpDown, LineChart, Menu, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,9 +13,9 @@ import { SortOption } from "@/hooks/useLibrary";
 interface LibraryHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
-  onOpenInsights?: () => void;
+  onOpenSettings: () => void;
+  onOpenInsights: () => void;
+  onAbout: () => void;
   sortBy: SortOption;
   onSortChange: (sort: SortOption) => void;
 }
@@ -30,8 +30,9 @@ const sortOptions: { value: SortOption; label: string }[] = [
 export function LibraryHeader({
   searchQuery,
   onSearchChange,
-  onToggleDarkMode,
+  onOpenSettings,
   onOpenInsights,
+  onAbout,
   sortBy,
   onSortChange,
 }: LibraryHeaderProps) {
@@ -42,7 +43,6 @@ export function LibraryHeader({
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
       <div className="flex items-center justify-between h-14 px-4">
-        {/* Title or Search Input */}
         <div className="flex-1 flex items-center">
           {isSearchOpen ? (
             <Input
@@ -64,9 +64,7 @@ export function LibraryHeader({
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex items-center gap-1">
-          {/* Sort Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -101,25 +99,46 @@ export function LibraryHeader({
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onOpenInsights}
-            className="h-9 w-9"
-          >
-            <LineChart className="h-5 w-5" />
-            <span className="sr-only">Reading Insights</span>
-          </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleDarkMode}
-            className="h-9 w-9"
-          >
-            <Settings2 className="h-5 w-5" />
-            <span className="sr-only">Settings</span>
-          </Button>
+          <div className="hidden md:flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={onOpenInsights} className="h-9 w-9">
+              <LineChart className="h-5 w-5" />
+              <span className="sr-only">Reading Insights</span>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onOpenSettings} className="h-9 w-9">
+              <Settings2 className="h-5 w-5" />
+              <span className="sr-only">Settings</span>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onAbout} className="h-9 w-9">
+              <Info className="h-5 w-5" />
+              <span className="sr-only">About</span>
+            </Button>
+          </div>
+
+          <div className="flex md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={onOpenSettings}>
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Appearance & Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenInsights}>
+                  <LineChart className="h-4 w-4 mr-2" />
+                  Reading Insights
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onAbout}>
+                  <Info className="h-4 w-4 mr-2" />
+                  About
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>

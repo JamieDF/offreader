@@ -1,10 +1,18 @@
 [
   {
+    "version": "0.1.5",
+    "date": "2026-05-05",
+    "items": [
+      "About page with app info, changelog, and links",
+      "Mobile navigation menu for settings, insights, and about"
+    ]
+  },
+  {
     "version": "0.1.4",
     "date": "2026-04-07",
     "items": [
       "Reading statistics fixes",
-      "Desktop navigation improvemnts"
+      "Desktop navigation improvments"
     ]
   },
   {
