@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import Library from "./pages/Library";
 import BookDetails from "./pages/BookDetails";
 import Reader from "./pages/Reader";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import { libraryService } from "@/services/LibraryService";
 import { ReaderSettingsProvider } from "@/hooks/useReaderSettings";
@@ -51,6 +52,7 @@ const App = () => {
               <Route path="/" element={<Library />} />
               <Route path="/book/:bookId" element={<BookDetails />} />
               <Route path="/reader" element={<Reader />} />
+              <Route path="/about" element={<About />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

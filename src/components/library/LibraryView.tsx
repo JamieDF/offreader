@@ -63,9 +63,9 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
       <LibraryHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        isDarkMode={document.documentElement.classList.contains("dark")}
-        onToggleDarkMode={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenInsights={() => setIsInsightsOpen(true)}
+        onAbout={() => navigate('/about')}
         sortBy={sortBy}
         onSortChange={setSortBy}
       />
