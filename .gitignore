@@ -81,3 +81,5 @@ package-lock.json
 android/.idea/
 android/.kotlin/
 android/build/
+
+*code-workspace
