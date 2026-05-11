@@ -20,9 +20,10 @@ interface SettingsDrawerProps {
   onClose: () => void;
   bookId?: string;
   onOpenToc?: () => void;
+  isPdf?: boolean;
 }
 
-const SettingsDrawer = ({ isOpen, onClose, bookId, onOpenToc }: SettingsDrawerProps) => {
+const SettingsDrawer = ({ isOpen, onClose, bookId, onOpenToc, isPdf }: SettingsDrawerProps) => {
   const navigate = useNavigate();
   const { settings, updateSettings } = useReaderSettings();
 
@@ -46,7 +47,7 @@ const SettingsDrawer = ({ isOpen, onClose, bookId, onOpenToc }: SettingsDrawerPr
         </DrawerHeader>
 
         <div className="px-4 pb-6 overflow-y-auto">
-          <SharedSettings settings={settings} updateSettings={updateSettings} />
+          <SharedSettings settings={settings} updateSettings={updateSettings} isPdf={isPdf} />
 
           <Separator className="my-6" />
 

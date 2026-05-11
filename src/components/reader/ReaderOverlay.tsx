@@ -8,6 +8,7 @@ import ChapterProgress from './ChapterProgress';
 import SettingsDrawer from './SettingsDrawer';
 import TocDrawer from './TocDrawer';
 import { BookmarksDrawer } from './BookmarksDrawer';
+import PdfZoomToolbar, { PdfZoom } from './PdfZoomToolbar';
 
 export interface LocationInfo {
   current: number;
@@ -34,6 +35,11 @@ interface ReaderOverlayProps {
   onBookmarkDelete: (id: string) => void;
   onAddBookmark: () => void;
   onChapterSelect: (chapter: Chapter) => void;
+  pdfZoom?: PdfZoom;
+  onPdfZoomChange?: (zoom: PdfZoom) => void;
+  pdfRotation?: number;
+  onPdfRotationChange?: (rotation: number) => void;
+  isPdf?: boolean;
 }
 
 export interface ReaderOverlayHandle {
@@ -55,6 +61,11 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
   onBookmarkDelete,
   onAddBookmark,
   onChapterSelect,
+  pdfZoom,
+  onPdfZoomChange,
+  pdfRotation,
+  onPdfRotationChange,
+  isPdf,
 }, ref) => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -92,6 +103,16 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
         isVisible={showOverlay}
       />
 
+      {pdfZoom !== undefined && onPdfZoomChange && (
+        <PdfZoomToolbar
+          zoom={pdfZoom}
+          onZoomChange={onPdfZoomChange}
+          isVisible={showOverlay}
+          rotation={pdfRotation}
+          onRotationChange={onPdfRotationChange}
+        />
+      )}
+
       <ReaderFooter
         progress={locationInfo.current}
         currentChapter={locationInfo.currentChapter}
@@ -114,6 +135,7 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
         onClose={() => setShowSettings(false)}
         bookId={bookId}
         onOpenToc={handleOpenToc}
+        isPdf={isPdf}
       />
 
       <BookmarksDrawer

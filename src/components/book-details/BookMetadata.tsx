@@ -101,7 +101,7 @@ export function BookMetadata({ book, stats, bookmarks = [], bookFilePath: _bookF
               <div className="flex justify-center">
                 <Layers className="h-5 w-5 text-muted-foreground" />
               </div>
-              <p className="text-xs text-muted-foreground uppercase">Chapters</p>
+              <p className="text-xs text-muted-foreground uppercase">{book.format === 'PDF' ? 'Sections' : 'Chapters'}</p>
               <p className="text-sm font-medium">{book.totalChapters || stats.totalChapters || 0}</p>
             </div>
             <div className="space-y-1">
@@ -121,7 +121,7 @@ export function BookMetadata({ book, stats, bookmarks = [], bookFilePath: _bookF
                   <div className="flex justify-center">
                     <BookOpen className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <p className="text-xs text-muted-foreground uppercase">Est. Pages</p>
+                  <p className="text-xs text-muted-foreground uppercase">{book.format === 'PDF' ? 'Pages' : 'Est. Pages'}</p>
                   <p className="text-sm font-medium">{book.pageCount.toLocaleString()}</p>
                 </div>
               )}

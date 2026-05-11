@@ -8,3 +8,9 @@ if (typeof Blob !== 'undefined' && typeof Blob.prototype.arrayBuffer === 'undefi
     });
   };
 }
+
+// Stub canvas APIs — jsdom doesn't implement them; parsers handle the failure gracefully
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = () => null;
+  HTMLCanvasElement.prototype.toDataURL = () => '';
+}

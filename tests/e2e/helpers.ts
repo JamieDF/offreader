@@ -7,6 +7,7 @@ export const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
 export const MOBI_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.mobi');
 export const BAD_FILE_PATH = path.resolve(__dirname, '../books/bad-file.epub');
+export const PDF_PATH = path.resolve(__dirname, '../books/minimal-document.pdf');
 
 export async function importBook(page: Page, filePath: string): Promise<void> {
   const fileChooserPromise = page.waitForEvent('filechooser');
