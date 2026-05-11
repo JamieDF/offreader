@@ -1,8 +1,4 @@
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
-
-GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
+import { pdfjsLib } from 'foliate-js/pdfjs.js'
 
 export interface PdfMetadata {
   title: string;
@@ -22,7 +18,8 @@ export interface PdfMetadata {
   coverImage?: string;
 }
 
-const extractCover = async (pdf: PDFDocumentProxy): Promise<string> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const extractCover = async (pdf: any): Promise<string> => {
   try {
     const page = await pdf.getPage(1)
     const viewport = page.getViewport({ scale: 1 })
@@ -54,7 +51,7 @@ export const extractPdfMetadata = async (file: File): Promise<PdfMetadata> => {
     throw new Error('Invalid PDF file')
   }
 
-  const pdf = await getDocument({ data: arrayBuffer }).promise
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 
   const fileName = file.name.replace(/\.[^/.]+$/, '')
   let title = fileName

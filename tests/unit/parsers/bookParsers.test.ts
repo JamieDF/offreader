@@ -7,25 +7,22 @@ import { extractMobiMetadata } from '@/parsers/mobiParser';
 import { extractPdfMetadata } from '@/parsers/pdfParser';
 import { extractBookMetadata } from '@/parsers/bookMetadataParser';
 
-vi.mock('pdfjs-dist/build/pdf.worker.mjs?url', () => ({ default: '' }));
-
-vi.mock('pdfjs-dist', () => ({
-  getDocument: vi.fn(() => ({
-    promise: Promise.resolve({
-      numPages: 3,
-      getMetadata: async () => ({ metadata: null, info: { Title: 'Test PDF', Author: 'Test Author' } }),
-      getOutline: async () => null,
-      getPage: async () => ({
-        getViewport: () => ({ width: 100, height: 100 }),
-        render: () => ({ promise: Promise.resolve() }),
+vi.mock('foliate-js/pdfjs.js', () => ({
+  pdfjsLib: {
+    getDocument: vi.fn(() => ({
+      promise: Promise.resolve({
+        numPages: 3,
+        getMetadata: async () => ({ metadata: null, info: { Title: 'Test PDF', Author: 'Test Author' } }),
+        getOutline: async () => null,
+        getPage: async () => ({
+          getViewport: () => ({ width: 100, height: 100 }),
+          render: () => ({ promise: Promise.resolve() }),
+        }),
+        destroy: async () => {},
       }),
-      destroy: async () => {},
-    }),
-  })),
-  GlobalWorkerOptions: { workerSrc: '' },
-  PDFDataRangeTransport: class {},
-  TextLayer: class {},
-  AnnotationLayer: class {},
+    })),
+    GlobalWorkerOptions: { workerSrc: '' },
+  },
 }));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -155,8 +152,8 @@ describe('pdfParser', () => {
     });
 
     it('falls back to filename when PDF has no title metadata', async () => {
-      const { getDocument } = await import('pdfjs-dist');
-      vi.mocked(getDocument).mockReturnValueOnce({
+      const { pdfjsLib } = await import('foliate-js/pdfjs.js');
+      vi.mocked(pdfjsLib.getDocument).mockReturnValueOnce({
         promise: Promise.resolve({
           numPages: 1,
           getMetadata: async () => ({ metadata: null, info: {} }),
@@ -167,7 +164,7 @@ describe('pdfParser', () => {
           }),
           destroy: async () => {},
         }),
-      } as unknown as ReturnType<typeof getDocument>);
+      } as any);
 
       const file = makeFile('minimal-document.pdf', 'application/pdf');
       const metadata = await extractPdfMetadata(file);
