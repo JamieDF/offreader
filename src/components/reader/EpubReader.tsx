@@ -278,8 +278,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
             if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
               const renderer = viewRef.current?.renderer;
               const maxScroll = renderer ? renderer.scrollWidth - renderer.clientWidth : 0;
-              // When zoomed in, only navigate if the viewport was already at the target edge
-              // when the gesture started — prevents pan-to-edge from accidentally flipping pages
+              // Only navigate if viewport was already at the target edge when gesture started
               const startedAtLeft = scrollLeft0 <= 1;
               const startedAtRight = scrollLeft0 >= maxScroll - 1;
               if (dx < 0 && startedAtRight) viewRef.current?.next();

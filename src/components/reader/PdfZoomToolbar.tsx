@@ -11,7 +11,7 @@ interface PdfZoomToolbarProps {
   onRotationChange?: (rotation: number) => void;
 }
 
-const ZOOM_STEP = 0.25;
+const ZOOM_STEP = 0.1;
 export const ZOOM_MIN = 0.25;
 export const ZOOM_MAX = 4;
 
