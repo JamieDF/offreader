@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
-import '@/lib/foliate-view.js';
+import 'foliate-js/view.js';
 import { Overlayer } from 'foliate-js/overlayer.js';
 import { fileStorage } from '@/services/fileStorage';
 import { storageService } from '@/services/storage';
