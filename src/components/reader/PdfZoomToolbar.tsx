@@ -12,8 +12,8 @@ interface PdfZoomToolbarProps {
 }
 
 const ZOOM_STEP = 0.25;
-const ZOOM_MIN = 0.25;
-const ZOOM_MAX = 4;
+export const ZOOM_MIN = 0.25;
+export const ZOOM_MAX = 4;
 
 const PdfZoomToolbar = ({ zoom, onZoomChange, isVisible, rotation = 0, onRotationChange }: PdfZoomToolbarProps) => {
   const numericBase = typeof zoom === 'number' ? zoom : 1;

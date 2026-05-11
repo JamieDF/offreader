@@ -243,6 +243,8 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
         let x0 = 0;
         let y0 = 0;
         let moved = false;
+        let pinched = false;
+        let scrollLeft0 = 0;
         const isTap = (t: number) => t - t0 < 200 && !moved;
 
         doc.addEventListener('touchstart', (ev: Event) => {
@@ -251,10 +253,14 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
           x0 = te.changedTouches[0].screenX;
           y0 = te.changedTouches[0].screenY;
           moved = false;
+          pinched = te.touches.length > 1;
+          const renderer = viewRef.current?.renderer;
+          scrollLeft0 = renderer?.scrollLeft ?? 0;
         }, { capture: true, passive: false });
 
         doc.addEventListener('touchmove', (ev: Event) => {
           const te = ev as TouchEvent;
+          if (te.touches.length > 1) { pinched = true; return; }
           const d = Math.hypot(te.changedTouches[0].screenX - x0, te.changedTouches[0].screenY - y0);
           if (d > 10) moved = true;
         }, { capture: true, passive: false });
@@ -265,16 +271,19 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
             overlayRef.current?.toggle();
             ev.preventDefault();
             ev.stopPropagation();
-          } else if (book.format === 'PDF' && moved) {
+          } else if (book.format === 'PDF' && moved && !pinched) {
             const touch = te.changedTouches[0];
             const dx = touch.screenX - x0;
             const dy = touch.screenY - y0;
             if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
               const renderer = viewRef.current?.renderer;
-              const atLeft = !renderer || renderer.scrollLeft <= 1;
-              const atRight = !renderer || renderer.scrollLeft >= renderer.scrollWidth - renderer.clientWidth - 1;
-              if (dx < 0 && atRight) viewRef.current?.next();
-              else if (dx > 0 && atLeft) viewRef.current?.prev();
+              const maxScroll = renderer ? renderer.scrollWidth - renderer.clientWidth : 0;
+              // When zoomed in, only navigate if the viewport was already at the target edge
+              // when the gesture started — prevents pan-to-edge from accidentally flipping pages
+              const startedAtLeft = scrollLeft0 <= 1;
+              const startedAtRight = scrollLeft0 >= maxScroll - 1;
+              if (dx < 0 && startedAtRight) viewRef.current?.next();
+              else if (dx > 0 && startedAtLeft) viewRef.current?.prev();
             }
           }
         }, { capture: true, passive: false });
