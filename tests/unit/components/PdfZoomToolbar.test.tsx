@@ -44,32 +44,32 @@ describe('PdfZoomToolbar', () => {
   });
 
   describe('zoom in / zoom out', () => {
-    it('increments numeric zoom by 0.25 on zoom in', () => {
+    it('increments numeric zoom by 0.1 on zoom in', () => {
       render(<PdfZoomToolbar zoom={1} onZoomChange={onZoomChange} isVisible={true} />);
       fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-      expect(onZoomChange).toHaveBeenCalledWith(1.25);
+      expect(onZoomChange).toHaveBeenCalledWith(1.1);
     });
 
-    it('decrements numeric zoom by 0.25 on zoom out', () => {
+    it('decrements numeric zoom by 0.1 on zoom out', () => {
       render(<PdfZoomToolbar zoom={1} onZoomChange={onZoomChange} isVisible={true} />);
       fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
-      expect(onZoomChange).toHaveBeenCalledWith(0.75);
+      expect(onZoomChange).toHaveBeenCalledWith(0.9);
     });
 
     it('uses 1 as base when zoom is a named mode', () => {
       render(<PdfZoomToolbar zoom="fit-page" onZoomChange={onZoomChange} isVisible={true} />);
       fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
-      expect(onZoomChange).toHaveBeenCalledWith(1.25);
+      expect(onZoomChange).toHaveBeenCalledWith(1.1);
     });
 
     it('clamps zoom in to ZOOM_MAX (4) when one step away', () => {
-      render(<PdfZoomToolbar zoom={3.75} onZoomChange={onZoomChange} isVisible={true} />);
+      render(<PdfZoomToolbar zoom={3.9} onZoomChange={onZoomChange} isVisible={true} />);
       fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
       expect(onZoomChange).toHaveBeenCalledWith(4);
     });
 
     it('clamps zoom out to ZOOM_MIN (0.25) when one step away', () => {
-      render(<PdfZoomToolbar zoom={0.5} onZoomChange={onZoomChange} isVisible={true} />);
+      render(<PdfZoomToolbar zoom={0.35} onZoomChange={onZoomChange} isVisible={true} />);
       fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
       expect(onZoomChange).toHaveBeenCalledWith(0.25);
     });
