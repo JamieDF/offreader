@@ -10,13 +10,13 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/version-0.1.5-blue.svg" alt="Version 0.1.5" />
+  <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version 0.2.0" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
 ---
 
-OffReader is a personal ebook reader built around one idea: your books should live on your device, not a server. Import an EPUB or MOBI file, read it, and everything — progress, bookmarks, reading history — stays local.
+OffReader is a personal ebook reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file, read it, and everything — progress, bookmarks, reading history — stays local.
 
 It runs in the browser and can be installed as an Android app via Capacitor.
 
@@ -28,7 +28,7 @@ There are other great projects that do something similar, but I wanted to build 
 
 ## Features
 
-- Import EPUB and MOBI files from your device (plan to cover more types in the future, PDFs too)
+- Import EPUB, MOBI, and PDF files from your device
 - Themes and typography controls (font, size, line height, spacing)
 - Per-chapter page tracking and overall progress
 - Bookmarks with jump-to navigation
@@ -55,7 +55,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Import Book** and select an EPUB or MOBI file to get started.
+Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Import Book** and select an EPUB, MOBI, or PDF file to get started.
 
 ---
 
@@ -90,7 +90,8 @@ E2E tests run against a real browser — Chromium is required (`npx playwright i
 - [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) — UI framework
 - [Vite](https://vitejs.dev/) — build tool
 - [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) — styling and components
-- [foliate-js](https://github.com/johnfactotum/foliate-js) — EPUB/MOBI rendering engine
+- [foliate-js](https://github.com/johnfactotum/foliate-js) — EPUB/MOBI/PDF rendering engine
+- [PDF.js](https://mozilla.github.io/pdf.js/) — PDF rendering (via pdfjs-dist)
 - [Capacitor](https://capacitorjs.com/) — Android bridge and native file storage
 - [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) — testing
 
