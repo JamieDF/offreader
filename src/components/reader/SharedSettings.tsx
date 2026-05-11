@@ -37,9 +37,11 @@ interface SharedSettingsProps {
     useReaderFontForSystem: boolean;
   };
   updateSettings: (updates: Partial<SharedSettingsProps['settings']>) => void;
+  isPdf?: boolean;
 }
 
-export function SharedSettings({ settings, updateSettings }: SharedSettingsProps) {
+export function SharedSettings({ settings, updateSettings, isPdf = false }: SharedSettingsProps) {
+  const typographyDisabled = isPdf ? 'opacity-50 pointer-events-none select-none' : '';
   const handleFontSizeChange = (delta: number) => {
     updateSettings({ fontSize: Math.max(50, Math.min(200, settings.fontSize + delta)) });
   };
@@ -54,6 +56,48 @@ export function SharedSettings({ settings, updateSettings }: SharedSettingsProps
         </div>
 
         <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+          <span className="text-sm">Font Family</span>
+          <Select
+            value={settings.fontFamily}
+            onValueChange={(v) => updateSettings({ fontFamily: v as FontFamily })}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">Serif</div>
+              <SelectItem value="Georgia">Georgia</SelectItem>
+              <SelectItem value="Playfair Display">Playfair Display</SelectItem>
+              <SelectItem value="Uncial Antiqua">Uncial Antiqua</SelectItem>
+
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">Sans-serif</div>
+              <SelectItem value="Lato">Lato</SelectItem>
+              <SelectItem value="Montserrat">Montserrat</SelectItem>
+              <SelectItem value="Source Sans Pro">Source Sans Pro</SelectItem>
+
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">Monospace</div>
+              <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
+              <SelectItem value="Fira Code">Syne Mono</SelectItem>
+              <SelectItem value="Special Elite">Special Elite</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+          <span className="text-sm">Use Reader Font for App UI</span>
+          <Switch
+            checked={settings.useReaderFontForSystem}
+            onCheckedChange={(checked) => updateSettings({ useReaderFontForSystem: checked })}
+          />
+        </div>
+
+        {isPdf && (
+          <p className="text-xs text-muted-foreground px-1">
+            The following settings don't apply to PDF documents.
+          </p>
+        )}
+
+        <div className={`flex items-center justify-between bg-muted/50 rounded-lg p-3 ${typographyDisabled}`}>
           <span className="text-sm">Font Size</span>
           <div className="flex items-center gap-3">
             <Button
@@ -78,46 +122,7 @@ export function SharedSettings({ settings, updateSettings }: SharedSettingsProps
           </div>
         </div>
 
-        <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-          <span className="text-sm">Font Family</span>
-          <Select 
-            value={settings.fontFamily} 
-            onValueChange={(v) => updateSettings({ fontFamily: v as FontFamily })}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {/* Serif Fonts */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">Serif</div>
-              <SelectItem value="Georgia">Georgia</SelectItem>
-              <SelectItem value="Playfair Display">Playfair Display</SelectItem>
-              <SelectItem value="Uncial Antiqua">Uncial Antiqua</SelectItem>
-              
-              {/* Sans-serif Fonts */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">Sans-serif</div>
-              <SelectItem value="Lato">Lato</SelectItem>
-              <SelectItem value="Montserrat">Montserrat</SelectItem>
-              <SelectItem value="Source Sans Pro">Source Sans Pro</SelectItem>
-              
-              {/* Monospace Fonts */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">Monospace</div>
-              <SelectItem value="JetBrains Mono">JetBrains Mono</SelectItem>
-              <SelectItem value="Fira Code">Syne Mono</SelectItem>
-              <SelectItem value="Special Elite">Special Elite</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-          <span className="text-sm">Use Reader Font for App UI</span>
-          <Switch
-            checked={settings.useReaderFontForSystem}
-            onCheckedChange={(checked) => updateSettings({ useReaderFontForSystem: checked })}
-          />
-        </div>
-
-        <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+        <div className={`space-y-2 bg-muted/50 rounded-lg p-3 ${typographyDisabled}`}>
           <div className="flex items-center justify-between">
             <span className="text-sm">Line Height</span>
             <span className="text-sm font-medium">{settings.lineHeight.toFixed(1)}</span>
@@ -132,7 +137,7 @@ export function SharedSettings({ settings, updateSettings }: SharedSettingsProps
           />
         </div>
 
-        <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+        <div className={`space-y-2 bg-muted/50 rounded-lg p-3 ${typographyDisabled}`}>
           <div className="flex items-center justify-between">
             <span className="text-sm">Margin Width</span>
             <span className="text-sm font-medium">{settings.marginWidth}%</span>
@@ -147,7 +152,7 @@ export function SharedSettings({ settings, updateSettings }: SharedSettingsProps
           />
         </div>
 
-        <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+        <div className={`space-y-2 bg-muted/50 rounded-lg p-3 ${typographyDisabled}`}>
           <div className="flex items-center justify-between">
             <span className="text-sm">Paragraph Spacing</span>
             <span className="text-sm font-medium">{settings.paragraphSpacing.toFixed(1)}</span>

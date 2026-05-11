@@ -4,7 +4,29 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { extractChaptersWithFoliate } from '@/parsers/epubParser';
 import { extractMobiMetadata } from '@/parsers/mobiParser';
+import { extractPdfMetadata } from '@/parsers/pdfParser';
 import { extractBookMetadata } from '@/parsers/bookMetadataParser';
+
+vi.mock('pdfjs-dist/build/pdf.worker.mjs?url', () => ({ default: '' }));
+
+vi.mock('pdfjs-dist', () => ({
+  getDocument: vi.fn(() => ({
+    promise: Promise.resolve({
+      numPages: 3,
+      getMetadata: async () => ({ metadata: null, info: { Title: 'Test PDF', Author: 'Test Author' } }),
+      getOutline: async () => null,
+      getPage: async () => ({
+        getViewport: () => ({ width: 100, height: 100 }),
+        render: () => ({ promise: Promise.resolve() }),
+      }),
+      destroy: async () => {},
+    }),
+  })),
+  GlobalWorkerOptions: { workerSrc: '' },
+  PDFDataRangeTransport: class {},
+  TextLayer: class {},
+  AnnotationLayer: class {},
+}));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BOOKS_DIR = path.resolve(__dirname, '../../books');
@@ -78,6 +100,78 @@ describe('bookMetadataParser', () => {
       const content = new Uint8Array(100).fill(0x41);
       const file = new File([content], 'fake.mobi', { type: 'application/x-mobipocket-ebook' });
       await expect(extractBookMetadata(file)).rejects.toThrow('Invalid MOBI file');
+    });
+
+    it('dispatches to the PDF parser for .pdf files', async () => {
+      const file = makeFile('minimal-document.pdf', 'application/pdf');
+      const metadata = await extractBookMetadata(file);
+      expect(metadata.format).toBe('PDF');
+    });
+
+    it('propagates validation errors from PDF parser', async () => {
+      const content = new Uint8Array(5).fill(0x00);
+      const file = new File([content], 'fake.pdf', { type: 'application/pdf' });
+      await expect(extractBookMetadata(file)).rejects.toThrow('Invalid PDF file');
+    });
+
+    it('throws on unsupported file format', async () => {
+      const file = new File(['content'], 'book.azw', { type: 'application/octet-stream' });
+      await expect(extractBookMetadata(file)).rejects.toThrow('Unsupported file format');
+    });
+  });
+});
+
+describe('pdfParser', () => {
+  describe('extractPdfMetadata', () => {
+    it('parses a valid PDF and returns metadata', async () => {
+      const file = makeFile('minimal-document.pdf', 'application/pdf');
+      const metadata = await extractPdfMetadata(file);
+
+      expect(metadata.format).toBe('PDF');
+      expect(metadata.title).toBeTruthy();
+      expect(metadata.author).toBeTruthy();
+      expect(metadata.totalChapters).toBe(0);   // no outline in mock → 0 sections
+      expect(metadata.pageCount).toBe(3);        // mock numPages = 3
+      expect(metadata.readingTime).toBeTruthy(); // e.g. "6m"
+    });
+
+    it('returns mocked title and author from PDF info', async () => {
+      const file = makeFile('minimal-document.pdf', 'application/pdf');
+      const metadata = await extractPdfMetadata(file);
+
+      expect(metadata.title).toBe('Test PDF');
+      expect(metadata.author).toBe('Test Author');
+    });
+
+    it('throws on a file with invalid PDF magic bytes', async () => {
+      const content = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04]);
+      const file = new File([content], 'not-a-pdf.pdf', { type: 'application/pdf' });
+      await expect(extractPdfMetadata(file)).rejects.toThrow('Invalid PDF file');
+    });
+
+    it('throws on a file too small to contain magic bytes', async () => {
+      const file = new File([new Uint8Array(3)], 'tiny.pdf', { type: 'application/pdf' });
+      await expect(extractPdfMetadata(file)).rejects.toThrow();
+    });
+
+    it('falls back to filename when PDF has no title metadata', async () => {
+      const { getDocument } = await import('pdfjs-dist');
+      vi.mocked(getDocument).mockReturnValueOnce({
+        promise: Promise.resolve({
+          numPages: 1,
+          getMetadata: async () => ({ metadata: null, info: {} }),
+          getOutline: async () => null,
+          getPage: async () => ({
+            getViewport: () => ({ width: 100, height: 100 }),
+            render: () => ({ promise: Promise.resolve() }),
+          }),
+          destroy: async () => {},
+        }),
+      } as unknown as ReturnType<typeof getDocument>);
+
+      const file = makeFile('minimal-document.pdf', 'application/pdf');
+      const metadata = await extractPdfMetadata(file);
+      expect(metadata.title).toBe('minimal-document');
     });
   });
 });

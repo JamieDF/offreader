@@ -41,7 +41,7 @@ class LibraryService {
               return null;
             }
 
-            const fileUrl = await fileStorage.retrieveFile(book.id, book.title);
+            const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
             return { ...book, filePath: fileUrl };
           } catch (error) {
             console.error(`Failed to retrieve file for book ${book.id}:`, error);
@@ -51,6 +51,9 @@ class LibraryService {
       );
 
       const loadedBooks = validBooks.filter((book): book is Book => book !== null);
+
+      // Migrate any books stored under the old .epub extension to their correct format extension
+      await fileStorage.migrateExtensions(loadedBooks.map(b => ({ id: b.id, format: b.format })));
 
       // Clean up orphaned files (files with no metadata)
       const validBookIds = loadedBooks.map(b => b.id);
