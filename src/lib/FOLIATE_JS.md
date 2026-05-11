@@ -65,6 +65,7 @@ merging upstream changes.
 | # | Change | Reason |
 |---|--------|--------|
 | 1 | Added `async reload()` method | `goToSpread()` has an early-return guard (`if (index === this.#index) return`) that prevents reloading the current page. After a rotation change the section cache is cleared and the page must be re-fetched, but `goTo()` silently does nothing. `reload()` resets `#index` to `-1` to bypass the guard, then calls `goToSpread()` normally. This is a candidate for an upstream PR. |
+| 2 | Changed `:host` CSS from `justify-content: center` / `align-items: center` to `justify-content: safe center` / `align-items: safe center` | `center` with `overflow: auto` makes the left/top overflow inaccessible (scrollLeft can't go negative), so ~20% of a zoomed-in page is permanently unreachable. `safe center` falls back to `flex-start` when content overflows, making the full page pannable while preserving centering at fit-page/fit-width zoom. |
 
 ---
 
