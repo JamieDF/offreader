@@ -17,7 +17,7 @@ import { useReaderSettings } from '@/hooks/useReaderSettings';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useReadingSession } from '@/hooks/useReadingSession';
 
-interface EpubReaderProps {
+interface BookReaderProps {
   bookId: string;
   book: Book;
   updateLibraryProgress: (bookId: string, progress: number) => void;
@@ -61,7 +61,7 @@ function showSingleTapHint() {
   }, 2000);
 }
 
-const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubReaderProps) => {
+const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookReaderProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -457,4 +457,4 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
   );
 };
 
-export default EpubReader;
+export default BookReader;

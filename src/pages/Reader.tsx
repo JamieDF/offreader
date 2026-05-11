@@ -1,5 +1,5 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
-import EpubReader from "@/components/reader/EpubReader";
+import BookReader from "@/components/reader/BookReader";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useEffect, useState } from "react";
 
@@ -58,7 +58,7 @@ const Reader = () => {
     return null; // Will navigate away in useEffect
   }
 
-  return <EpubReader bookId={bookId} book={book} updateLibraryProgress={updateProgress} />;
+  return <BookReader bookId={bookId} book={book} updateLibraryProgress={updateProgress} />;
 };
 
 export default Reader;
