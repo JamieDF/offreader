@@ -11,6 +11,7 @@ export interface Book {
   author: string;
   coverImage: string;
   filePath: string;
+  format?: 'EPUB' | 'MOBI' | 'PDF';
   progress: number; // 0-100
   description?: string;
   totalChapters?: number;

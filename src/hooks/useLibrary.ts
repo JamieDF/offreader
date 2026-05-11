@@ -7,6 +7,7 @@ import { storageService } from "@/services/storage";
 import { fileStorage } from "@/services/fileStorage";
 import { calculateReadingMetrics } from "@/utils/readingMetrics";
 import { extractBookMetadata } from "@/parsers/bookMetadataParser";
+import { PdfMetadata } from "@/parsers/pdfParser";
 import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
@@ -92,7 +93,7 @@ export function useLibrary() {
   const importBooks = useCallback(async () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".epub,.mobi";
+    input.accept = ".epub,.mobi,.pdf";
     input.multiple = true;
 
     input.onchange = async (event) => {
@@ -106,19 +107,21 @@ export function useLibrary() {
           // Generate unique ID for the book
           const bookId = uuidv4();
 
-          // Extract metadata from book (EPUB or MOBI)
-          const { title, author, publisher, pubDate, language, identifier, description, subjects, rights, chapters, totalChapters, format, coverImage } = await extractBookMetadata(file);
+          // Extract metadata from book
+          const extractedMeta = await extractBookMetadata(file);
+          const { title, author, publisher, pubDate, language, identifier, description, subjects, rights, chapters, totalChapters, format, coverImage } = extractedMeta as { title: string; author: string; publisher?: string; pubDate?: string; language?: string; identifier?: string; description?: string; subjects?: string[]; rights?: string; chapters: { label: string; href: string; index: number }[]; totalChapters: number; format: string; coverImage?: string };
 
-          // Calculate reading metrics
-          const { readingTime, pageCount } = calculateReadingMetrics(file.size);
-
-          // FIX #2: Save metadata FIRST as "commit marker"
-          // This ensures if file save fails, we don't orphan metadata
+          // For PDFs use exact page count and page-based reading estimate; fall back to file-size estimate for other formats
+          const pdfMeta = format === 'PDF' ? (extractedMeta as PdfMetadata) : null;
+          const { readingTime: calcReadingTime, pageCount: calcPageCount } = calculateReadingMetrics(file.size);
+          const readingTime = pdfMeta?.readingTime ?? calcReadingTime;
+          const pageCount = pdfMeta?.pageCount ?? calcPageCount;
 
           const newBook: Book = {
             id: bookId,
             title: title || fileName,
             author: author,
+            format: (format as Book['format']) ?? 'EPUB',
             publisher: publisher,
             pubDate: pubDate,
             language: language,
@@ -127,7 +130,7 @@ export function useLibrary() {
             subjects: subjects,
             rights: rights,
             coverImage: coverImage || '',
-            filePath: '', // Temporary, will be updated after file is stored
+            filePath: '',
             progress: 0,
             chapters: chapters,
             totalChapters: totalChapters,

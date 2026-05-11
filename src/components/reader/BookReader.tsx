@@ -2,13 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
-import 'foliate-js/view.js';
+import '@/lib/foliate-view.js';
 import { Overlayer } from 'foliate-js/overlayer.js';
 import { fileStorage } from '@/services/fileStorage';
 import { storageService } from '@/services/storage';
 import { titleCase } from '@/utils/titleCase';
 import { buildReaderStylesheet } from '@/utils/readerStyles';
 import ReaderOverlay, { ReaderOverlayHandle, LocationInfo } from './ReaderOverlay';
+import { PdfZoom } from './PdfZoomToolbar';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Chapter, Book } from '@/types/book';
 import { useBookTracker, Bookmark } from '@/hooks/useBookTracker';
@@ -16,7 +17,7 @@ import { useReaderSettings } from '@/hooks/useReaderSettings';
 import { useReadingStats } from '@/hooks/useReadingStats';
 import { useReadingSession } from '@/hooks/useReadingSession';
 
-interface EpubReaderProps {
+interface BookReaderProps {
   bookId: string;
   book: Book;
   updateLibraryProgress: (bookId: string, progress: number) => void;
@@ -60,7 +61,7 @@ function showSingleTapHint() {
   }, 2000);
 }
 
-const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubReaderProps) => {
+const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookReaderProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,8 +73,12 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
   const rendererPagesRef = useRef({ currentPage: 1, totalPages: 1 });
   const isInitializedRef = useRef(false);
 
+  const currentSectionIndexRef = useRef(0);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfZoom, setPdfZoom] = useState<PdfZoom>('fit-page');
+  const [pdfRotation, setPdfRotation] = useState(0);
   const [bookTitle, setBookTitle] = useState('');
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [lastKnownLocation, setLastKnownLocation] = useState('');
@@ -149,6 +154,21 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
     try { await viewRef.current?.next(); } catch (err) { console.error('Failed to go to next page:', err); }
   };
 
+  const handleRotationChange = useCallback((rotation: number) => {
+    setPdfRotation(rotation);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (viewRef.current?.book as any)?.setRotation(rotation);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (viewRef.current?.renderer as any)?.reload?.();
+  }, []);
+
+  const handleZoomChange = useCallback((zoom: PdfZoom) => {
+    setPdfZoom(zoom);
+    if (viewRef.current?.renderer) {
+      viewRef.current.renderer.setAttribute('zoom', String(zoom));
+    }
+  }, []);
+
   const handleBack = useCallback(() => {
     commitSession();
     navigate('/');
@@ -219,22 +239,52 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       // Re-runs per section load — tap listeners must be re-attached each time
       view.addEventListener('load', (e: Event) => {
         const { doc } = (e as CustomEvent<{ doc: Document }>).detail;
-        let t0 = 0, x0 = 0, y0 = 0, moved = false;
+        let t0 = 0;
+        let x0 = 0;
+        let y0 = 0;
+        let moved = false;
+        let pinched = false;
+        let scrollLeft0 = 0;
         const isTap = (t: number) => t - t0 < 200 && !moved;
 
         doc.addEventListener('touchstart', (ev: Event) => {
           const te = ev as TouchEvent;
-          t0 = te.timeStamp; x0 = te.changedTouches[0].screenX; y0 = te.changedTouches[0].screenY; moved = false;
+          t0 = te.timeStamp;
+          x0 = te.changedTouches[0].screenX;
+          y0 = te.changedTouches[0].screenY;
+          moved = false;
+          pinched = te.touches.length > 1;
+          const renderer = viewRef.current?.renderer;
+          scrollLeft0 = renderer?.scrollLeft ?? 0;
         }, { capture: true, passive: false });
 
         doc.addEventListener('touchmove', (ev: Event) => {
           const te = ev as TouchEvent;
+          if (te.touches.length > 1) { pinched = true; return; }
           const d = Math.hypot(te.changedTouches[0].screenX - x0, te.changedTouches[0].screenY - y0);
           if (d > 10) moved = true;
         }, { capture: true, passive: false });
 
         doc.addEventListener('touchend', (ev: Event) => {
-          if (isTap((ev as TouchEvent).timeStamp)) { overlayRef.current?.toggle(); ev.preventDefault(); ev.stopPropagation(); }
+          const te = ev as TouchEvent;
+          if (isTap(te.timeStamp)) {
+            overlayRef.current?.toggle();
+            ev.preventDefault();
+            ev.stopPropagation();
+          } else if (book.format === 'PDF' && moved && !pinched) {
+            const touch = te.changedTouches[0];
+            const dx = touch.screenX - x0;
+            const dy = touch.screenY - y0;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+              const renderer = viewRef.current?.renderer;
+              const maxScroll = renderer ? renderer.scrollWidth - renderer.clientWidth : 0;
+              // Only navigate if viewport was already at the target edge when gesture started
+              const startedAtLeft = scrollLeft0 <= 1;
+              const startedAtRight = scrollLeft0 >= maxScroll - 1;
+              if (dx < 0 && startedAtRight) viewRef.current?.next();
+              else if (dx > 0 && startedAtLeft) viewRef.current?.prev();
+            }
+          }
         }, { capture: true, passive: false });
 
         doc.addEventListener('mousedown', (ev: MouseEvent) => {
@@ -255,13 +305,14 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
         localStorage.setItem('epub-single-tap-hint-shown', 'true');
       }
 
-      const fileUrl = await fileStorage.retrieveFile(book.id, book.title);
+      const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
       await view.open(fileUrl);
 
       if (view.renderer) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         view.renderer.addEventListener('relocate', (e: any) => {
-          const { fraction, size } = e.detail;
+          const { fraction, size, index } = e.detail;
+          if (typeof index === 'number') currentSectionIndexRef.current = index;
           if (typeof size === 'number' && size > 0) {
             rendererPagesRef.current = {
               currentPage: Math.round(fraction / size) + 1,
@@ -269,7 +320,11 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
             };
           }
         });
-        view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
+        if (book.format === 'PDF') {
+          view.renderer.setAttribute('zoom', 'fit-page');
+        } else {
+          view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
+        }
       }
 
       // Restore saved location
@@ -292,7 +347,7 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
       if (bookData?.metadata?.title) setBookTitle(bookData.metadata.title);
 
       const toc = bookData?.toc;
-      setChapters(mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : (view.book.toc ?? [])));
+      setChapters(mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : []));
 
       setIsLoading(false);
       isInitializedRef.current = true;
@@ -336,12 +391,13 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Re-apply typography when settings change after initialization
+  // Re-apply typography when settings change after initialization (not for PDF)
   useEffect(() => {
+    if (book.format === 'PDF') return;
     const renderer = viewRef.current?.renderer;
     if (!renderer || typeof renderer.setStyles !== 'function') return;
     renderer.setStyles(buildReaderStylesheet(settings));
-  }, [settings]);
+  }, [settings, book.format]);
 
   return (
     <div className="flex flex-col h-screen bg-background relative">
@@ -361,6 +417,11 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
         onBookmarkDelete={handleBookmarkDelete}
         onAddBookmark={handleAddBookmark}
         onChapterSelect={handleChapterSelect}
+        pdfZoom={book.format === 'PDF' ? pdfZoom : undefined}
+        onPdfZoomChange={handleZoomChange}
+        pdfRotation={book.format === 'PDF' ? pdfRotation : undefined}
+        onPdfRotationChange={handleRotationChange}
+        isPdf={book.format === 'PDF'}
       />
 
       <div className="flex-1 relative overflow-hidden">
@@ -396,4 +457,4 @@ const EpubReader = ({ bookId: propBookId, book, updateLibraryProgress }: EpubRea
   );
 };
 
-export default EpubReader;
+export default BookReader;
