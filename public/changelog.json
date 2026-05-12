@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.3.0",
+    "date": "2026-05-12",
+    "items": [
+      "Pinch-to-zoom and pan for PDF pages",
+      "Swipe to navigate PDF pages, with edge-detection when zoomed in",
+      "Smooth zoom with flicker-free canvas swap on settle",
+      "PDF rendering performance improvements on high-DPI screens"
+    ]
+  },
+  {
     "version": "0.2.0",
     "date": "2026-05-11",
     "items": [
