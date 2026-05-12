@@ -36,8 +36,8 @@ export function ReadingStatsCard({
           <Progress value={stats.progress} className="h-2" />
           {!isNewBook && (
             <p className="text-xs text-muted-foreground">
-              {stats.currentChapter != null && stats.totalChapters
-                ? `Chapter ${stats.currentChapter + 1} of ${stats.totalChapters}`
+              {stats.currentChapterLabel
+                ? stats.currentChapterLabel
                 : stats.currentChapter != null
                 ? `Chapter ${stats.currentChapter + 1}`
                 : null}
