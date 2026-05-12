@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.3.1",
+    "date": "2026-05-12",
+    "items": [
+      "Chapter labels now show correct titles throughout (footer, book details, bookmarks, resume label)",
+      "Table of contents now includes all nested chapters",
+      "Chapter count in book details uses real TOC data instead of estimates",
+      "Reading time estimates now based on actual text content, not total file size",
+      "Fixed crash when navigating back from reader"
+    ]
+  },
+  {
     "version": "0.3.0",
     "date": "2026-05-12",
     "items": [
