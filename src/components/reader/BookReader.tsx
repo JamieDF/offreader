@@ -244,7 +244,8 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         let y0 = 0;
         let moved = false;
         let pinched = false;
-        let scrollLeft0 = 0;
+        let startedAtLeft = true;
+        let startedAtRight = true;
         const isTap = (t: number) => t - t0 < 200 && !moved;
 
         doc.addEventListener('touchstart', (ev: Event) => {
@@ -255,7 +256,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
           moved = false;
           pinched = te.touches.length > 1;
           const renderer = viewRef.current?.renderer;
-          scrollLeft0 = renderer?.scrollLeft ?? 0;
+          const edge = renderer?.scrollEdge ?? { atLeft: true, atRight: true };
+          startedAtLeft = edge.atLeft;
+          startedAtRight = edge.atRight;
         }, { capture: true, passive: false });
 
         doc.addEventListener('touchmove', (ev: Event) => {
@@ -276,11 +279,6 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
             const dx = touch.screenX - x0;
             const dy = touch.screenY - y0;
             if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-              const renderer = viewRef.current?.renderer;
-              const maxScroll = renderer ? renderer.scrollWidth - renderer.clientWidth : 0;
-              // Only navigate if viewport was already at the target edge when gesture started
-              const startedAtLeft = scrollLeft0 <= 1;
-              const startedAtRight = scrollLeft0 >= maxScroll - 1;
               if (dx < 0 && startedAtRight) viewRef.current?.next();
               else if (dx > 0 && startedAtLeft) viewRef.current?.prev();
             }
@@ -322,6 +320,8 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         });
         if (book.format === 'PDF') {
           view.renderer.setAttribute('zoom', 'fit-page');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          view.renderer.addEventListener('zoom', (e: any) => setPdfZoom(e.detail.scale));
         } else {
           view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
         }
