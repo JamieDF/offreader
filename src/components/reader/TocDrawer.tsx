@@ -58,9 +58,10 @@ const TocDrawer = ({
                   <Button
                     key={chapter.index}
                     variant="ghost"
-                    className={`w-full justify-start h-auto py-3 px-4 rounded-none text-left ${
-                      isCurrent 
-                        ? "bg-primary/10 border-l-2 border-primary" 
+                    style={{ paddingLeft: `${16 + (chapter.depth ?? 0) * 16}px` }}
+                    className={`w-full justify-start h-auto py-3 rounded-none text-left ${
+                      isCurrent
+                        ? "bg-primary/10 border-l-2 border-primary"
                         : "hover:bg-muted/50"
                     }`}
                     onClick={() => handleSelect(chapter)}

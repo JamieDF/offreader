@@ -211,17 +211,6 @@ export const extractChaptersWithFoliate = async (file: File): Promise<EpubMetada
   // Extract rights/copyright
   const rights = opfDoc.querySelector('rights')?.textContent || '';
 
-  // Get spine items for rough chapter count
-  const spineItems = opfDoc.querySelectorAll('spine itemref');
-  const totalChapters = Math.max(1, Math.floor(spineItems.length * 0.6)); // Estimate 60% are actual chapters
-
-  // Create estimated chapters
-  const chapters = Array.from({ length: totalChapters }, (_, i) => ({
-    label: `Chapter ${i + 1}`,
-    href: `chapter-${i + 1}`,
-    index: i
-  }));
-
   // If no description, try to create a better fallback
   if (!description || description.trim().length < 10) {
     const fallbackDesc = `An EPUB book by ${author}${subjects.length > 0 ? `. Topics include: ${subjects.slice(0, 3).join(', ')}` : ''}.`;
@@ -241,8 +230,8 @@ export const extractChaptersWithFoliate = async (file: File): Promise<EpubMetada
     description,
     subjects,
     rights,
-    chapters,
-    totalChapters,
+    chapters: [],
+    totalChapters: 0,
     format: 'EPUB',
     coverImage
   };

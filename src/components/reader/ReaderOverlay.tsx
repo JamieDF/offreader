@@ -18,6 +18,7 @@ export interface LocationInfo {
   fraction: number;
   currentPage: number;
   totalPagesInChapter: number;
+  currentChapterLabel?: string;
 }
 
 interface ReaderOverlayProps {
@@ -115,8 +116,7 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
 
       <ReaderFooter
         progress={locationInfo.current}
-        currentChapter={locationInfo.currentChapter}
-        totalChapters={locationInfo.totalChapters}
+        currentChapterLabel={locationInfo.currentChapterLabel}
         currentPage={locationInfo.currentPage}
         totalPagesInChapter={locationInfo.totalPagesInChapter}
         isVisible={showOverlay}
