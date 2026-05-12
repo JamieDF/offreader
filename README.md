@@ -5,18 +5,18 @@
 <h1 align="center">OffReader</h1>
 
 <p align="center">
-  An offline ebook reader for web and Android. No account. Just your books.
+  An offline ebook library and reader for web and Android. No account. Just your books.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version 0.2.0" />
+  <img src="https://img.shields.io/badge/version-0.3.0-blue.svg" alt="Version 0.2.0" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
 ---
 
-OffReader is a personal ebook reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file, read it, and everything — progress, bookmarks, reading history — stays local.
+OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file, read it, and everything — progress, bookmarks, reading history — stays local.
 
 It runs in the browser and can be installed as an Android app via Capacitor.
 
@@ -90,7 +90,7 @@ E2E tests run against a real browser — Chromium is required (`npx playwright i
 - [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) — UI framework
 - [Vite](https://vitejs.dev/) — build tool
 - [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) — styling and components
-- [foliate-js](https://github.com/johnfactotum/foliate-js) — EPUB/MOBI/PDF rendering engine
+- [foliate-js](https://github.com/JamieDF/foliate-js) — EPUB/MOBI/PDF rendering engine (Vite-compatible fork)
 - [PDF.js](https://mozilla.github.io/pdf.js/) — PDF rendering (via pdfjs-dist)
 - [Capacitor](https://capacitorjs.com/) — Android bridge and native file storage
 - [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) — testing
@@ -117,7 +117,7 @@ See also the list of [contributors](../../contributors) who have participated in
 
 ## Acknowledgments
 
-- [foliate-js](https://github.com/johnfactotum/foliate-js) by johnfactotum — the rendering engine that makes this possible
+- [foliate-js](https://github.com/johnfactotum/foliate-js) by johnfactotum — the rendering engine that makes this possible, forked at [JamieDF/foliate-js](https://github.com/JamieDF/foliate-js) to add Vite compatibility and PDF zoom/pan improvements
 - [Project Gutenberg](https://www.gutenberg.org/) — public domain ebooks used in tests
 - [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2) — README template
 
