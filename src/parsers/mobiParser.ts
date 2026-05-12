@@ -302,11 +302,6 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
     if (extractedAuthor) author = extractedAuthor;
     if (extractedDescription) description = extractedDescription;
 
-    const estimatedChapters = Math.max(1, Math.floor(file.size / 75000));
-    const chapters = Array.from({ length: estimatedChapters }, (_, i) => ({
-      label: `Chapter ${i + 1}`, href: `chapter-${i + 1}`, index: i
-    }));
-
     const coverImage = await extractMobiCover(arrayBuffer);
 
     return {
@@ -319,8 +314,8 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
       description,
       subjects: [],
       rights: undefined,
-      chapters,
-      totalChapters: estimatedChapters,
+      chapters: [],
+      totalChapters: 0,
       format: 'MOBI',
       coverImage
     };
