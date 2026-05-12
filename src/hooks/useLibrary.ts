@@ -197,7 +197,7 @@ export function useLibrary() {
            } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid')) {
              userMessage = `❌ File may be corrupted. Try a different book.`;
            } else if (errorMessage.includes('unsupported') || errorMessage.includes('format')) {
-             userMessage = `❌ File format not supported. Only EPUB and MOBI files are supported.`;
+             userMessage = `❌ File format not supported. Only EPUB, MOBI, and PDF files are supported.`;
            } else if (errorMessage.includes('metadata')) {
              userMessage = `❌ Could not read book information. The file might be corrupted.`;
            }
