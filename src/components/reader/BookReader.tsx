@@ -383,8 +383,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
     let mounted = true;
 
     const cleanup = () => {
-      if (viewRef.current?.parentNode && mounted) {
-        viewRef.current.parentNode.removeChild(viewRef.current);
+      if (viewRef.current) {
+        viewRef.current.close?.();
+        viewRef.current.parentNode?.removeChild(viewRef.current);
       }
       viewRef.current = null;
       overlayerRef.current = null;
