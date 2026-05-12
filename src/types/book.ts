@@ -3,6 +3,7 @@ export interface Chapter {
   href: string;
   cfi?: string;
   index: number;
+  depth?: number;
 }
 
 export interface Book {

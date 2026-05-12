@@ -16,6 +16,7 @@ export interface BookStats {
   lastReadDate: Date | null;
   totalChapters?: number;
   currentChapter?: number;
+  currentChapterLabel?: string;
   currentPage?: number; // Page within current chapter (1-based)
   totalPagesInChapter?: number; // Total pages in current chapter
   estimatedTimeLeft?: number; // in minutes
@@ -34,6 +35,7 @@ interface StoredBookData {
     progress: number;
     lastReadDate: string | null;
     currentChapter?: number;
+    currentChapterLabel?: string;
     currentPage?: number;
     totalPagesInChapter?: number;
     isFinished: boolean;
@@ -96,6 +98,7 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
             lastReadDate: bookTrackingData.lastReadDate ? new Date(bookTrackingData.lastReadDate) : null,
             totalChapters: currentBook?.totalChapters || 0,
             currentChapter: bookTrackingData.currentChapter || 0,
+            currentChapterLabel: bookTrackingData.currentChapterLabel,
             currentPage: bookTrackingData.currentPage,
             totalPagesInChapter: bookTrackingData.totalPagesInChapter,
             estimatedTimeLeft: progress > 0 ? Math.round((100 - progress) * 2.5) : 0,
@@ -139,6 +142,7 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
           progress: stats.progress,
           lastReadDate: stats.lastReadDate?.toISOString() ?? null,
           currentChapter: stats.currentChapter,
+          currentChapterLabel: stats.currentChapterLabel,
           currentPage: stats.currentPage,
           totalPagesInChapter: stats.totalPagesInChapter,
           isFinished: stats.isFinished,
@@ -155,11 +159,12 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
     saveData();
   }, [bookId, stats]);
 
-  const updateProgress = useCallback((progress: number, chapter?: number, page?: number, totalPages?: number) => {
+  const updateProgress = useCallback((progress: number, chapter?: number, chapterLabel?: string, page?: number, totalPages?: number) => {
     setStats((prev) => ({
       ...prev,
       progress: Math.min(100, Math.max(0, progress)),
       currentChapter: chapter ?? prev.currentChapter,
+      currentChapterLabel: chapterLabel ?? prev.currentChapterLabel,
       currentPage: page ?? prev.currentPage,
       totalPagesInChapter: totalPages ?? prev.totalPagesInChapter,
       lastReadDate: new Date(),
@@ -218,7 +223,7 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
     if (stats.isFinished) {
       return "Read Again";
     }
-    return `Resume at Chapter ${(stats.currentChapter ?? 0) + 1}`;
+    return stats.currentChapterLabel ? `Resume at ${stats.currentChapterLabel}` : `Resume at Chapter ${(stats.currentChapter ?? 0) + 1}`;
   }, [stats.progress, stats.currentChapter, stats.isFinished]);
 
   const formatLastRead = useCallback(() => {

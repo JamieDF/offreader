@@ -102,7 +102,7 @@ export function BookMetadata({ book, stats, bookmarks = [], bookFilePath: _bookF
                 <Layers className="h-5 w-5 text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground uppercase">{book.format === 'PDF' ? 'Sections' : 'Chapters'}</p>
-              <p className="text-sm font-medium">{book.totalChapters || stats.totalChapters || 0}</p>
+              <p className="text-sm font-medium">{book.chapters?.length || book.totalChapters || '—'}</p>
             </div>
             <div className="space-y-1">
               <div className="flex justify-center">

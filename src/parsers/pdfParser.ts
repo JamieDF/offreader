@@ -34,11 +34,16 @@ const extractCover = async (pdf: any): Promise<string> => {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapOutlineItem = (item: any, index: number): { label: string; href: string; index: number } => ({
-  label: item.title || `Page ${index + 1}`,
-  href: JSON.stringify(item.dest),
-  index,
-})
+function flattenOutline(items: any[], counter = { n: 0 }): { label: string; href: string; index: number }[] {
+  const result: { label: string; href: string; index: number }[] = [];
+  for (const item of items) {
+    result.push({ label: item.title || `Section ${counter.n + 1}`, href: JSON.stringify(item.dest), index: counter.n++ });
+    if (Array.isArray(item.items) && item.items.length > 0) {
+      result.push(...flattenOutline(item.items, counter));
+    }
+  }
+  return result;
+}
 
 export const extractPdfMetadata = async (file: File): Promise<PdfMetadata> => {
   const arrayBuffer = await file.arrayBuffer()
@@ -73,7 +78,7 @@ export const extractPdfMetadata = async (file: File): Promise<PdfMetadata> => {
   }
 
   const outline = await pdf.getOutline().catch(() => null)
-  const chapters = outline?.map(mapOutlineItem) ?? []
+  const chapters = outline ? flattenOutline(outline) : []
 
   const coverImage = await extractCover(pdf)
 

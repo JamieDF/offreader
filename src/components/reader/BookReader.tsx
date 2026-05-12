@@ -6,6 +6,8 @@ import 'foliate-js/view.js';
 import { Overlayer } from 'foliate-js/overlayer.js';
 import { fileStorage } from '@/services/fileStorage';
 import { storageService } from '@/services/storage';
+import { libraryService } from '@/services/LibraryService';
+import { saveStoredBooks } from '@/services/bookPersistence';
 import { titleCase } from '@/utils/titleCase';
 import { buildReaderStylesheet } from '@/utils/readerStyles';
 import ReaderOverlay, { ReaderOverlayHandle, LocationInfo } from './ReaderOverlay';
@@ -24,13 +26,21 @@ interface BookReaderProps {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapTocItems(toc: any[]): Chapter[] {
-  return toc.map((item, index) => ({
-    label: item.label || item.title || `Chapter ${index + 1}`,
-    href: item.href || '',
-    cfi: item.cfi || '',
-    index,
-  }));
+function mapTocItems(toc: any[], depth = 0, counter = { n: 0 }): Chapter[] {
+  const result: Chapter[] = [];
+  for (const item of toc) {
+    result.push({
+      label: item.label || item.title || `Chapter ${counter.n + 1}`,
+      href: item.href || '',
+      cfi: item.cfi || '',
+      index: counter.n++,
+      depth,
+    });
+    if (Array.isArray(item.subitems) && item.subitems.length > 0) {
+      result.push(...mapTocItems(item.subitems, depth + 1, counter));
+    }
+  }
+  return result;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,6 +82,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   const overlayRef = useRef<ReaderOverlayHandle>(null);
   const rendererPagesRef = useRef({ currentPage: 1, totalPages: 1 });
   const isInitializedRef = useRef(false);
+  const chaptersRef = useRef<Chapter[]>([]);
 
   const currentSectionIndexRef = useRef(0);
 
@@ -108,12 +119,10 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
 
   const handleAddBookmark = useCallback(() => {
     if (!viewRef.current || !propBookId) return;
-    const currentChapter = chapters[locationInfo.currentChapter - 1];
-    const chapterTitle = currentChapter?.label || `Chapter ${locationInfo.currentChapter}`;
+    const chapterTitle = locationInfo.currentChapterLabel || `Chapter ${locationInfo.currentChapter}`;
     const currentLocation = lastKnownLocation
       || viewRef.current.location?.cfi
       || viewRef.current.location?.href
-      || currentChapter?.href
       || '';
 
     if (currentLocation) {
@@ -196,12 +205,12 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       view.addEventListener('relocate', (event: any) => {
         const detail = event.detail;
-        const totalChapters = view.book.toc?.length || 1;
+        const flatChapters = chaptersRef.current;
+        const totalChapters = flatChapters.length || 1;
         let currentChapterIndex = 0;
 
         if (detail.tocItem?.label) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const idx = view.book.toc?.findIndex((item: any) => item.label === detail.tocItem.label) ?? -1;
+          const idx = flatChapters.findIndex(c => c.label === detail.tocItem.label);
           if (idx !== -1) currentChapterIndex = idx;
         }
 
@@ -216,9 +225,10 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
           fraction: progressPercentage,
           currentPage,
           totalPagesInChapter,
+          currentChapterLabel: detail.tocItem?.label ?? undefined,
         });
 
-        updateProgress(progressPercentage, currentChapterIndex, currentPage, totalPagesInChapter);
+        updateProgress(progressPercentage, currentChapterIndex, detail.tocItem?.label ?? undefined, currentPage, totalPagesInChapter);
         updateLibraryProgressRef.current(propBookId, progressPercentage);
 
         const location = resolveLocation(detail);
@@ -306,6 +316,20 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
       await view.open(fileUrl);
 
+      const toc = view.book?.toc;
+      const realChapters = mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : []);
+      chaptersRef.current = realChapters;
+      setChapters(realChapters);
+
+      if (realChapters.length > 0) {
+        const allBooks = libraryService.getBooks();
+        const updatedBooks = allBooks.map(b =>
+          b.id === propBookId ? { ...b, chapters: realChapters, totalChapters: realChapters.length } : b
+        );
+        libraryService.updateBooksSilent(updatedBooks);
+        await saveStoredBooks(updatedBooks);
+      }
+
       if (view.renderer) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         view.renderer.addEventListener('relocate', (e: any) => {
@@ -343,11 +367,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
       await view.goTo(targetLocation);
 
-      const bookData = view.book;
-      if (bookData?.metadata?.title) setBookTitle(bookData.metadata.title);
-
-      const toc = bookData?.toc;
-      setChapters(mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : []));
+      if (view.book?.metadata?.title) setBookTitle(view.book.metadata.title);
 
       setIsLoading(false);
       isInitializedRef.current = true;
@@ -363,8 +383,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
     let mounted = true;
 
     const cleanup = () => {
-      if (viewRef.current?.parentNode && mounted) {
-        viewRef.current.parentNode.removeChild(viewRef.current);
+      if (viewRef.current) {
+        viewRef.current.close?.();
+        viewRef.current.parentNode?.removeChild(viewRef.current);
       }
       viewRef.current = null;
       overlayerRef.current = null;
