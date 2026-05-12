@@ -2,6 +2,7 @@
  * MOBI binary format parser.
  * Extracts metadata and cover images from MOBI/PalmDOC files.
  */
+import { calculateReadingMetrics } from '@/utils/readingMetrics';
 
 export interface MobiMetadata {
   title: string;
@@ -15,6 +16,8 @@ export interface MobiMetadata {
   rights?: string;
   chapters: { label: string; href: string; index: number }[];
   totalChapters: number;
+  readingTime: string;
+  pageCount: number;
   format: string;
   coverImage?: string;
 }
@@ -302,6 +305,11 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
     if (extractedAuthor) author = extractedAuthor;
     if (extractedDescription) description = extractedDescription;
 
+    // PalmDOC header: record 0 offset 4 = uncompressed text length in bytes
+    const firstRecordOffset = dataView.getUint32(78, false);
+    const uncompressedTextLength = safeReadUint32(dataView, firstRecordOffset + 4, false) ?? 0;
+    const { readingTime, pageCount } = calculateReadingMetrics(uncompressedTextLength || file.size);
+
     const coverImage = await extractMobiCover(arrayBuffer);
 
     return {
@@ -316,6 +324,8 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
       rights: undefined,
       chapters: [],
       totalChapters: 0,
+      readingTime,
+      pageCount,
       format: 'MOBI',
       coverImage
     };
@@ -324,6 +334,7 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
     const description = `A MOBI book by ${author}.`;
     let coverImage = '';
     try { coverImage = await extractMobiCover(arrayBuffer); } catch { /* proceed without cover */ }
+    const { readingTime, pageCount } = calculateReadingMetrics(file.size);
 
     return {
       title,
@@ -337,6 +348,8 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
       rights: undefined,
       chapters: [],
       totalChapters: 0,
+      readingTime,
+      pageCount,
       format: 'MOBI',
       coverImage
     };
