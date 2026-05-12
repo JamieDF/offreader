@@ -8,6 +8,8 @@ import { fileStorage } from "@/services/fileStorage";
 import { calculateReadingMetrics } from "@/utils/readingMetrics";
 import { extractBookMetadata } from "@/parsers/bookMetadataParser";
 import { PdfMetadata } from "@/parsers/pdfParser";
+import { EpubMetadata } from "@/parsers/epubParser";
+import { MobiMetadata } from "@/parsers/mobiParser";
 import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
@@ -111,11 +113,13 @@ export function useLibrary() {
           const extractedMeta = await extractBookMetadata(file);
           const { title, author, publisher, pubDate, language, identifier, description, subjects, rights, chapters, totalChapters, format, coverImage } = extractedMeta as { title: string; author: string; publisher?: string; pubDate?: string; language?: string; identifier?: string; description?: string; subjects?: string[]; rights?: string; chapters: { label: string; href: string; index: number }[]; totalChapters: number; format: string; coverImage?: string };
 
-          // For PDFs use exact page count and page-based reading estimate; fall back to file-size estimate for other formats
+          // Each format computes its own reading time from actual text content
           const pdfMeta = format === 'PDF' ? (extractedMeta as PdfMetadata) : null;
+          const epubMeta = format === 'EPUB' ? (extractedMeta as EpubMetadata) : null;
+          const mobiMeta = format === 'MOBI' ? (extractedMeta as MobiMetadata) : null;
           const { readingTime: calcReadingTime, pageCount: calcPageCount } = calculateReadingMetrics(file.size);
-          const readingTime = pdfMeta?.readingTime ?? calcReadingTime;
-          const pageCount = pdfMeta?.pageCount ?? calcPageCount;
+          const readingTime = pdfMeta?.readingTime ?? epubMeta?.readingTime ?? mobiMeta?.readingTime ?? calcReadingTime;
+          const pageCount = pdfMeta?.pageCount ?? epubMeta?.pageCount ?? mobiMeta?.pageCount ?? calcPageCount;
 
           const newBook: Book = {
             id: bookId,
