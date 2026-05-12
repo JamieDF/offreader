@@ -4,6 +4,7 @@
  */
 
 import JSZip, { JSZipObject } from 'jszip';
+import { calculateReadingMetrics } from '@/utils/readingMetrics';
 
 export interface EpubMetadata {
   title: string;
@@ -17,6 +18,8 @@ export interface EpubMetadata {
   rights?: string;
   chapters: { label: string; href: string; index: number }[];
   totalChapters: number;
+  readingTime: string;
+  pageCount: number;
   format: string;
   coverImage?: string;
 }
@@ -211,22 +214,29 @@ export const extractChaptersWithFoliate = async (file: File): Promise<EpubMetada
   // Extract rights/copyright
   const rights = opfDoc.querySelector('rights')?.textContent || '';
 
-  // Get spine items for rough chapter count
-  const spineItems = opfDoc.querySelectorAll('spine itemref');
-  const totalChapters = Math.max(1, Math.floor(spineItems.length * 0.6)); // Estimate 60% are actual chapters
-
-  // Create estimated chapters
-  const chapters = Array.from({ length: totalChapters }, (_, i) => ({
-    label: `Chapter ${i + 1}`,
-    href: `chapter-${i + 1}`,
-    index: i
-  }));
-
   // If no description, try to create a better fallback
   if (!description || description.trim().length < 10) {
     const fallbackDesc = `An EPUB book by ${author}${subjects.length > 0 ? `. Topics include: ${subjects.slice(0, 3).join(', ')}` : ''}.`;
     description = fallbackDesc;
   }
+
+  // Sum uncompressed sizes of spine HTML files for accurate reading time
+  const opfDir = opfPath.substring(0, opfPath.lastIndexOf('/') + 1);
+  const manifestMap: Record<string, string> = {};
+  for (const item of Array.from(opfDoc.querySelectorAll('manifest item'))) {
+    const id = item.getAttribute('id');
+    const href = item.getAttribute('href');
+    if (id && href) manifestMap[id] = href;
+  }
+  let htmlContentSize = 0;
+  for (const spineItem of Array.from(opfDoc.querySelectorAll('spine itemref'))) {
+    const idref = spineItem.getAttribute('idref');
+    if (!idref || !manifestMap[idref]) continue;
+    const zipFile = zip.file(opfDir + manifestMap[idref]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    htmlContentSize += (zipFile as any)?._data?.uncompressedSize ?? 0;
+  }
+  const { readingTime, pageCount } = calculateReadingMetrics(htmlContentSize || file.size);
 
   // Extract cover image
   const coverImage = await extractEpubCover(zip, opfDoc, opfPath);
@@ -241,8 +251,10 @@ export const extractChaptersWithFoliate = async (file: File): Promise<EpubMetada
     description,
     subjects,
     rights,
-    chapters,
-    totalChapters,
+    chapters: [],
+    totalChapters: 0,
+    readingTime,
+    pageCount,
     format: 'EPUB',
     coverImage
   };
