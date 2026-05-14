@@ -10,11 +10,7 @@ import { labelService } from "@/services/labelService";
 import { libraryService } from "@/services/LibraryService";
 import { saveStoredBooks } from "@/services/bookPersistence";
 import { toast } from "@/components/ui/toast";
-
-const LABEL_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#06b6d4', '#3b82f6', '#8b5cf6', '#a855f7', '#ec4899',
-];
+import { LABEL_COLORS } from "@/constants/labels";
 
 export function ManageLibrary() {
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -85,12 +81,6 @@ export function ManageLibrary() {
 
     try {
       await shelfService.deleteShelf(shelfId);
-      const books = libraryService.getBooks();
-      const updatedBooks = books.map(b =>
-        b.shelfId === shelfId ? { ...b, shelfId: null } : b
-      );
-      libraryService.updateBooks(updatedBooks);
-      await saveStoredBooks(updatedBooks);
       toast.success('Shelf deleted');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete shelf');
