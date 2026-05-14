@@ -1,5 +1,7 @@
 import { Shelf } from "@/types/book";
 import { storageService } from "./storage";
+import { libraryService } from "./LibraryService";
+import { saveStoredBooks } from "./bookPersistence";
 
 const SHELVES_STORAGE_KEY = 'offreader-shelves';
 const LAST_USED_SHELF_KEY = 'offreader-last-used-shelf';
@@ -158,6 +160,21 @@ class ShelfService {
     if (this.lastUsedShelfId === id) {
       this.lastUsedShelfId = null;
       await this.persistLastUsed();
+    }
+
+    const books = libraryService.getBooks();
+    let booksUpdated = false;
+    const updatedBooks = books.map(book => {
+      if (book.shelfId === id) {
+        booksUpdated = true;
+        return { ...book, shelfId: null };
+      }
+      return book;
+    });
+
+    if (booksUpdated) {
+      libraryService.updateBooksSilent(updatedBooks);
+      await saveStoredBooks(updatedBooks);
     }
 
     await this.persist();
