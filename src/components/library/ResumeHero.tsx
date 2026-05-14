@@ -38,6 +38,14 @@ export function ResumeHero({ book, onContinue }: ResumeHeroProps) {
     };
 
     loadData();
+
+    const unsubShelf = shelfService.subscribe(loadData);
+    const unsubLabel = labelService.subscribe(loadData);
+
+    return () => {
+      unsubShelf();
+      unsubLabel();
+    };
   }, [book.shelfId, book.labelIds]);
 
   return (
