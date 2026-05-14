@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/version-0.3.1-blue.svg" alt="Version 0.3.1" />
+  <img src="https://img.shields.io/badge/version-0.4.0-blue.svg" alt="Version 0.4.0" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
@@ -29,6 +29,8 @@ There are other great projects that do something similar, but I wanted to build 
 ## Features
 
 - Import EPUB, MOBI, and PDF files from your device
+- **Organize with Shelves** — assign each book to one shelf; create, rename, reorder, and delete shelves
+- **Tag with Labels** — assign multiple colored labels per book; filter your library by shelf or labels
 - Themes and typography controls (font, size, line height, spacing)
 - Per-chapter page tracking and overall progress
 - Bookmarks with jump-to navigation
@@ -65,6 +67,9 @@ Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Impor
 |---|---|
 | Import a book | Tap the **Import Book** button and pick a file |
 | Open a book | Tap its card in the library |
+| Assign a shelf | Tap the **Shelf** button on the book detail page |
+| Add labels | Tap the **+** button next to Labels on the book detail page |
+| Organize library | Open **Manage Library** from settings to create/edit shelves and labels |
 | Navigate pages | Arrow keys, swipe, or the on-screen buttons |
 | Show controls | Tap anywhere on the page |
 | Change theme / font | Open settings from the reader toolbar |
