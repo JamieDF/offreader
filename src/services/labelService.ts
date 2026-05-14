@@ -136,13 +136,6 @@ class LabelService {
     await this.persist();
     this.notifyListeners();
   }
-
-  removeLabelFromBooks(labelId: string, books: { labelIds: string[] }[]): { labelIds: string[] }[] {
-    return books.map(book => ({
-      ...book,
-      labelIds: book.labelIds.filter(id => id !== labelId),
-    }));
-  }
 }
 
 export const labelService = LabelService.getInstance();
