@@ -79,7 +79,7 @@ class ShelfService {
     return this.lastUsedShelfId;
   }
 
-  isLoading(): boolean {
+  getIsLoading(): boolean {
     return this.isLoading;
   }
 
