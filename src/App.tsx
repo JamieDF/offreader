@@ -12,6 +12,8 @@ import Reader from "./pages/Reader";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import { libraryService } from "@/services/LibraryService";
+import { shelfService } from "@/services/shelfService";
+import { labelService } from "@/services/labelService";
 import { ReaderSettingsProvider } from "@/hooks/useReaderSettings";
 
 const queryClient = new QueryClient();
@@ -21,13 +23,22 @@ const App = () => {
   const { mode, lastVersion, dismiss } = useWelcomeDialog();
 
   useEffect(() => {
-    // Initialize library once on app start
-    libraryService.initialize().then(() => {
-      setLibraryReady(true);
-    }).catch((error) => {
-      console.error('App: Library initialization failed:', error);
-      setLibraryReady(true); // Still show app even if library fails
-    });
+    const initialize = async () => {
+      try {
+        // Initialize services in parallel
+        await Promise.all([
+          libraryService.initialize(),
+          shelfService.initialize(),
+          labelService.initialize(),
+        ]);
+      } catch (error) {
+        console.error('App: Service initialization failed:', error);
+      } finally {
+        setLibraryReady(true);
+      }
+    };
+
+    initialize();
   }, []);
   
   if (!libraryReady) {

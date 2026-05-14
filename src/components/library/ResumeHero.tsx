@@ -2,9 +2,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Book } from "@/types/book";
-import { BookOpen, Play } from "lucide-react";
-import { useState } from "react";
+import { BookOpen, Play, FolderInput, Tag } from "lucide-react";
+import { useState, useEffect } from "react";
 import { titleCase } from "@/utils/titleCase";
+import { shelfService } from "@/services/shelfService";
+import { labelService } from "@/services/labelService";
+import { Shelf, Label } from "@/types/book";
 
 interface ResumeHeroProps {
   book: Book;
@@ -13,7 +16,29 @@ interface ResumeHeroProps {
 
 export function ResumeHero({ book, onContinue }: ResumeHeroProps) {
   const [imageError, setImageError] = useState(false);
+  const [shelf, setShelf] = useState<Shelf | null>(null);
+  const [labels, setLabels] = useState<Label[]>([]);
   const showFallback = imageError || !book.coverImage;
+
+  useEffect(() => {
+    const loadData = () => {
+      if (book.shelfId) {
+        const shelves = shelfService.getShelves();
+        setShelf(shelves.find(s => s.id === book.shelfId) || null);
+      } else {
+        setShelf(null);
+      }
+
+      if (book.labelIds.length > 0) {
+        const allLabels = labelService.getLabels();
+        setLabels(allLabels.filter(l => book.labelIds.includes(l.id)));
+      } else {
+        setLabels([]);
+      }
+    };
+
+    loadData();
+  }, [book.shelfId, book.labelIds]);
 
   return (
     <Card className="mb-8 overflow-hidden border-none bg-gradient-to-br from-primary/15 via-primary/5 to-background shadow-md hover:shadow-lg transition-all duration-300 ring-1 ring-primary/10">
@@ -56,6 +81,31 @@ export function ResumeHero({ book, onContinue }: ResumeHeroProps) {
               <p className="text-sm sm:text-lg text-muted-foreground font-medium line-clamp-1">
                 {book.author}
               </p>
+
+              {/* Shelf and Labels */}
+              {(shelf || labels.length > 0) && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {shelf && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs">
+                      <FolderInput className="h-3 w-3" />
+                      {shelf.name}
+                    </span>
+                  )}
+                  {labels.slice(0, 3).map(label => (
+                    <span
+                      key={label.id}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"
+                      style={{ backgroundColor: `${label.color}25`, color: label.color }}
+                    >
+                      <Tag className="h-3 w-3" />
+                      {label.name}
+                    </span>
+                  ))}
+                  {labels.length > 3 && (
+                    <span className="text-xs text-muted-foreground">+{labels.length - 3}</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-3 sm:mt-8 space-y-3 sm:space-y-6">

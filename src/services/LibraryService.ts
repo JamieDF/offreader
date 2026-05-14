@@ -1,6 +1,7 @@
 import { Book } from "@/types/book";
 import { fileStorage } from "./fileStorage";
 import { storageService } from "./storage";
+import { saveStoredBooks } from "./bookPersistence";
 
 class LibraryService {
   private static instance: LibraryService;
@@ -60,6 +61,10 @@ class LibraryService {
       await fileStorage.cleanupOrphanFiles(validBookIds);
 
       this.books = loadedBooks;
+      
+      // Migrate any books that don't have shelfId/labelIds
+      const migratedBooks = this.migrateBooks(loadedBooks);
+      
       this.isLoading = false;
       this.notifyListeners();
     } catch (error) {
@@ -68,6 +73,31 @@ class LibraryService {
       this.isLoading = false;
       this.notifyListeners();
     }
+  }
+
+  private migrateBooks(books: Book[]): Book[] {
+    let hasMigration = false;
+    const migrated = books.map(book => {
+      if (book.shelfId === undefined || book.labelIds === undefined) {
+        hasMigration = true;
+        return {
+          ...book,
+          shelfId: null,
+          labelIds: [],
+        };
+      }
+      return book;
+    });
+
+    if (hasMigration) {
+      // Save migrated books
+      this.updateBooksSilent(migrated);
+      saveStoredBooks(migrated).catch(err => {
+        console.error('Failed to save migrated books:', err);
+      });
+    }
+
+    return migrated;
   }
   
   // Update books (for imports)
