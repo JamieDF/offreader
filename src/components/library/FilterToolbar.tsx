@@ -204,12 +204,6 @@ export function FilterToolbar({
   const selectedStatus = statusOptions.find(s => s.value === filters.status);
   const selectedLabels = labels.filter(l => filters.labelIds.includes(l.id));
 
-  const cycleStatus = () => {
-    const currentIndex = statusOptions.findIndex(s => s.value === filters.status);
-    const nextIndex = (currentIndex + 1) % statusOptions.length;
-    onFilterChange('status', statusOptions[nextIndex].value);
-  };
-
   return (
     <div ref={toolbarRef} className="sticky top-14 z-40 bg-background/95 backdrop-blur border-b border-border">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">

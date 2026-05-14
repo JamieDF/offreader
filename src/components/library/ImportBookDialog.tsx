@@ -14,6 +14,7 @@ import { Shelf } from "@/types/book";
 import { labelService } from "@/services/labelService";
 import { shelfService } from "@/services/shelfService";
 import { toast } from "@/components/ui/toast";
+import { LABEL_COLORS } from "@/constants/labels";
 
 interface ImportBookDialogProps {
   isOpen: boolean;
@@ -22,11 +23,6 @@ interface ImportBookDialogProps {
   onConfirm: (shelfId: string | null, labelIds: string[]) => void;
   onCancel: () => void;
 }
-
-const LABEL_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#06b6d4', '#3b82f6', '#8b5cf6', '#a855f7', '#ec4899',
-];
 
 export function ImportBookDialog({
   isOpen,

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/types/book";
 import { labelService } from "@/services/labelService";
 import { toast } from "@/components/ui/toast";
+import { LABEL_COLORS } from "@/constants/labels";
 
 interface AddLabelDialogProps {
   isOpen: boolean;
@@ -20,11 +21,6 @@ interface AddLabelDialogProps {
   onRemoveLabel: (labelId: string) => void;
   onClose: () => void;
 }
-
-const LABEL_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#06b6d4', '#3b82f6', '#8b5cf6', '#a855f7', '#ec4899',
-];
 
 export function AddLabelDialog({
   isOpen,
