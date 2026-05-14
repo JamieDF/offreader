@@ -23,12 +23,24 @@ export function BookCard({ book, onSelect, labels = [] }: BookCardProps) {
   const overflowCount = bookLabels.length - 2;
 
   useEffect(() => {
-    if (book.shelfId) {
-      const shelves = shelfService.getShelves();
-      setShelf(shelves.find(s => s.id === book.shelfId) || null);
-    } else {
-      setShelf(null);
-    }
+    const updateShelfAndLabels = () => {
+      if (book.shelfId) {
+        const shelves = shelfService.getShelves();
+        setShelf(shelves.find(s => s.id === book.shelfId) || null);
+      } else {
+        setShelf(null);
+      }
+    };
+
+    updateShelfAndLabels();
+
+    const unsubShelf = shelfService.subscribe(updateShelfAndLabels);
+    const unsubLabel = labelService.subscribe(updateShelfAndLabels);
+
+    return () => {
+      unsubShelf();
+      unsubLabel();
+    };
   }, [book.shelfId]);
 
   return (
