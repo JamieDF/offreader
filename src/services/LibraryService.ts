@@ -123,7 +123,7 @@ class LibraryService {
     return () => this.listeners.delete(listener);
   }
   
-  private notifyListeners(): void {
+  notifyListeners(): void {
     this.listeners.forEach(listener => listener());
   }
 }

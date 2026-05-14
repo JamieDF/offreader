@@ -87,7 +87,7 @@ export function BookCard({ book, onSelect, labels = [] }: BookCardProps) {
 
         {/* Completed badge */}
         {book.progress === 100 && (
-          <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
+          <div className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
             Done
           </div>
         )}
