@@ -1,15 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Book } from "@/types/book";
+import { Label } from "@/types/book";
 import { useLibrary } from "@/hooks/useLibrary";
+import { labelService } from "@/services/labelService";
+import { shelfService } from "@/services/shelfService";
+import { libraryService } from "@/services/LibraryService";
 import { storageService } from "@/services/storage";
+import { saveStoredBooks } from "@/services/bookPersistence";
 import { BookCard } from "./BookCard";
 import { LibraryHeader } from "./LibraryHeader";
+import { FilterToolbar } from "./FilterToolbar";
 import { EmptyState } from "./EmptyState";
 import { FloatingActionButton } from "./FloatingActionButton";
 import { ResumeHero } from "./ResumeHero";
 import { ThemeSettingsDialog } from "./ThemeSettingsDialog";
 import { ReadingInsights } from "./ReadingInsights";
+import { ManageLibraryDialog } from "./ManageLibraryDialog";
+import { ImportBookDialog } from "./ImportBookDialog";
+import { toast } from "@/components/ui/toast";
 
 interface LibraryViewProps {
   onBookSelect: (book: Book) => void;
@@ -26,13 +35,53 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     setSortBy,
     importBooks,
     isEmpty,
+    filters,
+    setFilter,
+    clearFilters,
+    activeFilterCount,
   } = useLibrary();
 
+  const [labels, setLabels] = useState<Label[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
+  const [isManageLibraryOpen, setIsManageLibraryOpen] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importedBooks, setImportedBooks] = useState<Book[]>([]);
 
-  const handleResume = async (book: Book) => {
-    // Get the current location from storage (useBookTracker uses book-tracker-data key)
+  useEffect(() => {
+    const loadLabels = () => {
+      setLabels(labelService.getLabels());
+    };
+
+    loadLabels();
+    const unsubscribe = labelService.subscribe(loadLabels);
+    return unsubscribe;
+  }, []);
+
+  const handleApplyImportLabels = async (shelfId: string | null, labelIds: string[]) => {
+    if (importedBooks.length === 0) {
+      setShowImportDialog(false);
+      return;
+    }
+
+    const books = libraryService.getBooks();
+    const updatedBooks = books.map(book => {
+      const isImported = importedBooks.some(b => b.id === book.id);
+      if (isImported) {
+        return { ...book, shelfId, labelIds };
+      }
+      return book;
+    });
+
+    libraryService.updateBooks(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+    await shelfService.setLastUsedShelf(shelfId);
+
+    setShowImportDialog(false);
+    setImportedBooks([]);
+    toast.success(`Applied to ${importedBooks.length} book${importedBooks.length > 1 ? 's' : ''}`);
+  };
+    const handleResume = async (book: Book) => {
     try {
       const trackerDataString = await storageService.getItem('book-tracker-data');
       
@@ -65,19 +114,34 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         onSearchChange={setSearchQuery}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenInsights={() => setIsInsightsOpen(true)}
+        onOpenManageLibrary={() => setIsManageLibraryOpen(true)}
         onAbout={() => navigate('/about')}
         sortBy={sortBy}
         onSortChange={setSortBy}
+      />
+
+      <FilterToolbar
+        filters={filters}
+        onFilterChange={setFilter}
+        onClearFilters={clearFilters}
+        activeFilterCount={activeFilterCount}
+        bookCount={books.length}
       />
 
       {/* Scrollable Content Area - only this section scrolls */}
       <main className="flex-1 overflow-y-auto overscroll-contain bg-background">
         <div className="max-w-7xl mx-auto w-full">
           {isEmpty ? (
-            <EmptyState onBrowse={importBooks} />
+            <EmptyState onBrowse={() => importBooks((books) => { setImportedBooks(books); setShowImportDialog(true); })} />
           ) : books.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground p-12">
-              No books match your search
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-12 gap-4">
+              <p>No books match your filters</p>
+              <button
+                onClick={clearFilters}
+                className="text-sm text-primary hover:underline"
+              >
+                Clear filters
+              </button>
             </div>
           ) : (
             <div className="p-4 sm:p-6 pb-24 animate-fade-in space-y-8">
@@ -95,6 +159,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
                       key={book.id}
                       book={book}
                       onSelect={onBookSelect}
+                      labels={labels}
                     />
                   ))}
                 </div>
@@ -104,7 +169,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         </div>
       </main>
 
-      <FloatingActionButton onClick={importBooks} />
+      <FloatingActionButton onClick={() => importBooks((books) => { setImportedBooks(books); setShowImportDialog(true); })} />
       
       <ThemeSettingsDialog
         isOpen={isSettingsOpen}
@@ -114,6 +179,22 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
       <ReadingInsights
         isOpen={isInsightsOpen}
         onOpenChange={setIsInsightsOpen}
+      />
+
+      <ManageLibraryDialog
+        isOpen={isManageLibraryOpen}
+        onOpenChange={setIsManageLibraryOpen}
+      />
+
+      <ImportBookDialog
+        isOpen={showImportDialog}
+        bookCount={importedBooks.length}
+        bookTitle={importedBooks.length === 1 ? importedBooks[0].title : undefined}
+        onConfirm={handleApplyImportLabels}
+        onCancel={() => {
+          setShowImportDialog(false);
+          setImportedBooks([]);
+        }}
       />
     </div>
   );

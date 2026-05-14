@@ -6,6 +6,19 @@ export interface Chapter {
   depth?: number;
 }
 
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface Shelf {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  order: number;
+}
+
 export interface Book {
   id: string;
   title: string;
@@ -27,4 +40,6 @@ export interface Book {
   rights?: string;
   estimatedReadingTime?: string; // e.g., "4h 30m"
   pageCount?: number; // Estimated page count
+  shelfId: string | null;
+  labelIds: string[];
 }

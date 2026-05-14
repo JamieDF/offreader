@@ -107,7 +107,7 @@ export function BookDetailsView({ book, onRemove }: BookDetailsViewProps) {
       {/* Main scrollable content area - fixed height with overflow */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden pb-4">
         <BookHero book={book} />
-        
+
         <ReadingStatsCard
           book={book}
           stats={stats}
