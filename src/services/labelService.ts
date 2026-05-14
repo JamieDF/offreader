@@ -58,7 +58,7 @@ class LabelService {
     return this.labels.filter(l => ids.includes(l.id));
   }
 
-  isLoading(): boolean {
+  getIsLoading(): boolean {
     return this.isLoading;
   }
 
