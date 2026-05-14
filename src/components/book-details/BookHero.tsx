@@ -17,6 +17,7 @@ interface BookHeroProps {
 }
 
 export function BookHero({ book }: BookHeroProps) {
+  const [currentBook, setCurrentBook] = useState(book);
   const [labels, setLabels] = useState<Label[]>([]);
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [showLabelDialog, setShowLabelDialog] = useState(false);
@@ -24,49 +25,59 @@ export function BookHero({ book }: BookHeroProps) {
 
   useEffect(() => {
     const loadData = () => {
-      setLabels(labelService.getLabels());
-      setShelves(shelfService.getShelves());
+      const books = libraryService.getBooks();
+      const updatedBook = books.find(b => b.id === book.id);
+      if (updatedBook) {
+        setCurrentBook(updatedBook);
+        setLabels(labelService.getLabels());
+        setShelves(shelfService.getShelves());
+      }
     };
 
     loadData();
     const unsubscribeLabel = labelService.subscribe(loadData);
     const unsubscribeShelf = shelfService.subscribe(loadData);
+    const unsubscribeBooks = libraryService.subscribe(loadData);
     return () => {
       unsubscribeLabel();
       unsubscribeShelf();
+      unsubscribeBooks();
     };
-  }, []);
+  }, [book.id]);
 
-  const bookLabels = labels.filter(l => book.labelIds.includes(l.id));
-  const currentShelf = shelves.find(s => s.id === book.shelfId);
+  const bookLabels = labels.filter(l => currentBook.labelIds.includes(l.id));
+  const currentShelf = shelves.find(s => s.id === currentBook.shelfId);
 
   const handleShelfChange = async (shelfId: string | null) => {
     const books = libraryService.getBooks();
     const updatedBooks = books.map(b =>
-      b.id === book.id ? { ...b, shelfId } : b
+      b.id === currentBook.id ? { ...b, shelfId } : b
     );
     libraryService.updateBooksSilent(updatedBooks);
     await saveStoredBooks(updatedBooks);
+    libraryService.notifyListeners();
   };
 
   const handleAddLabel = async (labelId: string) => {
-    if (book.labelIds.includes(labelId)) return;
+    if (currentBook.labelIds.includes(labelId)) return;
 
     const books = libraryService.getBooks();
     const updatedBooks = books.map(b =>
-      b.id === book.id ? { ...b, labelIds: [...b.labelIds, labelId] } : b
+      b.id === currentBook.id ? { ...b, labelIds: [...b.labelIds, labelId] } : b
     );
     libraryService.updateBooksSilent(updatedBooks);
     await saveStoredBooks(updatedBooks);
+    libraryService.notifyListeners();
   };
 
   const handleRemoveLabel = async (labelId: string) => {
     const books = libraryService.getBooks();
     const updatedBooks = books.map(b =>
-      b.id === book.id ? { ...b, labelIds: b.labelIds.filter(id => id !== labelId) } : b
+      b.id === currentBook.id ? { ...b, labelIds: b.labelIds.filter(id => id !== labelId) } : b
     );
     libraryService.updateBooksSilent(updatedBooks);
     await saveStoredBooks(updatedBooks);
+    libraryService.notifyListeners();
   };
 
   return (
@@ -75,10 +86,10 @@ export function BookHero({ book }: BookHeroProps) {
         {/* Cover with drop shadow */}
         <div className="relative w-48 md:w-56 rounded-lg overflow-hidden shadow-2xl shadow-foreground/20">
           <div className="relative" style={{ paddingBottom: "150%" }}>
-            {book.coverImage ? (
+            {currentBook.coverImage ? (
               <img
-                src={book.coverImage}
-                alt={titleCase(book.title)}
+                src={currentBook.coverImage}
+                alt={titleCase(currentBook.title)}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : (
@@ -92,10 +103,10 @@ export function BookHero({ book }: BookHeroProps) {
         {/* Title and Author */}
         <div className="mt-6 text-center">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
-            {titleCase(book.title)}
+            {titleCase(currentBook.title)}
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            by {book.author}
+            by {currentBook.author}
           </p>
 
           {/* Labels and Shelf Row */}
@@ -135,7 +146,7 @@ export function BookHero({ book }: BookHeroProps) {
 
       <AddLabelDialog
         isOpen={showLabelDialog}
-        bookLabelIds={book.labelIds}
+        bookLabelIds={currentBook.labelIds}
         onAddLabel={handleAddLabel}
         onRemoveLabel={handleRemoveLabel}
         onClose={() => setShowLabelDialog(false)}
@@ -143,7 +154,7 @@ export function BookHero({ book }: BookHeroProps) {
 
       <ShelfDialog
         isOpen={showShelfDialog}
-        currentShelfId={book.shelfId}
+        currentShelfId={currentBook.shelfId}
         onSelectShelf={handleShelfChange}
         onClose={() => setShowShelfDialog(false)}
       />
