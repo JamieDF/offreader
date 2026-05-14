@@ -14,11 +14,24 @@ import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/service
 
 export type SortOption = "recent" | "title" | "author" | "progress";
 
+export type ReadingStatus = 'all' | 'unread' | 'in_progress' | 'read';
+
+export interface LibraryFilters {
+  shelfId: string | null;
+  labelIds: string[];
+  status: ReadingStatus;
+}
+
 export function useLibrary() {
   const [books, setBooks] = useState<Book[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [trackerData, setTrackerData] = useState<StoredBookData>({});
+  const [filters, setFilters] = useState<LibraryFilters>({
+    shelfId: null,
+    labelIds: [],
+    status: 'all',
+  });
 
   // Load tracker data on mount
   useEffect(() => {
@@ -58,12 +71,44 @@ export function useLibrary() {
   }, []);
 
   const sortedAndFilteredBooks = useMemo(() => {
-    // First filter
+    // First filter by search query
     let result = books.filter(
       (book) =>
         book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         book.author.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Apply shelf filter
+    if (filters.shelfId !== null) {
+      result = result.filter(book => book.shelfId === filters.shelfId);
+    }
+
+    // Apply label filter
+    if (filters.labelIds.length > 0) {
+      result = result.filter(book =>
+        filters.labelIds.every(labelId => book.labelIds.includes(labelId))
+      );
+    }
+
+    // Apply status filter (derived from progress and isFinished)
+    if (filters.status !== 'all') {
+      result = result.filter(book => {
+        const bookTracker = trackerData[book.id];
+        const progress = bookTracker?.progress ?? book.progress ?? 0;
+        const isFinished = bookTracker?.isFinished ?? progress >= 100;
+
+        switch (filters.status) {
+          case 'unread':
+            return !isFinished && progress === 0;
+          case 'in_progress':
+            return !isFinished && progress > 0;
+          case 'read':
+            return isFinished;
+          default:
+            return true;
+        }
+      });
+    }
 
     // Then sort
     switch (sortBy) {
@@ -90,9 +135,30 @@ export function useLibrary() {
     }
 
     return result;
-  }, [books, searchQuery, sortBy, trackerData]);
+  }, [books, searchQuery, sortBy, trackerData, filters]);
 
-  const importBooks = useCallback(async () => {
+  const setFilter = useCallback(<K extends keyof LibraryFilters>(
+    key: K,
+    value: LibraryFilters[K]
+  ) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({ shelfId: null, labelIds: [], status: 'all' });
+  }, []);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.shelfId !== null) count++;
+    if (filters.labelIds.length > 0) count++;
+    if (filters.status !== 'all') count++;
+    return count;
+  }, [filters]);
+
+type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
+
+  const importBooks = useCallback(async (onImportComplete?: ImportCallback) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".epub,.mobi,.pdf";
@@ -102,18 +168,17 @@ export function useLibrary() {
       const files = (event.target as HTMLInputElement).files;
       if (!files) return;
 
+      const newlyImportedBooks: Book[] = [];
+
       for (const file of files) {
         try {
-          const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+          const fileName = file.name.replace(/\.[^/.]+$/, "");
 
-          // Generate unique ID for the book
           const bookId = uuidv4();
 
-          // Extract metadata from book
           const extractedMeta = await extractBookMetadata(file);
           const { title, author, publisher, pubDate, language, identifier, description, subjects, rights, chapters, totalChapters, format, coverImage } = extractedMeta as { title: string; author: string; publisher?: string; pubDate?: string; language?: string; identifier?: string; description?: string; subjects?: string[]; rights?: string; chapters: { label: string; href: string; index: number }[]; totalChapters: number; format: string; coverImage?: string };
 
-          // Each format computes its own reading time from actual text content
           const pdfMeta = format === 'PDF' ? (extractedMeta as PdfMetadata) : null;
           const epubMeta = format === 'EPUB' ? (extractedMeta as EpubMetadata) : null;
           const mobiMeta = format === 'MOBI' ? (extractedMeta as MobiMetadata) : null;
@@ -141,9 +206,10 @@ export function useLibrary() {
             fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
             estimatedReadingTime: readingTime,
             pageCount: pageCount,
+            shelfId: null,
+            labelIds: [],
           };
 
-          // Save metadata with temporary filePath
           const updatedBooksWithTemp = [...books, newBook];
           libraryService.updateBooks(updatedBooksWithTemp);
 
@@ -151,12 +217,10 @@ export function useLibrary() {
             await saveStoredBooks(updatedBooksWithTemp);
           } catch (metadataError) {
             console.error(`❌ Failed to save metadata:`, metadataError);
-            // Revert library state since metadata save failed
             libraryService.updateBooks(books);
             throw new Error(`Failed to save book metadata: ${metadataError}`);
           }
 
-          // FIX #2: Now store the actual file
           let fileUrl: string;
 
           try {
@@ -164,8 +228,6 @@ export function useLibrary() {
           } catch (fileError) {
             console.error(`Failed to store file:`, fileError);
 
-            // FIX #2: Clean up metadata entry on file storage failure
-            // Remove the book we just added to metadata
             const cleanedBooks = books.filter(b => b.id !== bookId);
             libraryService.updateBooks(cleanedBooks);
             await saveStoredBooks(cleanedBooks);
@@ -173,7 +235,6 @@ export function useLibrary() {
             throw new Error(`Failed to store book file: ${fileError}`);
           }
 
-          // FIX #2: Update book with actual file path and save metadata again
           const finalBook: Book = {
             ...newBook,
             filePath: fileUrl
@@ -183,35 +244,38 @@ export function useLibrary() {
           libraryService.updateBooks(finalBooks);
           await saveStoredBooks(finalBooks);
 
-          toast.success(`Successfully imported "${title}"`);
+          newlyImportedBooks.push(finalBook);
 
          } catch (error) {
-           console.error(`❌ Failed to import ${file.name}:`, error);
+            console.error(`❌ Failed to import ${file.name}:`, error);
 
-           // Provide helpful, specific error messages
-           const errorMessage = error instanceof Error ? error.message : String(error);
-           let userMessage = `Failed to import "${file.name}"`;
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            let userMessage = `Failed to import "${file.name}"`;
 
-           // Check for specific error types and provide guidance
-           if (errorMessage.includes('Insufficient storage') || errorMessage.includes('storage') || errorMessage.toLowerCase().includes('quota')) {
-             const requiredMB = /(\d+)MB/.exec(errorMessage)?.[1];
-             userMessage = `⚠️ Storage full: Need ${requiredMB || 'more'}MB available. Delete some books to free up space.`;
-           } else if (errorMessage.includes('network') || errorMessage.includes('offline')) {
-             userMessage = `❌ Connection failed. Check your internet and try again.`;
-           } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid')) {
-             userMessage = `❌ File may be corrupted. Try a different book.`;
-           } else if (errorMessage.includes('unsupported') || errorMessage.includes('format')) {
-             userMessage = `❌ File format not supported. Only EPUB, MOBI, and PDF files are supported.`;
-           } else if (errorMessage.includes('metadata')) {
-             userMessage = `❌ Could not read book information. The file might be corrupted.`;
-           }
+            if (errorMessage.includes('Insufficient storage') || errorMessage.includes('storage') || errorMessage.toLowerCase().includes('quota')) {
+              const requiredMB = /(\d+)MB/.exec(errorMessage)?.[1];
+              userMessage = `⚠️ Storage full: Need ${requiredMB || 'more'}MB available. Delete some books to free up space.`;
+            } else if (errorMessage.includes('network') || errorMessage.includes('offline')) {
+              userMessage = `❌ Connection failed. Check your internet and try again.`;
+            } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid')) {
+              userMessage = `❌ File may be corrupted. Try a different book.`;
+            } else if (errorMessage.includes('unsupported') || errorMessage.includes('format')) {
+              userMessage = `❌ File format not supported. Only EPUB, MOBI, and PDF files are supported.`;
+            } else if (errorMessage.includes('metadata')) {
+              userMessage = `❌ Could not read book information. The file might be corrupted.`;
+            }
 
-           toast.error(userMessage);
-         }
+            toast.error(userMessage);
+          }
+      }
+
+      // After all files processed, call the callback if provided
+      if (newlyImportedBooks.length > 0) {
+        toast.success(`Successfully imported ${newlyImportedBooks.length} book${newlyImportedBooks.length > 1 ? 's' : ''}`);
+        onImportComplete?.(newlyImportedBooks);
       }
     };
 
-    // Trigger file picker
     input.click();
   }, [books]);
 
@@ -220,12 +284,53 @@ export function useLibrary() {
       ...bookData,
       id: uuidv4(),
       progress: 0,
+      shelfId: bookData.shelfId ?? null,
+      labelIds: bookData.labelIds ?? [],
     };
     const updatedBooks = [...books, newBook];
     libraryService.updateBooks(updatedBooks);
     await saveStoredBooks(updatedBooks);
     return newBook;
   }, [books]);
+
+  const updateBookShelf = useCallback(async (bookId: string, shelfId: string | null) => {
+    const currentBooks = libraryService.getBooks();
+    const updatedBooks = currentBooks.map(book =>
+      book.id === bookId ? { ...book, shelfId } : book
+    );
+    libraryService.updateBooksSilent(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+  }, []);
+
+  const updateBookLabels = useCallback(async (bookId: string, labelIds: string[]) => {
+    const currentBooks = libraryService.getBooks();
+    const updatedBooks = currentBooks.map(book =>
+      book.id === bookId ? { ...book, labelIds } : book
+    );
+    libraryService.updateBooksSilent(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+  }, []);
+
+  const addLabelToBook = useCallback(async (bookId: string, labelId: string) => {
+    const currentBooks = libraryService.getBooks();
+    const updatedBooks = currentBooks.map(book => {
+      if (book.id !== bookId) return book;
+      if (book.labelIds.includes(labelId)) return book;
+      return { ...book, labelIds: [...book.labelIds, labelId] };
+    });
+    libraryService.updateBooksSilent(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+  }, []);
+
+  const removeLabelFromBook = useCallback(async (bookId: string, labelId: string) => {
+    const currentBooks = libraryService.getBooks();
+    const updatedBooks = currentBooks.map(book => {
+      if (book.id !== bookId) return book;
+      return { ...book, labelIds: book.labelIds.filter(id => id !== labelId) };
+    });
+    libraryService.updateBooksSilent(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+  }, []);
 
   const updateProgress = useCallback(async (bookId: string, progress: number) => {
     // Only update library service silently - don't notify listeners to prevent loops
@@ -298,7 +403,15 @@ export function useLibrary() {
     addBook,
     updateProgress,
     removeBook,
+    updateBookShelf,
+    updateBookLabels,
+    addLabelToBook,
+    removeLabelFromBook,
     isEmpty: books.length === 0,
     isLoading: false, // Always false after app initialization
+    filters,
+    setFilter,
+    clearFilters,
+    activeFilterCount,
   };
 }

@@ -1,4 +1,4 @@
-import { Search, Settings2, ArrowUpDown, LineChart, Menu, Info } from "lucide-react";
+import { Search, Settings2, ArrowUpDown, LineChart, Menu, Info, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,6 +15,7 @@ interface LibraryHeaderProps {
   onSearchChange: (query: string) => void;
   onOpenSettings: () => void;
   onOpenInsights: () => void;
+  onOpenManageLibrary: () => void;
   onAbout: () => void;
   sortBy: SortOption;
   onSortChange: (sort: SortOption) => void;
@@ -32,6 +33,7 @@ export function LibraryHeader({
   onSearchChange,
   onOpenSettings,
   onOpenInsights,
+  onOpenManageLibrary,
   onAbout,
   sortBy,
   onSortChange,
@@ -101,6 +103,10 @@ export function LibraryHeader({
           </Button>
 
           <div className="hidden md:flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={onOpenManageLibrary} className="h-9 w-9">
+              <Library className="h-5 w-5" />
+              <span className="sr-only">Manage Library</span>
+            </Button>
             <Button variant="ghost" size="icon" onClick={onOpenInsights} className="h-9 w-9">
               <LineChart className="h-5 w-5" />
               <span className="sr-only">Reading Insights</span>
@@ -124,6 +130,10 @@ export function LibraryHeader({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={onOpenManageLibrary}>
+                  <Library className="h-4 w-4 mr-2" />
+                  Manage Library
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={onOpenSettings}>
                   <Settings2 className="h-4 w-4 mr-2" />
                   Appearance & Settings
