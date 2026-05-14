@@ -45,7 +45,7 @@ export function BookHero({ book }: BookHeroProps) {
     const updatedBooks = books.map(b =>
       b.id === book.id ? { ...b, shelfId } : b
     );
-    libraryService.updateBooks(updatedBooks);
+    libraryService.updateBooksSilent(updatedBooks);
     await saveStoredBooks(updatedBooks);
   };
 
@@ -56,7 +56,7 @@ export function BookHero({ book }: BookHeroProps) {
     const updatedBooks = books.map(b =>
       b.id === book.id ? { ...b, labelIds: [...b.labelIds, labelId] } : b
     );
-    libraryService.updateBooks(updatedBooks);
+    libraryService.updateBooksSilent(updatedBooks);
     await saveStoredBooks(updatedBooks);
   };
 
@@ -65,7 +65,7 @@ export function BookHero({ book }: BookHeroProps) {
     const updatedBooks = books.map(b =>
       b.id === book.id ? { ...b, labelIds: b.labelIds.filter(id => id !== labelId) } : b
     );
-    libraryService.updateBooks(updatedBooks);
+    libraryService.updateBooksSilent(updatedBooks);
     await saveStoredBooks(updatedBooks);
   };
 
