@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MoreVertical, List, Bookmark } from "lucide-react";
+import { ArrowLeft, MoreVertical, List, Bookmark, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef } from "react";
 
@@ -9,9 +9,10 @@ interface ReaderHeaderProps {
   onOpenSettings?: () => void;
   onOpenToc?: () => void;
   onOpenBookmarks?: () => void;
+  onOpenSearch?: () => void;
 }
 
-const ReaderHeader = ({ bookTitle, onBack, onOpenSettings, onOpenToc, onOpenBookmarks }: ReaderHeaderProps) => {
+const ReaderHeader = ({ bookTitle, onBack, onOpenSettings, onOpenToc, onOpenBookmarks, onOpenSearch }: ReaderHeaderProps) => {
   const navigate = useNavigate();
   const titleRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +105,15 @@ const ReaderHeader = ({ bookTitle, onBack, onOpenSettings, onOpenToc, onOpenBook
       </div>
       
       <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onOpenSearch}
+          className="shrink-0"
+          aria-label="Search"
+        >
+          <Search className="h-5 w-5" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"

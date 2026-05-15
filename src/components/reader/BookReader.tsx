@@ -12,8 +12,9 @@ import { titleCase } from '@/utils/titleCase';
 import { buildReaderStylesheet } from '@/utils/readerStyles';
 import ReaderOverlay, { ReaderOverlayHandle, LocationInfo } from './ReaderOverlay';
 import { PdfZoom } from './PdfZoomToolbar';
+import { searchService } from '@/services/searchService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Chapter, Book } from '@/types/book';
+import { Chapter, Book, SearchResult } from '@/types/book';
 import { useBookTracker, Bookmark } from '@/hooks/useBookTracker';
 import { useReaderSettings } from '@/hooks/useReaderSettings';
 import { useReadingStats } from '@/hooks/useReadingStats';
@@ -97,6 +98,8 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
     current: 1, total: 1, currentChapter: 1, totalChapters: 1,
     fraction: 0, currentPage: 1, totalPagesInChapter: 1,
   });
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { addSession } = useReadingStats();
   const { updateProgress, updateLocation, addBookmark, removeBookmark, getBookmarks } = useBookTracker(propBookId);
@@ -371,6 +374,10 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
 
       setIsLoading(false);
       isInitializedRef.current = true;
+
+      // Build search index after reader is ready
+      console.log('[BookReader] Building search index for', book.title);
+      searchService.buildSearchIndex(book, view);
     } catch (err) {
       console.error('Failed to initialize reader:', err);
       setError('Failed to load book. Please try again.');
@@ -420,6 +427,24 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
     renderer.setStyles(buildReaderStylesheet(settings));
   }, [settings, book.format]);
 
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    const results = searchService.search(query, { bookId: book.id });
+    console.log('[BookReader] Search for "', query, '" got', results.length, 'results');
+    setSearchResults(results);
+  }, [book.id]);
+
+  const handleSearchResultClick = useCallback(async (location: string) => {
+    console.log('[BookReader] Clicked result, navigating to:', location);
+    try {
+      await viewRef.current?.goTo(location);
+      // Close the overlay panel
+      overlayRef.current?.toggle();
+    } catch (err) {
+      console.error('[BookReader] Failed to navigate:', err);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-background relative">
       <ReaderOverlay
@@ -443,6 +468,10 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         pdfRotation={book.format === 'PDF' ? pdfRotation : undefined}
         onPdfRotationChange={handleRotationChange}
         isPdf={book.format === 'PDF'}
+        onSearch={handleSearch}
+        searchResults={searchResults}
+        searchQuery={searchQuery}
+        onSearchResultClick={handleSearchResultClick}
       />
 
       <div className="flex-1 relative overflow-hidden">
