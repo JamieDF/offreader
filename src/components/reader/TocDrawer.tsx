@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Chapter, SearchResult } from '@/types/book';
-import { Check, BookOpen, Search, X, ArrowLeft, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Check, BookOpen, Search, X, ArrowLeft, ChevronDown } from 'lucide-react';
 
 interface TocDrawerProps {
   isOpen: boolean;
@@ -60,14 +60,9 @@ export function TocDrawer({
       setShowResults(false);
       onSearch?.('');
     }
-  }, [localQuery]);
+  }, [localQuery, onSearch]);
 
   const handleClearSearch = useCallback(() => {
-    setLocalQuery('');
-    setShowResults(false);
-  }, []);
-
-  const handleBackToContents = useCallback(() => {
     setLocalQuery('');
     setShowResults(false);
   }, []);
@@ -112,7 +107,7 @@ export function TocDrawer({
         <SheetHeader className="px-4 py-4 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2">
             {showResults ? (
-              <button onClick={handleBackToContents} className="p-1 -ml-1 hover:bg-muted rounded">
+              <button onClick={handleClearSearch} className="p-1 -ml-1 hover:bg-muted rounded">
                 <ArrowLeft className="h-5 w-5" />
               </button>
             ) : (
