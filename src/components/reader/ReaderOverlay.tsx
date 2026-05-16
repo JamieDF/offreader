@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useState, useCallback } from 'react';
-import { Chapter } from '@/types/book';
+import { Chapter, SearchResult } from '@/types/book';
 import { Bookmark } from '@/hooks/useBookTracker';
 import ReaderHeader from './ReaderHeader';
 import ReaderFooter from './ReaderFooter';
@@ -41,6 +41,11 @@ interface ReaderOverlayProps {
   pdfRotation?: number;
   onPdfRotationChange?: (rotation: number) => void;
   isPdf?: boolean;
+  // Search props
+  onSearch: (query: string) => void;
+  searchResults: SearchResult[];
+  searchQuery: string;
+  onSearchResultClick: (location: string) => void;
 }
 
 export interface ReaderOverlayHandle {
@@ -67,6 +72,10 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
   pdfRotation,
   onPdfRotationChange,
   isPdf,
+  onSearch,
+  searchResults,
+  searchQuery,
+  onSearchResultClick,
 }, ref) => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -86,8 +95,8 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
           bookTitle={bookTitle}
           onBack={onBack}
           onOpenSettings={() => setShowSettings(true)}
-          onOpenToc={() => setShowToc(true)}
           onOpenBookmarks={() => setShowBookmarks(true)}
+          onOpenSearch={() => setShowToc(true)}
         />
       )}
 
@@ -128,6 +137,10 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
         chapters={chapters}
         currentChapterIndex={locationInfo.currentChapter - 1}
         onChapterSelect={onChapterSelect}
+        onSearch={onSearch}
+        searchResults={searchResults}
+        searchQuery={searchQuery}
+        onSearchResultClick={onSearchResultClick}
       />
 
       <SettingsDrawer
