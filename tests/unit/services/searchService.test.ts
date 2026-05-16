@@ -63,6 +63,38 @@ describe('searchService', () => {
 
       expect(searchService.hasIndex('test-book-123')).toBe(true);
     });
+
+    it('should not crash when passLibraryBook has PDF format with no real PDF', async () => {
+      const mockView = {
+        book: {
+          spine: {
+            items: []
+          }
+        }
+      };
+
+      const pdfBook: Book = { ...mockBook, format: 'PDF' };
+
+      await searchService.buildSearchIndex(mockBook, mockView as any, pdfBook);
+
+      expect(searchService.hasIndex('test-book-123')).toBe(true);
+    });
+
+    it('should not crash when passLibraryBook has MOBI format', async () => {
+      const mockView = {
+        book: {
+          spine: {
+            items: []
+          }
+        }
+      };
+
+      const mobiBook: Book = { ...mockBook, format: 'MOBI' };
+
+      await searchService.buildSearchIndex(mockBook, mockView as any, mobiBook);
+
+      expect(searchService.hasIndex('test-book-123')).toBe(true);
+    });
   });
 
   describe('search', () => {
