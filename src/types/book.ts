@@ -6,6 +6,16 @@ export interface Chapter {
   depth?: number;
 }
 
+export interface SearchResult {
+  text: string;
+  matchStart: number;
+  matchEnd: number;
+  chapterTitle: string;
+  chapterIndex: number;
+  page: number;
+  location: string;
+}
+
 export interface Label {
   id: string;
   name: string;
