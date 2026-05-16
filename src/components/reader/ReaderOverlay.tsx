@@ -95,7 +95,6 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
           bookTitle={bookTitle}
           onBack={onBack}
           onOpenSettings={() => setShowSettings(true)}
-          onOpenToc={() => setShowToc(true)}
           onOpenBookmarks={() => setShowBookmarks(true)}
           onOpenSearch={() => setShowToc(true)}
         />
