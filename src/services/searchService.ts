@@ -1,4 +1,5 @@
 import { Book } from '@/types/book';
+import { fileStorage } from './fileStorage';
 
 export interface SearchResult {
   text: string;
@@ -36,7 +37,6 @@ function extractSnippet(text: string, matchStart: number, matchEnd: number, targ
   let start = Math.max(0, matchStart - contextLength);
   let end = Math.min(text.length, matchEnd + contextLength);
 
-  // Extend to fill target length
   while (end - start < targetLength && start > 0) {
     start--;
   }
@@ -58,13 +58,8 @@ async function extractTextFromEpub(view: any): Promise<IndexedChapter[]> {
     const book = view.book;
     if (!book) return chapters;
 
-    // Try book.sections first (foliate-js uses this)
-    let sections = book.sections;
-    if (!sections || !sections.length) {
-      sections = [];
-    }
-
-    console.log('[SearchService] sections count:', sections.length);
+    let sections = book.sections || book.spine?.items;
+    if (!sections || !sections.length) sections = [];
     if (!sections.length) return chapters;
 
     for (let i = 0; i < sections.length; i++) {
@@ -72,10 +67,15 @@ async function extractTextFromEpub(view: any): Promise<IndexedChapter[]> {
       if (!section) continue;
 
       try {
-        // Try createDocument (foliate-js method)
-        const doc = await section.createDocument();
-        if (doc?.body) {
-          const text = stripHtml(doc.body.innerHTML);
+        let doc = null;
+        if (typeof section.createDocument === 'function') {
+          doc = await section.createDocument().catch(() => null);
+        } else if (typeof section.load === 'function') {
+          doc = await section.load().catch(() => null);
+        }
+        const body = doc?.body || (doc?.getBody?.() || null);
+        if (body && typeof body.innerHTML === 'string') {
+          const text = stripHtml(body.innerHTML);
           if (text.length > 0) {
             chapters.push({
               title: section.label || section.title || `Chapter ${i + 1}`,
@@ -85,36 +85,92 @@ async function extractTextFromEpub(view: any): Promise<IndexedChapter[]> {
             });
           }
         }
-      } catch (err) {
-        console.warn('[SearchService] Failed to load section:', err);
+      } catch {
+        // skip problematic sections
       }
     }
-  } catch (e) {
-    console.warn('[SearchService] Failed to extract EPUB text:', e);
+  } catch {
+    // skip extraction errors
   }
 
   return chapters;
 }
 
-async function extractTextFromPdf(view: any): Promise<IndexedChapter[]> {
+async function extractTextFromPdf(view: any, libraryBook: Book): Promise<IndexedChapter[]> {
   const chapters: IndexedChapter[] = [];
 
   try {
-    const renderer = view.renderer;
-    if (!renderer) return chapters;
+    const book = view.book;
+    if (!book) return chapters;
 
-    // PDF pages as chapters
-    const pageCount = await renderer.getPageCount?.() || 0;
+    const libraryNumPages = (libraryBook as any).numPages || (libraryBook as any).pageCount;
+    const hasNumPages = typeof libraryNumPages === 'number' && libraryNumPages > 0;
+
+    if (!hasNumPages && book.sections?.length) {
+      for (let i = 0; i < book.sections.length; i++) {
+        try {
+          const section = book.sections[i];
+          if (!section) continue;
+
+          if (typeof section.load === 'function') {
+            const src = await section.load();
+            let url: string | null = null;
+            if (typeof src === 'string') url = src;
+            else if (src?.src) url = src.src;
+
+            if (url) {
+              try {
+                const response = await fetch(url);
+                const html = await response.text();
+                const text = stripHtml(html);
+                if (text.length > 0) {
+                  chapters.push({
+                    title: `Page ${i + 1}`,
+                    index: i,
+                    text,
+                    location: `page-${i}`,
+                  });
+                }
+              } catch {
+                // skip
+              }
+            }
+          }
+        } catch {
+          // skip
+        }
+      }
+      return chapters;
+    }
+
+    const pageCount = libraryNumPages || book.numPages || 0;
+    if (pageCount === 0) return chapters;
+
+    let pdf = (book as any)._pdf || (book as any).pdf;
+    if (!pdf && (view.renderer as any)?._pdf) {
+      pdf = (view.renderer as any)._pdf;
+    }
+    if (!pdf) {
+      if ((view as any)._pdf) pdf = (view as any)._pdf;
+      else if ((book as any).pdfjs) pdf = (book as any).pdfjs;
+      else if ((view.renderer as any)?.pdf) pdf = (view.renderer as any).pdf;
+    }
+
+    if (!pdf) {
+      return extractTextFromPdfFile(view, libraryBook);
+    }
+
     for (let i = 0; i < pageCount; i++) {
       try {
-        const page = await renderer.loadPage(i);
-        const content = await page.getTextContent?.();
+        const page = await pdf.getPage(i + 1);
+        const content = await page.getTextContent();
         if (content?.items) {
           const text = content.items
             .map((item: any) => item.str || '')
             .join(' ')
             .replace(/\s+/g, ' ')
             .trim();
+
           if (text.length > 0) {
             chapters.push({
               title: `Page ${i + 1}`,
@@ -125,51 +181,88 @@ async function extractTextFromPdf(view: any): Promise<IndexedChapter[]> {
           }
         }
       } catch {
-        // Skip pages that fail
+        // skip
       }
     }
-  } catch (e) {
-    console.warn('Failed to extract PDF text:', e);
+  } catch {
+    // skip
+  }
+
+  return chapters;
+}
+
+async function extractTextFromPdfFile(view: any, libraryBook: Book): Promise<IndexedChapter[]> {
+  const chapters: IndexedChapter[] = [];
+
+  try {
+    const pageCount = (libraryBook as any).numPages || (libraryBook as any).pageCount || 0;
+    if (pageCount === 0) return chapters;
+
+    const { pdfjsLib } = await import('foliate-js/pdfjs.js');
+    const fileUrl = await fileStorage.retrieveFile(libraryBook.id, 'PDF');
+    const response = await fetch(fileUrl);
+    const arrayBuffer = await response.arrayBuffer();
+
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      try {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        if (content?.items) {
+          const text = content.items
+            .map((item: any) => item.str || '')
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (text.length > 0) {
+            chapters.push({
+              title: `Page ${i}`,
+              index: i - 1,
+              text,
+              location: `page-${i - 1}`,
+            });
+          }
+        }
+      } catch {
+        // skip
+      }
+    }
+
+    await pdf.destroy();
+  } catch {
+    // skip
   }
 
   return chapters;
 }
 
 async function extractTextFromMobi(view: any): Promise<IndexedChapter[]> {
-  // MOBI uses same spine-based extraction as EPUB
   return extractTextFromEpub(view);
 }
 
 export const searchService = {
-  async buildSearchIndex(book: Book, view: any): Promise<void> {
-    if (!view?.book) {
-      console.warn('[SearchService] No view.book');
-      return;
-    }
+  async buildSearchIndex(book: Book, view: any, passLibraryBook?: Book): Promise<void> {
+    if (!view?.book) return;
 
+    const libraryBook = passLibraryBook || book;
     const existing = indexCache.get(book.id);
     const bookModified = (book as any).lastModified;
 
-    // Re-index if no existing index, no lastModified, or existing has 0 chapters
-    const shouldReindex = !existing || !existing.chapters.length ||
-      (!bookModified && existing.chapters.length === 0);
-
     if (existing && existing.lastModified === bookModified && existing.chapters.length > 0) {
-      return; // Already indexed with content
+      return;
     }
 
     let chapters: IndexedChapter[] = [];
 
-    if (book.format === 'PDF') {
-      chapters = await extractTextFromPdf(view);
-    } else if (book.format === 'MOBI') {
+    if (libraryBook.format === 'PDF') {
+      chapters = await extractTextFromPdf(view, libraryBook);
+    } else if (libraryBook.format === 'MOBI') {
       chapters = await extractTextFromMobi(view);
     } else {
-      // EPUB default
       chapters = await extractTextFromEpub(view);
     }
 
-    console.log('[SearchService] Indexed', chapters.length, 'chapters for', book.id, book.title);
     indexCache.set(book.id, {
       bookId: book.id,
       chapters,
@@ -177,7 +270,7 @@ export const searchService = {
     });
   },
 
-search(query: string, options?: { sortBy?: 'page' | 'chapter', bookId?: string }): SearchResult[] {
+  search(query: string, options?: { sortBy?: 'page' | 'chapter', bookId?: string }): SearchResult[] {
     if (!query.trim()) return [];
 
     let cache: SearchIndex | undefined;
@@ -189,11 +282,9 @@ search(query: string, options?: { sortBy?: 'page' | 'chapter', bookId?: string }
       cache = Array.from(indexCache.values()).pop();
     }
     if (!cache || cache.chapters.length === 0) {
-      console.warn('[SearchService] No index found, cached keys:', Array.from(indexCache.keys()));
       return [];
     }
 
-    console.log('[SearchService] Found index with', cache.chapters.length, 'chapters, searching for:', query);
     const lowerQuery = query.toLowerCase();
     const results: SearchResult[] = [];
 
@@ -211,17 +302,14 @@ search(query: string, options?: { sortBy?: 'page' | 'chapter', bookId?: string }
           matchEnd: matchEnd,
           chapterTitle: chapter.title,
           chapterIndex: chapter.index,
-          page: chapter.index + 1, // 1-indexed
+          page: chapter.index + 1,
           location: chapter.location,
         });
 
-        console.log('[SearchService] Result location:', chapter.location);
-
-searchStart = matchEnd;
+        searchStart = matchEnd;
       }
     }
 
-    console.log('[SearchService] Search for "', query, '" found', results.length, 'results');
     return results;
   },
 

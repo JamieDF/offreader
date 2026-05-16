@@ -376,8 +376,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       isInitializedRef.current = true;
 
       // Build search index after reader is ready
-      console.log('[BookReader] Building search index for', book.title);
-      searchService.buildSearchIndex(book, view);
+      searchService.buildSearchIndex(book, view, book);
     } catch (err) {
       console.error('Failed to initialize reader:', err);
       setError('Failed to load book. Please try again.');
@@ -430,20 +429,22 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     const results = searchService.search(query, { bookId: book.id });
-    console.log('[BookReader] Search for "', query, '" got', results.length, 'results');
     setSearchResults(results);
   }, [book.id]);
 
   const handleSearchResultClick = useCallback(async (location: string) => {
-    console.log('[BookReader] Clicked result, navigating to:', location);
     try {
-      await viewRef.current?.goTo(location);
-      // Close the overlay panel
+      if (book.format === 'PDF' && location.startsWith('page-')) {
+        const pageIndex = parseInt(location.replace('page-', ''), 10);
+        await viewRef.current?.goTo(pageIndex);
+      } else {
+        await viewRef.current?.goTo(location);
+      }
       overlayRef.current?.toggle();
     } catch (err) {
       console.error('[BookReader] Failed to navigate:', err);
     }
-  }, []);
+  }, [book.format]);
 
   return (
     <div className="flex flex-col h-screen bg-background relative">
