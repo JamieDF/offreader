@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-05-16",
+    "items": [
+      "Added Full-text search across EPUB, PDF, and MOBI books",
+      "Sort results by page or chapter, group by chapter",
+      "Click any result to navigate directly to the page or chapter"
+    ]
+  },
+  {
     "version": "0.4.0",
     "date": "2026-05-14",
     "items": [
