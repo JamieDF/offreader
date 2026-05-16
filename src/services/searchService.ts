@@ -1,5 +1,4 @@
 import { Book } from '@/types/book';
-import { fileStorage } from './fileStorage';
 
 export interface SearchResult {
   text: string;
@@ -96,118 +95,13 @@ async function extractTextFromEpub(view: any): Promise<IndexedChapter[]> {
   return chapters;
 }
 
-async function extractTextFromPdf(view: any, libraryBook: Book): Promise<IndexedChapter[]> {
+async function extractTextFromPdfFile(pdfDoc: any): Promise<IndexedChapter[]> {
   const chapters: IndexedChapter[] = [];
 
   try {
-    const book = view.book;
-    if (!book) return chapters;
-
-    const libraryNumPages = (libraryBook as any).numPages || (libraryBook as any).pageCount;
-    const hasNumPages = typeof libraryNumPages === 'number' && libraryNumPages > 0;
-
-    if (!hasNumPages && book.sections?.length) {
-      for (let i = 0; i < book.sections.length; i++) {
-        try {
-          const section = book.sections[i];
-          if (!section) continue;
-
-          if (typeof section.load === 'function') {
-            const src = await section.load();
-            let url: string | null = null;
-            if (typeof src === 'string') url = src;
-            else if (src?.src) url = src.src;
-
-            if (url) {
-              try {
-                const response = await fetch(url);
-                const html = await response.text();
-                const text = stripHtml(html);
-                if (text.length > 0) {
-                  chapters.push({
-                    title: `Page ${i + 1}`,
-                    index: i,
-                    text,
-                    location: `page-${i}`,
-                  });
-                }
-              } catch {
-                // skip
-              }
-            }
-          }
-        } catch {
-          // skip
-        }
-      }
-      return chapters;
-    }
-
-    const pageCount = libraryNumPages || book.numPages || 0;
-    if (pageCount === 0) return chapters;
-
-    let pdf = (book as any)._pdf || (book as any).pdf;
-    if (!pdf && (view.renderer as any)?._pdf) {
-      pdf = (view.renderer as any)._pdf;
-    }
-    if (!pdf) {
-      if ((view as any)._pdf) pdf = (view as any)._pdf;
-      else if ((book as any).pdfjs) pdf = (book as any).pdfjs;
-      else if ((view.renderer as any)?.pdf) pdf = (view.renderer as any).pdf;
-    }
-
-    if (!pdf) {
-      return extractTextFromPdfFile(view, libraryBook);
-    }
-
-    for (let i = 0; i < pageCount; i++) {
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
       try {
-        const page = await pdf.getPage(i + 1);
-        const content = await page.getTextContent();
-        if (content?.items) {
-          const text = content.items
-            .map((item: any) => item.str || '')
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-          if (text.length > 0) {
-            chapters.push({
-              title: `Page ${i + 1}`,
-              index: i,
-              text,
-              location: `page-${i}`,
-            });
-          }
-        }
-      } catch {
-        // skip
-      }
-    }
-  } catch {
-    // skip
-  }
-
-  return chapters;
-}
-
-async function extractTextFromPdfFile(view: any, libraryBook: Book): Promise<IndexedChapter[]> {
-  const chapters: IndexedChapter[] = [];
-
-  try {
-    const pageCount = (libraryBook as any).numPages || (libraryBook as any).pageCount || 0;
-    if (pageCount === 0) return chapters;
-
-    const { pdfjsLib } = await import('foliate-js/pdfjs.js');
-    const fileUrl = await fileStorage.retrieveFile(libraryBook.id, 'PDF');
-    const response = await fetch(fileUrl);
-    const arrayBuffer = await response.arrayBuffer();
-
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      try {
-        const page = await pdf.getPage(i);
+        const page = await pdfDoc.getPage(i);
         const content = await page.getTextContent();
         if (content?.items) {
           const text = content.items
@@ -228,8 +122,6 @@ async function extractTextFromPdfFile(view: any, libraryBook: Book): Promise<Ind
         // skip
       }
     }
-
-    await pdf.destroy();
   } catch {
     // skip
   }
@@ -256,7 +148,10 @@ export const searchService = {
     let chapters: IndexedChapter[] = [];
 
     if (libraryBook.format === 'PDF') {
-      chapters = await extractTextFromPdf(view, libraryBook);
+      const pdfDoc = view.book?.pdfDoc;
+      if (pdfDoc) {
+        chapters = await extractTextFromPdfFile(pdfDoc);
+      }
     } else if (libraryBook.format === 'MOBI') {
       chapters = await extractTextFromMobi(view);
     } else {
