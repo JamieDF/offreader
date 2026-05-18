@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.5.1",
+    "date": "2026-05-18",
+    "items": [
+      "Fixed search drawer not closing when clicking a search result",
+      "Fixed stale closure in search result click handler"
+    ]
+  },
+  {
     "version": "0.5.0",
     "date": "2026-05-16",
     "items": [

@@ -440,7 +440,6 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       } else {
         await viewRef.current?.goTo(location);
       }
-      overlayRef.current?.toggle();
     } catch (err) {
       console.error('[BookReader] Failed to navigate:', err);
     }
