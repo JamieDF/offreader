@@ -88,6 +88,11 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
 
   const handleOpenToc = useCallback(() => setShowToc(true), []);
 
+  const handleSearchResultClick = useCallback((location: string) => {
+    onSearchResultClick(location);
+    setShowToc(false);
+  }, [onSearchResultClick]);
+
   return (
     <>
       {showOverlay && (
@@ -140,7 +145,7 @@ const ReaderOverlay = forwardRef<ReaderOverlayHandle, ReaderOverlayProps>(({
         onSearch={onSearch}
         searchResults={searchResults}
         searchQuery={searchQuery}
-        onSearchResultClick={onSearchResultClick}
+        onSearchResultClick={handleSearchResultClick}
       />
 
       <SettingsDrawer

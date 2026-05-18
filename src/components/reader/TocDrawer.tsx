@@ -69,7 +69,7 @@ export function TocDrawer({
 
   const handleResultClick = useCallback((location: string) => {
     onSearchResultClick?.(location);
-  }, []);
+  }, [onSearchResultClick]);
 
   const sortedResults = [...(searchResults || [])].sort((a, b) => {
     if (sortBy === 'page') {
