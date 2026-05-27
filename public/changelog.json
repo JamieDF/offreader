@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-05-27",
+    "items": [
+      "Editable book metadata — edit title, author, and description from the book detail page",
+      "Post-import dialog now lets you review and edit metadata before finishing",
+      "Fixed incorrect chapter numbers in search results for EPUB and MOBI books"
+    ]
+  },
+  {
     "version": "0.5.2",
     "date": "2026-05-27",
     "items": [
