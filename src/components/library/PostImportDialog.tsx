@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, FolderInput, Tag, Check } from "lucide-react";
+import { Plus, BookOpen, Tag, Check, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,28 +9,29 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/types/book";
+import { Textarea } from "@/components/ui/textarea";
+import { Book, Label } from "@/types/book";
 import { Shelf } from "@/types/book";
 import { labelService } from "@/services/labelService";
 import { shelfService } from "@/services/shelfService";
 import { toast } from "@/components/ui/toast";
 import { LABEL_COLORS } from "@/constants/labels";
 
-interface ImportBookDialogProps {
+interface PostImportDialogProps {
   isOpen: boolean;
-  bookCount: number;
-  bookTitle?: string;
-  onConfirm: (shelfId: string | null, labelIds: string[]) => void;
-  onCancel: () => void;
+  books: Book[];
+  onConfirm: (
+    shelfId: string | null,
+    labelIds: string[],
+    metadataUpdates?: { title: string; author: string; description: string }
+  ) => void;
 }
 
-export function ImportBookDialog({
+export function PostImportDialog({
   isOpen,
-  bookCount,
-  bookTitle,
+  books,
   onConfirm,
-  onCancel,
-}: ImportBookDialogProps) {
+}: PostImportDialogProps) {
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const [selectedShelfId, setSelectedShelfId] = useState<string | null>(null);
@@ -40,6 +41,12 @@ export function ImportBookDialog({
   const [showNewLabel, setShowNewLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0]);
+
+  const isSingleBook = books.length === 1;
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [description, setDescription] = useState('');
+  const [validationError, setValidationError] = useState('');
 
   useEffect(() => {
     const loadData = () => {
@@ -55,6 +62,13 @@ export function ImportBookDialog({
       setNewShelfName('');
       setNewLabelName('');
       setNewLabelColor(LABEL_COLORS[0]);
+      setValidationError('');
+
+      if (books.length === 1) {
+        setTitle(books[0].title);
+        setAuthor(books[0].author);
+        setDescription(books[0].description || '');
+      }
 
       const lastUsedId = shelfService.getLastUsedShelfId();
       if (lastUsedId) {
@@ -64,7 +78,7 @@ export function ImportBookDialog({
         setSelectedShelfId(defaultShelf?.id || null);
       }
     }
-  }, [isOpen]);
+  }, [isOpen, books]);
 
   const handleCreateShelf = async () => {
     if (!newShelfName.trim()) {
@@ -111,38 +125,83 @@ export function ImportBookDialog({
     );
   };
 
-  const handleConfirm = async () => {
-    if (selectedShelfId) {
-      await shelfService.setLastUsedShelf(selectedShelfId);
+  const handleConfirm = () => {
+    if (isSingleBook) {
+      const trimmedTitle = title.trim();
+      const trimmedAuthor = author.trim();
+      if (!trimmedTitle || !trimmedAuthor) {
+        setValidationError('Title and author are required');
+        return;
+      }
+      onConfirm(selectedShelfId, selectedLabelIds, {
+        title: trimmedTitle,
+        author: trimmedAuthor,
+        description: description.trim(),
+      });
+    } else {
+      onConfirm(selectedShelfId, selectedLabelIds);
     }
-    onConfirm(selectedShelfId, selectedLabelIds);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FolderInput className="h-5 w-5 text-primary" />
-            {bookCount === 1 ? 'Import Book' : `Import ${bookCount} Books`}
+            <BookOpen className="h-5 w-5 text-primary" />
+            {isSingleBook ? 'Book Added' : `${books.length} Books Added`}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {bookTitle && (
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{bookTitle}</span>
-              {bookCount > 1 && ` and ${bookCount - 1} more`}
-            </p>
+          {isSingleBook ? (
+            <>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input
+                    value={title}
+                    onChange={(e) => { setTitle(e.target.value); setValidationError(''); }}
+                    placeholder="Book title"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Author</label>
+                  <Input
+                    value={author}
+                    onChange={(e) => { setAuthor(e.target.value); setValidationError(''); }}
+                    placeholder="Author name"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className="max-h-32 resize-none"
+                    placeholder="Book description"
+                  />
+                </div>
+                {validationError && (
+                  <p className="text-sm text-destructive">{validationError}</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1">
+              {books.map(book => (
+                <p key={book.id} className="text-sm text-foreground">{book.title}</p>
+              ))}
+            </div>
           )}
 
-          {/* Shelf Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
-              <FolderInput className="h-4 w-4 text-muted-foreground" />
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
               Shelf
             </label>
-            
+
             {showNewShelf ? (
               <div className="flex gap-2">
                 <Input
@@ -184,7 +243,6 @@ export function ImportBookDialog({
             )}
           </div>
 
-          {/* Label Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <Tag className="h-4 w-4 text-muted-foreground" />
@@ -262,11 +320,8 @@ export function ImportBookDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
           <Button onClick={handleConfirm}>
-            Import
+            Done
           </Button>
         </DialogFooter>
       </DialogContent>
