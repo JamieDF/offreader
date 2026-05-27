@@ -17,7 +17,7 @@ import { ResumeHero } from "./ResumeHero";
 import { ThemeSettingsDialog } from "./ThemeSettingsDialog";
 import { ReadingInsights } from "./ReadingInsights";
 import { ManageLibraryDialog } from "./ManageLibraryDialog";
-import { ImportBookDialog } from "./ImportBookDialog";
+import { PostImportDialog } from "./PostImportDialog";
 import { toast } from "@/components/ui/toast";
 
 interface LibraryViewProps {
@@ -58,17 +58,19 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     return unsubscribe;
   }, []);
 
-  const handleApplyImportLabels = async (shelfId: string | null, labelIds: string[]) => {
-    if (importedBooks.length === 0) {
-      setShowImportDialog(false);
-      return;
-    }
+  const handleApplyImportLabels = async (shelfId: string | null, labelIds: string[], metadataUpdates?: { title: string; author: string; description: string }) => {
+    if (importedBooks.length === 0) return;
 
     const books = libraryService.getBooks();
     const updatedBooks = books.map(book => {
       const isImported = importedBooks.some(b => b.id === book.id);
       if (isImported) {
-        return { ...book, shelfId, labelIds };
+        return {
+          ...book,
+          shelfId,
+          labelIds,
+          ...(metadataUpdates ? metadataUpdates : {})
+        };
       }
       return book;
     });
@@ -186,15 +188,10 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         onOpenChange={setIsManageLibraryOpen}
       />
 
-      <ImportBookDialog
+      <PostImportDialog
         isOpen={showImportDialog}
-        bookCount={importedBooks.length}
-        bookTitle={importedBooks.length === 1 ? importedBooks[0].title : undefined}
+        books={importedBooks}
         onConfirm={handleApplyImportLabels}
-        onCancel={() => {
-          setShowImportDialog(false);
-          setImportedBooks([]);
-        }}
       />
     </div>
   );
