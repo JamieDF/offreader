@@ -17,6 +17,11 @@ interface IndexedChapter {
   location: string;
 }
 
+export interface TocMapping {
+  toCIndex: number;
+  label: string;
+}
+
 interface SearchIndex {
   bookId: string;
   chapters: IndexedChapter[];
@@ -50,7 +55,7 @@ function extractSnippet(text: string, matchStart: number, matchEnd: number, targ
   return snippet;
 }
 
-async function extractTextFromEpub(view: any): Promise<IndexedChapter[]> {
+async function extractTextFromEpub(view: any, tocMap: Map<number, TocMapping>): Promise<IndexedChapter[]> {
   const chapters: IndexedChapter[] = [];
 
   try {
@@ -76,9 +81,10 @@ async function extractTextFromEpub(view: any): Promise<IndexedChapter[]> {
         if (body && typeof body.innerHTML === 'string') {
           const text = stripHtml(body.innerHTML);
           if (text.length > 0) {
+            const mapped = tocMap.get(i);
             chapters.push({
-              title: section.label || section.title || `Chapter ${i + 1}`,
-              index: i,
+              title: mapped?.label || section.label || section.title || `Section ${i + 1}`,
+              index: mapped?.toCIndex ?? i,
               text,
               location: section.href || section.id || section.cfi || `section-${i}`,
             });
@@ -129,12 +135,12 @@ async function extractTextFromPdfFile(pdfDoc: any): Promise<IndexedChapter[]> {
   return chapters;
 }
 
-async function extractTextFromMobi(view: any): Promise<IndexedChapter[]> {
-  return extractTextFromEpub(view);
+async function extractTextFromMobi(view: any, tocMap: Map<number, TocMapping>): Promise<IndexedChapter[]> {
+  return extractTextFromEpub(view, tocMap);
 }
 
 export const searchService = {
-  async buildSearchIndex(book: Book, view: any, passLibraryBook?: Book): Promise<void> {
+  async buildSearchIndex(book: Book, view: any, passLibraryBook?: Book, tocMap?: Map<number, TocMapping>): Promise<void> {
     if (!view?.book) return;
 
     const libraryBook = passLibraryBook || book;
@@ -145,6 +151,7 @@ export const searchService = {
       return;
     }
 
+    const mapping = tocMap || new Map<number, TocMapping>();
     let chapters: IndexedChapter[] = [];
 
     if (libraryBook.format === 'PDF') {
@@ -153,9 +160,9 @@ export const searchService = {
         chapters = await extractTextFromPdfFile(pdfDoc);
       }
     } else if (libraryBook.format === 'MOBI') {
-      chapters = await extractTextFromMobi(view);
+      chapters = await extractTextFromMobi(view, mapping);
     } else {
-      chapters = await extractTextFromEpub(view);
+      chapters = await extractTextFromEpub(view, mapping);
     }
 
     indexCache.set(book.id, {

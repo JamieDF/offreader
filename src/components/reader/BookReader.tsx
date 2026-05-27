@@ -12,7 +12,7 @@ import { titleCase } from '@/utils/titleCase';
 import { buildReaderStylesheet } from '@/utils/readerStyles';
 import ReaderOverlay, { ReaderOverlayHandle, LocationInfo } from './ReaderOverlay';
 import { PdfZoom } from './PdfZoomToolbar';
-import { searchService } from '@/services/searchService';
+import { searchService, TocMapping } from '@/services/searchService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Chapter, Book, SearchResult } from '@/types/book';
 import { useBookTracker, Bookmark } from '@/hooks/useBookTracker';
@@ -376,7 +376,21 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       isInitializedRef.current = true;
 
       // Build search index after reader is ready
-      searchService.buildSearchIndex(book, view, book);
+      // Map section indices → ToC chapter info for correct chapter numbers in search results
+      const tocMap = new Map<number, TocMapping>();
+      if (view.book?.resolveHref && realChapters.length > 0) {
+        for (const chapter of realChapters) {
+          try {
+            const resolved = await view.book.resolveHref(chapter.href || chapter.cfi);
+            if (resolved?.index !== undefined) {
+              tocMap.set(resolved.index, { toCIndex: chapter.index, label: chapter.label });
+            }
+          } catch {
+            // skip unresolvable ToC entries
+          }
+        }
+      }
+      searchService.buildSearchIndex(book, view, book, tocMap);
     } catch (err) {
       console.error('Failed to initialize reader:', err);
       setError('Failed to load book. Please try again.');
