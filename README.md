@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/version-0.5.2-blue.svg" alt="Version 0.5.2" />
+  <img src="https://img.shields.io/badge/version-0.6.0-blue.svg" alt="Version 0.6.0" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
@@ -35,6 +35,7 @@ There are other great projects that do something similar, but I wanted to build 
 - Per-chapter page tracking and overall progress
 - Bookmarks with jump-to navigation
 - **Full-text search** — search inside any book across EPUB, PDF, and MOBI; results show context with highlighted matches and click-to-navigate
+- **Editable metadata** — fix titles, authors, and descriptions on any book; review and edit right after import
 - Reading time tracking, streaks, and activity history
 - Persistent library — your books survive a refresh or reboot
 - CSP-enforced EPUB script blocking for security

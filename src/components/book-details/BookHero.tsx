@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, Pencil } from "lucide-react";
 import { BookOpen } from "lucide-react";
 import { Book } from "@/types/book";
 import { Label } from "@/types/book";
@@ -7,6 +7,7 @@ import { Shelf } from "@/types/book";
 import { titleCase } from "@/utils/titleCase";
 import { AddLabelDialog } from "./AddLabelDialog";
 import { ShelfDialog } from "./ShelfDialog";
+import { EditMetadataDialog } from "./EditMetadataDialog";
 import { labelService } from "@/services/labelService";
 import { shelfService } from "@/services/shelfService";
 import { libraryService } from "@/services/LibraryService";
@@ -22,6 +23,7 @@ export function BookHero({ book }: BookHeroProps) {
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [showLabelDialog, setShowLabelDialog] = useState(false);
   const [showShelfDialog, setShowShelfDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -80,6 +82,16 @@ export function BookHero({ book }: BookHeroProps) {
     libraryService.notifyListeners();
   };
 
+  const handleSaveMetadata = async (updates: { title: string; author: string; description: string }) => {
+    const books = libraryService.getBooks();
+    const updatedBooks = books.map(b =>
+      b.id === currentBook.id ? { ...b, ...updates } : b
+    );
+    libraryService.updateBooksSilent(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+    libraryService.notifyListeners();
+  };
+
   return (
     <>
       <div className="flex flex-col items-center px-6 pt-6 pb-4">
@@ -102,9 +114,18 @@ export function BookHero({ book }: BookHeroProps) {
 
         {/* Title and Author */}
         <div className="mt-6 text-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
-            {titleCase(currentBook.title)}
-          </h1>
+          <div className="inline-flex items-center gap-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight">
+              {titleCase(currentBook.title)}
+            </h1>
+            <button
+              onClick={() => setShowEditDialog(true)}
+              className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Edit book details"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
           <p className="mt-2 text-lg text-muted-foreground">
             by {currentBook.author}
           </p>
@@ -157,6 +178,13 @@ export function BookHero({ book }: BookHeroProps) {
         currentShelfId={currentBook.shelfId}
         onSelectShelf={handleShelfChange}
         onClose={() => setShowShelfDialog(false)}
+      />
+
+      <EditMetadataDialog
+        isOpen={showEditDialog}
+        book={currentBook}
+        onSave={handleSaveMetadata}
+        onClose={() => setShowEditDialog(false)}
       />
     </>
   );
