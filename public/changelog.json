@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.5.2",
+    "date": "2026-05-27",
+    "items": [
+      "Fixed incorrect chapter numbers and titles in search results, now matches the footer and table of contents"
+    ]
+  },
+  {
     "version": "0.5.1",
     "date": "2026-05-18",
     "items": [

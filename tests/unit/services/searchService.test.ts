@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { searchService } from '@/services/searchService';
+import { searchService, TocMapping } from '@/services/searchService';
 import { Book } from '@/types/book';
 
 // Mock book data
@@ -97,6 +97,67 @@ describe('searchService', () => {
     });
   });
 
+  describe('ToC mapping', () => {
+    it('should use ToC mapping for correct chapter indices and titles', async () => {
+      // Simulate: sections 0-2 are front matter, sections 3-4 are real chapters
+      const mockView = createMockView([
+        { title: 'Cover', content: 'Cover page', href: 'cover.xhtml' },
+        { title: 'Title', content: 'Title page', href: 'title.xhtml' },
+        { title: 'TOC', content: 'Table of contents', href: 'toc.xhtml' },
+        { title: 'Ch1', content: 'The quick brown fox jumps', href: 'ch1.xhtml' },
+        { title: 'Ch2', content: 'Another quick fox sighting', href: 'ch2.xhtml' },
+      ]);
+
+      // Map section indices to ToC chapters: section 3→ToC chapter 0, section 4→ToC chapter 1
+      const tocMap = new Map<number, TocMapping>();
+      tocMap.set(3, { toCIndex: 0, label: 'Chapter One' });
+      tocMap.set(4, { toCIndex: 1, label: 'Chapter Two' });
+
+      await searchService.buildSearchIndex(mockBook, mockView as any, undefined, tocMap);
+
+      const results = searchService.search('quick', { bookId: 'test-book-123' });
+
+      expect(results.length).toBe(2);
+      // Front matter (sections 0-2) are NOT in tocMap, so they use fallback labels
+      // Sections 3-4 are mapped to correct ToC indices
+      const ch1Result = results.find(r => r.location === 'ch1.xhtml');
+      const ch2Result = results.find(r => r.location === 'ch2.xhtml');
+
+      expect(ch1Result).toBeDefined();
+      expect(ch1Result!.chapterTitle).toBe('Chapter One');
+      expect(ch1Result!.chapterIndex).toBe(0);
+      expect(ch1Result!.page).toBe(1);
+
+      expect(ch2Result).toBeDefined();
+      expect(ch2Result!.chapterTitle).toBe('Chapter Two');
+      expect(ch2Result!.chapterIndex).toBe(1);
+      expect(ch2Result!.page).toBe(2);
+    });
+
+    it('should use fallback labels for unmapped sections', async () => {
+      const mockView = createMockView([
+        { title: 'Front', content: 'Front matter text here', href: 'front.xhtml' },
+        { title: 'Ch1', content: 'Chapter one content text', href: 'ch1.xhtml' },
+      ]);
+
+      // Only map section 1, leave section 0 unmapped
+      const tocMap = new Map<number, TocMapping>();
+      tocMap.set(1, { toCIndex: 0, label: 'Chapter One' });
+
+      await searchService.buildSearchIndex(mockBook, mockView as any, undefined, tocMap);
+
+      const results = searchService.search('text', { bookId: 'test-book-123' });
+
+      expect(results.length).toBe(2);
+      // Front matter section (unmapped) should use fallback label and raw index
+      expect(results[0].chapterTitle).toBe('Section 1');
+      expect(results[0].chapterIndex).toBe(0);
+      // Mapped section should use ToC label and index
+      expect(results[1].chapterTitle).toBe('Chapter One');
+      expect(results[1].chapterIndex).toBe(0);
+    });
+  });
+
   describe('search', () => {
     it('should find matches in indexed book', async () => {
       const mockView = createMockView([
@@ -109,8 +170,9 @@ describe('searchService', () => {
       const results = searchService.search('quick', { bookId: 'test-book-123' });
 
       expect(results.length).toBe(2);
-      expect(results[0].chapterTitle).toBe('Chapter 1');
-      expect(results[1].chapterTitle).toBe('Chapter 2');
+      // Without ToC mapping, falls back to section-based labels
+      expect(results[0].chapterTitle).toBe('Section 1');
+      expect(results[1].chapterTitle).toBe('Section 2');
     });
 
     it('should be case insensitive', async () => {
