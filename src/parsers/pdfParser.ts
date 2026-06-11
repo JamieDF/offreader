@@ -68,11 +68,15 @@ export const extractPdfMetadata = async (file: File): Promise<PdfMetadata> => {
   try {
     const { metadata, info } = await pdf.getMetadata() ?? {}
     const pdfInfo = info as Record<string, string> | undefined
-    title = metadata?.get('dc:title') ?? pdfInfo?.Title ?? fileName
-    author = metadata?.get('dc:creator') ?? pdfInfo?.Author ?? 'Unknown Author'
-    description = metadata?.get('dc:description') ?? pdfInfo?.Subject ?? ''
-    language = metadata?.get('dc:language') ?? undefined
-    publisher = metadata?.get('dc:publisher') ?? undefined
+    const rawTitle = metadata?.get('dc:title') ?? pdfInfo?.Title ?? fileName
+    const rawAuthor = metadata?.get('dc:creator') ?? pdfInfo?.Author ?? 'Unknown Author'
+    const rawDescription = metadata?.get('dc:description') ?? pdfInfo?.Subject ?? ''
+    // PDF metadata values can be arrays or objects — coerce to string
+    title = String(rawTitle)
+    author = String(rawAuthor)
+    description = String(rawDescription)
+    language = metadata?.get('dc:language') != null ? String(metadata.get('dc:language')) : undefined
+    publisher = metadata?.get('dc:publisher') != null ? String(metadata.get('dc:publisher')) : undefined
   } catch {
     // Proceed with filename fallback
   }
