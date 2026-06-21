@@ -89,5 +89,5 @@ electron/build/
 *.deb
 *.rpm
 
-*code-workspaceelectron/dist/
+*code-workspace
 electron/node_modules/electron/dist/
