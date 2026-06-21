@@ -1,7 +1,7 @@
 {
   "name": "OffReader",
-  "version": "0.6.0",
-  "description": "An Amazing Capacitor App",
+  "version": "0.7.0",
+  "description": "OffReader — offline ebook reader for Linux desktop",
   "author": {
     "name": "Jamie DF",
     "email": "mail@jamie-fraser.com"

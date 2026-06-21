@@ -8,7 +8,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useWelcomeDialog } from '@/hooks/useWelcomeDialog';
 import { storageService } from '@/services/storage';
 
-const APP_VERSION = '0.6.0';
+const APP_VERSION = '0.7.0';
 
 vi.mock('@/services/storage', () => ({
   storageService: {
