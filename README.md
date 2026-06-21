@@ -53,7 +53,7 @@ All books and settings stay on your device — nothing is uploaded anywhere.
 | **Android** | App's internal storage (`/data/data/com.offreader.reader/files/`) | `SharedPreferences` + SQLite |
 | **AppImage / Linux desktop** | IndexedDB blob store (`~/.config/OffReader/IndexedDB/capacitor-electron_-_0.indexeddb.blob/`) | `localStorage` via LevelDB (`~/.config/OffReader/Local Storage/`) |
 
-On desktop (AppImage), the logical path shown in the app is `/DOCUMENTS/books/` but this does **not** correspond to any real folder on disk. Book files are stored as blobs inside Chromium's IndexedDB — you won't find `.epub` or `.pdf` files floating around your filesystem. To locate the actual storage on a Linux desktop:
+To locate the actual storage on a Linux desktop:
 
 ```bash
 # Book files (as IndexedDB blobs)
