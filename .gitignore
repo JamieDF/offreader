@@ -82,4 +82,13 @@ android/.idea/
 android/.kotlin/
 android/build/
 
+# Electron
+electron/dist/
+electron/build/
+dist-electron/
+*.AppImage
+*.deb
+*.rpm
+
 *code-workspace
+electron/node_modules/electron/dist/

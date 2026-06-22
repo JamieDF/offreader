@@ -5,12 +5,12 @@
 <h1 align="center">OffReader</h1>
 
 <p align="center">
-  An offline ebook library and reader for web and Android. No account. Just your books.
+  An offline ebook library and reader for web, Android, and Linux desktop. No account. Just your books.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/version-0.6.0-blue.svg" alt="Version 0.6.0" />
+  <img src="https://img.shields.io/badge/version-0.7.0-blue.svg" alt="Version 0.7.0" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
@@ -18,7 +18,7 @@
 
 OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file, read it, and everything — progress, bookmarks, reading history — stays local.
 
-It runs in the browser and can be installed as an Android app via Capacitor.
+It runs in the browser, as an Android app, or as a Linux desktop AppImage via Capacitor.
 
 ## Why
 
@@ -40,6 +40,28 @@ There are other great projects that do something similar, but I wanted to build 
 - Persistent library — your books survive a refresh or reboot
 - CSP-enforced EPUB script blocking for security
 - Works fully offline; nothing is sent anywhere
+
+---
+
+## Data Storage
+
+All books and settings stay on your device — nothing is uploaded anywhere.
+
+| Platform | Book files | App data (settings, progress, library) |
+|----------|-----------|----------------------------------------|
+| **Web browser** | Browser's File System Access API or IndexedDB fallback | `localStorage` |
+| **Android** | App's internal storage (`/data/data/com.offreader.reader/files/`) | `SharedPreferences` + SQLite |
+| **AppImage / Linux desktop** | IndexedDB blob store (`~/.config/OffReader/IndexedDB/capacitor-electron_-_0.indexeddb.blob/`) | `localStorage` via LevelDB (`~/.config/OffReader/Local Storage/`) |
+
+To locate the actual storage on a Linux desktop:
+
+```bash
+# Book files (as IndexedDB blobs)
+~/.config/OffReader/IndexedDB/capacitor-electron_-_0.indexeddb.blob/
+
+# App settings, reading progress, library metadata
+~/.config/OffReader/Local Storage/leveldb/
+```
 
 ---
 
@@ -99,7 +121,7 @@ E2E tests run against a real browser — Chromium is required (`npx playwright i
 - [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) — styling and components
 - [foliate-js](https://github.com/JamieDF/foliate-js) — EPUB/MOBI/PDF rendering engine (Vite-compatible fork)
 - [PDF.js](https://mozilla.github.io/pdf.js/) — PDF rendering (via pdfjs-dist)
-- [Capacitor](https://capacitorjs.com/) — Android bridge and native file storage
+- [Capacitor](https://capacitorjs.com/) — Android/iOS/Linux bridge and native storage
 - [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) — testing
 
 ---

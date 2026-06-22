@@ -1,6 +1,6 @@
 {
   "name": "offreader",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "OffReader — offline ebook reader. No account, no cloud, just your books.",
   "license": "MIT",
@@ -23,7 +23,13 @@
     "cap:sync": "cap sync",
     "cap:android": "cap run android",
     "cap:build": "npm run build && npm run cap:sync",
-    "cap:apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug"
+    "cap:apk": "npm run build && cap sync android && cd android && ./gradlew assembleDebug",
+    "electron:dev": "npm run build && npx cap copy electron && cd electron && npm run electron:start",
+    "electron:build": "npm run build && npx cap copy electron && cd electron && npm run electron:make",
+    "electron:build:appimage": "npm run build && npx cap copy electron && cd electron && npm run build && npx electron-builder --linux AppImage",
+    "electron:build:rpm": "npm run build && npx cap copy electron && cd electron && npm run build && npx electron-builder --linux rpm",
+    "electron:build:deb": "npm run build && npx cap copy electron && cd electron && npm run build && npx electron-builder --linux deb",
+    "electron:make": "npm run build && npx cap copy electron && cd electron && npm run electron:make"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.2",
@@ -80,6 +86,7 @@
     "vaul": "^0.9.9"
   },
   "devDependencies": {
+    "@capacitor-community/electron": "^5.0.1",
     "@capacitor/cli": "^8.0.2",
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.58.2",
@@ -89,6 +96,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
+    "electron-builder": "^26.15.2",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
