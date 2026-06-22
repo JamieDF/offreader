@@ -82,7 +82,7 @@ jobs:
         run: npx cap sync android
 
       - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > release.keystore
+        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > android/app/release.keystore
 
       - name: Build release APK
         run: |
