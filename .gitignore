@@ -85,6 +85,7 @@ android/build/
 # Electron
 electron/dist/
 electron/build/
+dist-electron/
 *.AppImage
 *.deb
 *.rpm
