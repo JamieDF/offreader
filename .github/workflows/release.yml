@@ -63,6 +63,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
