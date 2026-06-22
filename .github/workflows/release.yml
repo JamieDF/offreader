@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build-appimage:
+    name: Build AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Copy to Electron
+        run: npx cap copy electron
+
+      - name: Install Electron dependencies
+        run: cd electron && npm ci
+
+      - name: Build AppImage
+        run: |
+          cd electron
+          npm run build
+          npx electron-builder --linux AppImage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist-electron/*.AppImage
+          retention-days: 5
+
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Sync to Android
+        run: npx cap sync android
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > release.keystore
+
+      - name: Build release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+        env:
+          KEYSTORE_PATH: release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 5
+
+  approval:
+    name: Approval
+    needs: [build-appimage, build-apk]
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Release approved
+        run: echo "Release approved by ${{ github.actor }}"
+
+  create-release:
+    name: Create Release
+    needs: [build-appimage, build-apk, approval]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: appimage
+          path: artifacts/
+
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk
+          path: artifacts/
+
+      - name: Extract changelog for release notes
+        id: changelog
+        run: |
+          CHANGELOG=$(node -e "
+            const changelog = require('./public/changelog.json');
+            const latest = changelog[0];
+            const items = latest.items.map(item => '- ' + item).join('\n');
+            console.log('## ' + latest.version + ' (' + latest.date + ')\n\n' + items);
+          ")
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          files: |
+            artifacts/*.AppImage
+            artifacts/*.apk
+          body: ${{ steps.changelog.outputs.body }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
