@@ -32,7 +32,7 @@ jobs:
         run: npx cap copy electron
 
       - name: Install Electron dependencies
-        run: cd electron && npm ci
+        run: cd electron && npm install
 
       - name: Build AppImage
         run: |
