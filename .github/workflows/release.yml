@@ -86,21 +86,9 @@ jobs:
         run: npx cap sync android
 
       - name: Decode keystore
-        run: |
-          echo "$KEYSTORE_FILE" | base64 -d > android/app/release.keystore
+        run: echo "$KEYSTORE_FILE" | base64 -d > android/app/release.keystore
         env:
           KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
-
-      - name: Verify keystore is PKCS12
-        run: |
-          echo "=== Keystore file ==="
-          ls -la android/app/release.keystore
-          echo "=== First 4 bytes (PKCS12 starts 30 80) ==="
-          head -c 4 android/app/release.keystore | xxd
-          echo "=== Checking with keytool ==="
-          echo "$KEYSTORE_PASS" | keytool -list -keystore android/app/release.keystore -storetype PKCS12 -storepass stdin 2>&1 | head -5 || true
-        env:
-          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
 
       - name: Build release APK
         run: |
