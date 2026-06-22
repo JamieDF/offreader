@@ -42,7 +42,7 @@
     "appId": "com.offreader.app",
     "productName": "OffReader",
     "directories": {
-      "output": "dist",
+      "output": "../dist-electron",
       "buildResources": "resources"
     },
     "files": [
