@@ -82,7 +82,10 @@ jobs:
         run: npx cap sync android
 
       - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > android/app/release.keystore
+        run: |
+          echo "$KEYSTORE_FILE" | base64 -d > android/app/release.keystore
+        env:
+          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
 
       - name: Verify keystore is PKCS12
         run: |
