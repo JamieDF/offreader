@@ -103,7 +103,7 @@ export function ChaptersList({
                         <span>{chapter.index + 1}</span>
                       )}
                     </div>
-                    <span className={`flex-1 text-sm truncate ${
+                    <span className={`flex-1 min-w-0 text-sm truncate ${
                       status === "current" ? "font-medium text-primary" : ""
                     }`}>
                       {chapter.label}

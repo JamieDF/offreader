@@ -4,7 +4,7 @@ Thanks for taking the time to contribute! Every bug report, suggestion, and pull
 
 ## Before You Start
 
-- **Search first.** Check [open and closed issues](../../issues) before filing a new one — your question or bug may already be covered.
+- **Search first.** Check [open and closed issues](../../issues) before filing a new one; your question or bug may already be covered.
 - **Comment before coding.** For anything beyond a small bug fix, open an issue first to discuss the approach. This avoids wasted effort if the direction doesn't fit the project.
 
 ## How to Contribute
@@ -27,7 +27,7 @@ Open an issue describing:
 
 1. Fork the repo and create a branch: `git checkout -b feat/your-feature`
 2. Make your changes
-3. Run the test suite — all tests must pass:
+3. Run the test suite; all tests must pass:
    ```bash
    npm test          # unit tests
    npm run test:e2e  # end-to-end tests
@@ -38,14 +38,14 @@ Open an issue describing:
 
 ## Code Standards
 
-- **TypeScript** — no `any` types unless genuinely unavoidable
-- **Tests required** — new features need unit or E2E tests; bug fixes ideally include a regression test
-- **One thing per PR** — keep pull requests focused on a single change
-- **No console.log** — use proper error handling instead
+- **TypeScript**: no `any` types unless genuinely unavoidable
+- **Tests required**: new features need unit or E2E tests; bug fixes ideally include a regression test
+- **One thing per PR**: keep pull requests focused on a single change
+- **No console.log**: use proper error handling instead
 
 ## What We're Looking For
 
-OffReader is intentionally simple — offline, no account, no cloud. Contributions that align with that philosophy are most welcome. Features that require accounts, tracking, or external services are unlikely to be accepted.
+OffReader is intentionally simple: offline, no account, no cloud. Contributions that align with that philosophy are most welcome. Features that require accounts, tracking, or external services are unlikely to be accepted.
 
 ## Response Time
 
