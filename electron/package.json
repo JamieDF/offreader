@@ -1,6 +1,6 @@
 {
   "name": "OffReader",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "OffReader — offline ebook reader for Linux desktop",
   "author": {
     "name": "Jamie DF",
@@ -52,7 +52,11 @@
       "app/**/*"
     ],
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "category": "Office"
     }
   }
