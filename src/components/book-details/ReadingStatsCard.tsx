@@ -79,7 +79,7 @@ export function ReadingStatsCard({
           ) : (
             <Play className="w-5 h-5 mr-2" />
           )}
-          {resumeLabel}
+          <span className="min-w-0 truncate">{resumeLabel}</span>
         </Button>
       </CardContent>
     </Card>

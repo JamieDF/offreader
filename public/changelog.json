@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.8.1",
+    "date": "2026-07-01",
+    "items": [
+      "Fixed long chapter titles, labels, and resume buttons overflowing; text now truncates with an ellipsis"
+    ]
+  },
+  {
     "version": "0.8.0",
     "date": "2026-07-01",
     "items": [

@@ -140,7 +140,7 @@ function LabelsPopup({
               className="w-2.5 h-2.5 rounded-full flex-shrink-0"
               style={{ backgroundColor: label.color }}
             />
-            <span className="flex-1 truncate">{label.name}</span>
+            <span className="flex-1 min-w-0 truncate">{label.name}</span>
             {isSelected && (
               <span className="text-xs" style={{ color: label.color }}>
                 <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
