@@ -153,12 +153,6 @@ jobs:
           name: apk
           path: artifacts/
 
-      - name: Download AAB
-        uses: actions/download-artifact@v4
-        with:
-          name: aab
-          path: artifacts/
-
       - name: Extract changelog for release notes
         id: changelog
         run: |
@@ -180,7 +174,6 @@ jobs:
           files: |
             artifacts/*.AppImage
             artifacts/*.apk
-            artifacts/*.aab
           body: ${{ steps.changelog.outputs.body }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
