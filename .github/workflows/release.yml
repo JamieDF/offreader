@@ -114,9 +114,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: apk
-          path: |
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/bundle/release/*.aab
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 5
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab
+          path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 5
 
   approval:
@@ -146,6 +151,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: apk
+          path: artifacts/
+
+      - name: Download AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: aab
           path: artifacts/
 
       - name: Extract changelog for release notes
