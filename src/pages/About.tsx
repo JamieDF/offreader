@@ -1,24 +1,10 @@
 import { ArrowLeft, Bug, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-
-interface ChangelogEntry {
-  version: string;
-  date: string;
-  items: string[];
-}
+import { AboutContent } from '@/components/library/AboutContent';
 
 const About = () => {
   const navigate = useNavigate();
-  const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
-
-  useEffect(() => {
-    fetch('/changelog.json')
-      .then(r => r.json())
-      .then(setChangelog)
-      .catch(() => {});
-  }, []);
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -36,31 +22,11 @@ const About = () => {
           <section className="flex flex-col items-center text-center gap-2 pt-2">
             <img src="/offReader.svg" alt="OffReader" className="h-16 w-16" />
             <h1 className="text-2xl font-bold">OffReader</h1>
-            <p className="text-muted-foreground text-sm">A simple ebook library and reader using Foliate.js. No account, no cloud — just you and your books.</p>
+            <p className="text-muted-foreground text-sm">A simple ebook library and reader using Foliate.js. No account, no cloud. Just you and your books.</p>
             <span className="text-xs text-muted-foreground">v{__APP_VERSION__}</span>
           </section>
 
-          {changelog.length > 0 && (
-            <section className="space-y-6">
-              <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Changelog</h2>
-              {changelog.map(entry => (
-                <div key={entry.version} className="space-y-2">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-sm font-semibold">v{entry.version}</span>
-                    <span className="text-xs text-muted-foreground">{entry.date}</span>
-                  </div>
-                  <ul className="space-y-1">
-                    {entry.items.map((item, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                        <span className="shrink-0">·</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </section>
-          )}
+          <AboutContent />
 
           <section className="space-y-3 border-t border-border pt-8">
             <button

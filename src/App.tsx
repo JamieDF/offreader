@@ -41,7 +41,7 @@ const App = () => {
 
     initialize();
   }, []);
-  
+
   if (!libraryReady) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -52,7 +52,7 @@ const App = () => {
       </div>
     );
   }
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <ReaderSettingsProvider>
