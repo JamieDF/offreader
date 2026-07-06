@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Upload, WifiOff } from 'lucide-react';
+import { AboutContent, ChangelogAccordion } from '@/components/library/AboutContent';
 import { type WelcomeDialogMode } from '@/hooks/useWelcomeDialog';
 
 interface ChangelogEntry {
@@ -22,118 +23,69 @@ interface WelcomeDialogProps {
 }
 
 export function WelcomeDialog({ mode, lastVersion, onDismiss }: WelcomeDialogProps) {
+  const title = mode === 'first-time'
+    ? 'Welcome to OffReader'
+    : 'Welcome back';
+
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
 
+  // Fetch the changelog whenever we actually need to show it (welcome-back).
   useEffect(() => {
-    if (!mode) return;
+    if (mode !== 'welcome-back') return;
     fetch('/changelog.json')
       .then(r => r.json())
       .then(setChangelog)
       .catch(() => {});
   }, [mode]);
 
-  const { missed, rest } = useMemo(() => {
-    if (!changelog.length) return { missed: [], rest: [] };
-    if (!lastVersion) return { missed: changelog.slice(0, 1), rest: changelog.slice(1) };
+  // Compute which versions were released after lastVersion (these are what
+  // the user missed). If lastVersion isn't in the changelog, show everything.
+  const missedVersions = (() => {
+    if (mode !== 'welcome-back' || !changelog.length) return undefined;
+    if (!lastVersion) return changelog.map(e => e.version);
     const cutoff = changelog.findIndex(e => e.version === lastVersion);
     const pivot = cutoff === -1 ? changelog.length : cutoff;
-    return { missed: changelog.slice(0, pivot), rest: changelog.slice(pivot) };
-  }, [changelog, lastVersion]);
+    return changelog.slice(0, pivot).map(e => e.version);
+  })();
+
+  const isWelcomeBack = mode === 'welcome-back';
 
   return (
     <Dialog open={mode !== null} onOpenChange={(open) => { if (!open) onDismiss(); }}>
-      <DialogContent className="sm:max-w-[480px] max-h-[85vh] flex flex-col gap-0">
-        <DialogHeader className="pb-4">
-          <DialogTitle>
-            {mode === 'first-time' ? 'Welcome to OffReader' : 'Welcome back'}
-          </DialogTitle>
+      <DialogContent className="sm:max-w-[480px] max-h-[85vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+          <DialogTitle>{title}</DialogTitle>
+          {isWelcomeBack && (
+            <DialogDescription>
+              Here's what's changed since v{lastVersion ?? 'your last visit'}.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-6">
-          {mode === 'first-time' ? <FirstTimeContent /> : <WelcomeBackContent />}
-          {changelog.length > 0 && <WhatsNewSection missed={missed} rest={rest} />}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6">
+          {isWelcomeBack ? (
+            missedVersions && missedVersions.length > 0 ? (
+              <ChangelogAccordion
+                entries={changelog}
+                versions={missedVersions}
+                defaultExpandedVersions={missedVersions}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No notable changes recorded for this update.
+              </p>
+            )
+          ) : (
+            <AboutContent showChangelog={false} />
+          )}
         </div>
 
-        <div className="pt-4 mt-4 border-t">
+        <div className="px-6 py-4 mt-4 border-t shrink-0">
           <Button onClick={onDismiss} className="w-full">
             Got it
           </Button>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function FirstTimeContent() {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        OffReader is a private ebook reader. No account, no sync — your books and reading data stay entirely on your device.
-      </p>
-      <ul className="space-y-3">
-        <li className="flex items-start gap-3 text-sm">
-          <Upload className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-          <span>Import EPUB or MOBI files directly from your device</span>
-        </li>
-        <li className="flex items-start gap-3 text-sm">
-          <BookOpen className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-          <span>Track progress, bookmarks, and reading streaks across your library</span>
-        </li>
-        <li className="flex items-start gap-3 text-sm">
-          <WifiOff className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-          <span>Nothing is ever sent to a server — no tracking, no cloud storage</span>
-        </li>
-      </ul>
-    </div>
-  );
-}
-
-function WelcomeBackContent() {
-  return (
-    <p className="text-sm text-muted-foreground">
-      Good to have you back. Here's what's changed since your last visit.
-    </p>
-  );
-}
-
-function ChangelogEntryRow({ entry }: { entry: ChangelogEntry }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-mono text-primary">v{entry.version}</span>
-        <span className="text-xs text-muted-foreground">{entry.date}</span>
-      </div>
-      <ul className="space-y-1.5">
-        {entry.items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-            <span className="mt-2 w-1 h-1 rounded-full bg-muted-foreground shrink-0" />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function WhatsNewSection({ missed, rest }: { missed: ChangelogEntry[]; rest: ChangelogEntry[] }) {
-  const [showAll, setShowAll] = useState(false);
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold">What's new</h3>
-      {missed.map(entry => <ChangelogEntryRow key={entry.version} entry={entry} />)}
-      {rest.length > 0 && (
-        showAll
-          ? rest.map(entry => <ChangelogEntryRow key={entry.version} entry={entry} />)
-          : (
-            <button
-              onClick={() => setShowAll(true)}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Show {rest.length} older {rest.length === 1 ? 'release' : 'releases'}
-            </button>
-          )
-      )}
-    </div>
   );
 }
