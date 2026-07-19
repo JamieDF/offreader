@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AboutContent, ChangelogAccordion } from '@/components/library/AboutContent';
+import { Bug, ExternalLink, Star } from 'lucide-react';
 import { type WelcomeDialogMode } from '@/hooks/useWelcomeDialog';
 
 interface ChangelogEntry {
@@ -64,17 +65,46 @@ export function WelcomeDialog({ mode, lastVersion, onDismiss }: WelcomeDialogPro
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6">
           {isWelcomeBack ? (
-            missedVersions && missedVersions.length > 0 ? (
-              <ChangelogAccordion
-                entries={changelog}
-                versions={missedVersions}
-                defaultExpandedVersions={missedVersions}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No notable changes recorded for this update.
-              </p>
-            )
+            <>
+              {missedVersions && missedVersions.length > 0 ? (
+                <ChangelogAccordion
+                  entries={changelog}
+                  versions={missedVersions}
+                  defaultExpandedVersions={missedVersions}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No notable changes recorded for this update.
+                </p>
+              )}
+
+              <div className="mt-6 pt-4 border-t space-y-2">
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.offreader.reader"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-muted-foreground" />
+                    Rate this app
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </a>
+                <a
+                  href="https://github.com/JamieDF/offreader/issues"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Bug className="h-4 w-4 text-muted-foreground" />
+                    Report a bug
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </a>
+              </div>
+            </>
           ) : (
             <AboutContent showChangelog={false} />
           )}

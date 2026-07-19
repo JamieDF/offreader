@@ -5,7 +5,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { BookOpen, ExternalLink, Library, Tag, Upload, WifiOff } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { BookOpen, ChevronDown, ExternalLink, Library, Tag, Upload, WifiOff } from 'lucide-react';
 
 interface ChangelogEntry {
   version: string;
@@ -174,10 +175,15 @@ export function AboutContent({
       </section>
 
       {showChangelog && changelog.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Changelog</h2>
-          <ChangelogAccordion entries={changelog} versions={changelogVersions} />
-        </section>
+        <Collapsible className="space-y-3">
+          <CollapsibleTrigger className="flex items-center justify-between w-full group">
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Changelog</h2>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ChangelogAccordion entries={changelog} versions={changelogVersions} />
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );
