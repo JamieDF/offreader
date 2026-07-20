@@ -1,0 +1,250 @@
+/* Driver.js popover overrides — match the shadcn theme tokens.
+ *
+ * Driver.js injects its popover into <body>, so it inherits any CSS custom
+ * properties on <html> (where ReaderSettingsProvider applies the active
+ * theme class). We override the hardcoded driver.js colours and the
+ * generic button styling with the same tokens used elsewhere in the app,
+ * so the tour adapts to whatever theme the user has picked (parchment,
+ * day, night, neon, etc.) and the buttons feel native to the rest of
+ * the UI rather than like generic browser buttons.
+ */
+
+.driver-popover {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 2px solid hsl(var(--border));
+  font-family: inherit;
+  box-shadow:
+    0 2px 4px hsl(var(--foreground) / 0.08),
+    0 12px 36px hsl(var(--foreground) / 0.22);
+}
+
+.driver-popover-title {
+  color: hsl(var(--popover-foreground));
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding-right: 24px; /* room for the close button */
+}
+
+.driver-popover-description {
+  color: hsl(var(--muted-foreground));
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.driver-popover-close-btn {
+  color: hsl(var(--muted-foreground));
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.driver-popover-close-btn:hover,
+.driver-popover-close-btn:focus {
+  color: hsl(var(--popover-foreground));
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+/* Footer: separator from the body content. The navigation-buttons
+ * container (which now also holds the progress text, see the
+ * controller's onPopoverRender) does the actual layout work. */
+.driver-popover-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid hsl(var(--border) / 1.4);
+}
+
+/* Single row on desktop:
+ *   [ Back  | 2 of 4 |  Next ]
+ * Buttons are pushed to the ends; progress text sits between them. */
+.driver-popover-navigation-btns {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.driver-popover-progress-text {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Reset the ugly "all: unset" driver.js default and rebuild both buttons
+ * with shadcn-shaped sizing, focus rings, and disabled state. */
+.driver-popover-footer-btn,
+.driver-popover-prev-btn,
+.driver-popover-next-btn {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0 16px;
+  height: 40px;
+  min-height: 44px; /* touch target */
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease, color 150ms ease,
+              border-color 150ms ease, transform 100ms ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Secondary action: Back and Stay on tour. Outline button, neutral. */
+.driver-popover-prev-btn,
+.tour-stay-btn {
+  background-color: transparent;
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.driver-popover-prev-btn:hover:not(.driver-popover-btn-disabled),
+.driver-popover-prev-btn:focus-visible:not(.driver-popover-btn-disabled),
+.tour-stay-btn:hover,
+.tour-stay-btn:focus-visible {
+  background-color: hsl(var(--muted) / 0.5);
+  border-color: hsl(var(--muted-foreground) / 0.4);
+}
+
+.driver-popover-prev-btn:focus-visible,
+.tour-stay-btn:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.driver-popover-prev-btn:active:not(.driver-popover-btn-disabled),
+.tour-stay-btn:active {
+  transform: scale(0.97);
+}
+
+/* Primary action: Next / Done. Solid primary colour. */
+.driver-popover-next-btn {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: 1px solid hsl(var(--primary));
+  box-shadow: 0 1px 2px hsl(var(--primary) / 0.2);
+}
+
+.driver-popover-next-btn:hover:not(.driver-popover-btn-disabled),
+.driver-popover-next-btn:focus-visible:not(.driver-popover-btn-disabled) {
+  background-color: hsl(var(--primary) / 0.92);
+  border-color: hsl(var(--primary) / 0.92);
+  box-shadow: 0 2px 6px hsl(var(--primary) / 0.25);
+}
+
+.driver-popover-next-btn:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.driver-popover-next-btn:active:not(.driver-popover-btn-disabled) {
+  transform: scale(0.97);
+}
+
+/* Destructive action shown after clicking outside the tour. Keep this
+ * explicit instead of using the theme's primary colour so "End tour"
+ * remains legible in every reader theme. */
+.driver-popover[data-tour-exit-active] .driver-popover-next-btn {
+  background-color: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  border-color: hsl(var(--destructive));
+}
+
+.driver-popover[data-tour-exit-active] .driver-popover-next-btn:hover,
+.driver-popover[data-tour-exit-active] .driver-popover-next-btn:focus-visible {
+  background-color: hsl(var(--destructive) / 0.9);
+  color: hsl(var(--destructive-foreground));
+  border-color: hsl(var(--destructive) / 0.9);
+}
+
+/* Disabled state for either button. */
+.driver-popover-btn-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Arrow colour matches the popover background. */
+.driver-popover-arrow {
+  border: 5px solid hsl(var(--popover));
+}
+
+/* Mobile layout — per-step popover positions.
+ *
+ * The popover is tagged with `data-tour-step` set by OnboardingTour's
+ * onPopoverRender, so we can position it differently for each step.
+ * Step 1 (welcome) and step 2 (import FAB) sit in the middle, with
+ * enough bottom margin to keep the floating action button visible. Steps
+ * 3, 5 and 6 dock to the bottom of the screen. Step 4 docks to the
+ * top so it sits near the shelf + labels section of the dialog.
+ * The driver.js arrow is hidden because there is no sensible place to
+ * point it when the popover is docked to an edge. */
+@media (max-width: 640px) {
+  .driver-popover {
+    width: auto !important;
+    max-width: none !important;
+    padding: 16px;
+    border-radius: 12px !important;
+  }
+
+  /* Middle: steps 1 (welcome) and 2 (import FAB). */
+  .driver-popover[data-tour-step="welcome"],
+  .driver-popover[data-tour-step="import"] {
+    left: 8px !important;
+    right: 8px !important;
+    top: auto !important;
+    bottom: 96px !important;
+  }
+
+  /* Bottom: steps 3, 5 and 6. */
+  .driver-popover[data-tour-step="dialog-metadata"],
+  .driver-popover[data-tour-step="book-card"],
+  .driver-popover[data-tour-step="settings"] {
+    left: 8px !important;
+    right: 8px !important;
+    top: auto !important;
+    bottom: 8px !important;
+  }
+
+  /* Top: step 4 (shelf + labels). */
+  .driver-popover[data-tour-step="dialog-shelf"] {
+    left: 8px !important;
+    right: 8px !important;
+    top: 8px !important;
+    bottom: auto !important;
+  }
+
+  .driver-popover-arrow {
+    display: none;
+  }
+
+  .driver-popover-navigation-btns {
+    gap: 8px;
+  }
+
+  .driver-popover-progress-text {
+    font-size: 11px;
+  }
+
+  .driver-popover-prev-btn,
+  .driver-popover-next-btn {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}

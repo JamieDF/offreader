@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Book } from "@/types/book";
 import { Label } from "@/types/book";
@@ -19,9 +19,36 @@ import { ReadingInsights } from "./ReadingInsights";
 import { ManageLibraryDialog } from "./ManageLibraryDialog";
 import { PostImportDialog } from "./PostImportDialog";
 import { toast } from "@/components/ui/toast";
+import { useOnboardingTour } from "@/hooks/useOnboardingTour";
 
 interface LibraryViewProps {
   onBookSelect: (book: Book) => void;
+}
+
+/**
+ * Builds the fake Book used by the onboarding tour's demo steps (3 + 4).
+ * Lives in module scope because it has no instance state. The tour applies
+ * the user's selected shelf/label to this book for step 4.
+ */
+function makeDemoBook(): Book {
+  return {
+    id: 'tour-demo-book',
+    title: 'Pride and Prejudice',
+    author: 'Jane Austen',
+    coverImage: '',
+    filePath: '',
+    format: 'EPUB',
+    progress: 0,
+    description: 'A classic novel of manners.',
+    totalChapters: 61,
+    pageCount: 432,
+    estimatedReadingTime: '11h 30m',
+    publisher: 'T. Egerton',
+    pubDate: '1813',
+    language: 'en',
+    shelfId: null,
+    labelIds: [],
+  };
 }
 
 export function LibraryView({ onBookSelect }: LibraryViewProps) {
@@ -40,6 +67,12 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     clearFilters,
     activeFilterCount,
   } = useLibrary();
+  const {
+    isOpen: tourOpen,
+    demoState,
+    startDemoImport,
+    applyDemoImport,
+  } = useOnboardingTour();
 
   const [labels, setLabels] = useState<Label[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -58,18 +91,56 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     return unsubscribe;
   }, []);
 
-  const handleApplyImportLabels = async (shelfId: string | null, labelIds: string[], metadataUpdates?: { title: string; author: string; description: string }) => {
+  // When the tour demo card step is active, render the fake book alongside
+  // (or instead of) real books so the spotlight anchor exists.
+  const demoBook = useMemo<Book | null>(() => {
+    if (!demoState.bookCardVisible) return null;
+    const base = makeDemoBook();
+    return {
+      ...base,
+      shelfId: demoState.selectedShelfId,
+      labelIds: demoState.selectedLabelIds,
+    };
+  }, [demoState.bookCardVisible, demoState.selectedShelfId, demoState.selectedLabelIds]);
+
+  // Treat the library as non-empty while the demo card is on screen so the
+  // EmptyState doesn't render behind the spotlight.
+  const showEmptyState = isEmpty && !demoState.bookCardVisible;
+
+  const handleRealImport = () => {
+    importBooks((books) => {
+      setImportedBooks(books);
+      setShowImportDialog(true);
+    });
+  };
+
+  // FAB / EmptyState click handler. During the tour, route the click into
+  // the demo flow instead of opening the OS file picker — driver.js's
+  // overlay would otherwise block user gestures anyway.
+  const handleImportClick = () => {
+    if (tourOpen) {
+      startDemoImport();
+    } else {
+      handleRealImport();
+    }
+  };
+
+  const handleApplyImportLabels = async (
+    shelfId: string | null,
+    labelIds: string[],
+    metadataUpdates?: { title: string; author: string; description: string },
+  ) => {
     if (importedBooks.length === 0) return;
 
-    const books = libraryService.getBooks();
-    const updatedBooks = books.map(book => {
-      const isImported = importedBooks.some(b => b.id === book.id);
+    const allBooks = libraryService.getBooks();
+    const updatedBooks = allBooks.map((book) => {
+      const isImported = importedBooks.some((b) => b.id === book.id);
       if (isImported) {
         return {
           ...book,
           shelfId,
           labelIds,
-          ...(metadataUpdates ? metadataUpdates : {})
+          ...(metadataUpdates ? metadataUpdates : {}),
         };
       }
       return book;
@@ -83,24 +154,23 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     setImportedBooks([]);
     toast.success(`Applied to ${importedBooks.length} book${importedBooks.length > 1 ? 's' : ''}`);
   };
-    const handleResume = async (book: Book) => {
+
+  const handleResume = async (book: Book) => {
     try {
       const trackerDataString = await storageService.getItem('book-tracker-data');
-      
+
       if (trackerDataString) {
         const allTrackerData = JSON.parse(trackerDataString);
         const bookTrackerData = allTrackerData[book.id];
         const currentLocation = bookTrackerData?.currentLocation;
-        
-        // Navigate with book ID and location if available
+
         const baseUrl = `/reader?bookId=${encodeURIComponent(book.id)}`;
-        const resumeUrl = currentLocation 
+        const resumeUrl = currentLocation
           ? `${baseUrl}&location=${encodeURIComponent(currentLocation)}`
           : baseUrl;
-        
+
         navigate(resumeUrl);
       } else {
-        // No saved location, navigate without location
         navigate(`/reader?bookId=${encodeURIComponent(book.id)}`);
       }
     } catch (error) {
@@ -108,6 +178,16 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
       navigate(`/reader?bookId=${encodeURIComponent(book.id)}`);
     }
   };
+
+  // While the tour is on step 3 (dialog) or step 4 (book card), open the
+  // dialog with the fake book and route the confirm to the demo callback
+  // instead of persisting anything.
+  const showDemoDialog = demoState.dialogOpen;
+  const dialogBooks = showDemoDialog ? [makeDemoBook()] : importedBooks;
+  const dialogOpen = showImportDialog || showDemoDialog;
+  const dialogOnConfirm = showDemoDialog
+    ? (shelfId: string | null, labelIds: string[]) => applyDemoImport(shelfId, labelIds)
+    : handleApplyImportLabels;
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -120,6 +200,8 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         onAbout={() => navigate('/about')}
         sortBy={sortBy}
         onSortChange={setSortBy}
+        mobileMenuOpen={undefined}
+        onMobileMenuOpenChange={undefined}
       />
 
       <FilterToolbar
@@ -127,15 +209,15 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         onFilterChange={setFilter}
         onClearFilters={clearFilters}
         activeFilterCount={activeFilterCount}
-        bookCount={books.length}
+        bookCount={books.length + (demoBook ? 1 : 0)}
       />
 
       {/* Scrollable Content Area - only this section scrolls */}
       <main className="flex-1 overflow-y-auto overscroll-contain bg-background">
         <div className="max-w-7xl mx-auto w-full">
-          {isEmpty ? (
-            <EmptyState onBrowse={() => importBooks((books) => { setImportedBooks(books); setShowImportDialog(true); })} />
-          ) : books.length === 0 ? (
+          {showEmptyState ? (
+            <EmptyState onBrowse={handleImportClick} />
+          ) : books.length === 0 && !demoBook ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-12 gap-4">
               <p>No books match your filters</p>
               <button
@@ -152,7 +234,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
                   <ResumeHero book={lastReadBook} onContinue={handleResume} />
                 </div>
               )}
-              
+
               <div className="space-y-4">
                 <h2 className="text-xl font-bold tracking-tight px-1">Your Collection</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
@@ -164,6 +246,18 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
                       labels={labels}
                     />
                   ))}
+                  {demoBook && (
+                    <BookCard
+                      key={demoBook.id}
+                      book={demoBook}
+                      onSelect={() => {
+                        // During the tour, tapping the demo card is a
+                        // no-op. The popover already explains the action.
+                      }}
+                      labels={labels}
+                      dataTourId="demo-book-card"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -171,8 +265,8 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         </div>
       </main>
 
-      <FloatingActionButton onClick={() => importBooks((books) => { setImportedBooks(books); setShowImportDialog(true); })} />
-      
+      <FloatingActionButton onClick={handleImportClick} />
+
       <ThemeSettingsDialog
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
@@ -189,9 +283,11 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
       />
 
       <PostImportDialog
-        isOpen={showImportDialog}
-        books={importedBooks}
-        onConfirm={handleApplyImportLabels}
+        isOpen={dialogOpen}
+        books={dialogBooks}
+        onConfirm={dialogOnConfirm}
+        dataTourMetadataId="import-dialog-metadata"
+        dataTourShelfId="import-dialog-shelf"
       />
     </div>
   );

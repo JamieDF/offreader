@@ -1,6 +1,6 @@
 {
   "name": "offreader",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "OffReader — offline ebook reader. No account, no cloud, just your books.",
   "license": "MIT",
@@ -70,6 +70,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "driver.js": "^1.8.0",
     "embla-carousel-react": "^8.6.0",
     "foliate-js": "github:JamieDF/foliate-js",
     "input-otp": "^1.4.2",

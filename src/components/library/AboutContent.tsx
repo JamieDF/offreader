@@ -48,6 +48,8 @@ interface AboutContentProps {
   showChangelog?: boolean;
   /** Restrict the changelog to these versions (and pre-expand them). */
   changelogVersions?: string[];
+  /** Optional content shown directly below the How to use it heading. */
+  howToUseAction?: React.ReactNode;
 }
 
 export function ChangelogAccordion({
@@ -66,7 +68,7 @@ export function ChangelogAccordion({
   return (
     <Accordion type="multiple" defaultValue={defaultExpandedVersions} className="w-full">
       {visible.map(entry => (
-        <AccordionItem key={entry.version} value={entry.version}>
+            <AccordionItem key={entry.version} value={entry.version} className="border-b-0">
           <AccordionTrigger className="text-sm">
             <span className="flex items-center gap-2">
               <span className="font-semibold">v{entry.version}</span>
@@ -92,6 +94,7 @@ export function ChangelogAccordion({
 export function AboutContent({
   showChangelog = true,
   changelogVersions,
+  howToUseAction,
 }: AboutContentProps = {}) {
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
 
@@ -127,6 +130,7 @@ export function AboutContent({
 
       <section className="space-y-3">
         <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">How to use it</h2>
+        {howToUseAction}
         <p className="text-sm text-muted-foreground">
           Tap the <span className="text-foreground font-medium">+</span> button on your library to import an EPUB or MOBI file. Open a book to start reading. Your progress saves automatically as you turn pages.
         </p>

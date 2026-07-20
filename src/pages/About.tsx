@@ -1,10 +1,23 @@
-import { ArrowLeft, Bug, ChevronRight, ExternalLink, Star } from 'lucide-react';
+import { ArrowLeft, Bug, ChevronRight, ExternalLink, Play, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { AboutContent } from '@/components/library/AboutContent';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 
 const About = () => {
   const navigate = useNavigate();
+  const { forceStart: forceStartTour } = useOnboardingTour();
+
+  // Tour steps are anchored on the Library page, so navigate there first
+  // and start the tour on the next frame so the target elements exist.
+  const handleStartTour = async () => {
+    navigate('/');
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // forceStart ignores the persisted completion marker so replay
+    // always works (start() was racy because stop() is async and could
+    // queue a stale `false` after our `true`).
+    await forceStartTour();
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -29,6 +42,16 @@ const About = () => {
           <AboutContent />
 
           <section className="space-y-3 border-t border-border pt-8">
+            <button
+              type="button"
+              onClick={handleStartTour}
+              className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors w-full"
+            >
+              <div className="flex items-center gap-2">
+                <Play className="h-4 w-4 text-muted-foreground" />
+                Need a refresher? Take the tour
+              </div>
+            </button>
             <a
               href="https://play.google.com/store/apps/details?id=com.offreader.reader"
               target="_blank"
