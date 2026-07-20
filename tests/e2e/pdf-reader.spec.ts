@@ -4,6 +4,12 @@ import { PDF_PATH, importAndOpenReader, waitForReaderReady, openReaderOverlay } 
 test.describe('PDF Reader', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
+    });
+    await page.reload();
     await importAndOpenReader(page, PDF_PATH, /minimal/i);
   });
 

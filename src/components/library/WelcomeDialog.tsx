@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AboutContent, ChangelogAccordion } from '@/components/library/AboutContent';
-import { Bug, ExternalLink, Star } from 'lucide-react';
+import { Bug, ExternalLink, Play, Star } from 'lucide-react';
 import { type WelcomeDialogMode } from '@/hooks/useWelcomeDialog';
 
 interface ChangelogEntry {
@@ -21,9 +21,10 @@ interface WelcomeDialogProps {
   mode: WelcomeDialogMode;
   lastVersion: string | null;
   onDismiss: () => void;
+  onStartTour?: () => void;
 }
 
-export function WelcomeDialog({ mode, lastVersion, onDismiss }: WelcomeDialogProps) {
+export function WelcomeDialog({mode, lastVersion, onDismiss, onStartTour }: WelcomeDialogProps) {
   const title = mode === 'first-time'
     ? 'Welcome to OffReader'
     : 'Welcome back';
@@ -79,6 +80,18 @@ export function WelcomeDialog({ mode, lastVersion, onDismiss }: WelcomeDialogPro
               )}
 
               <div className="mt-6 pt-4 border-t space-y-2">
+                {onStartTour && (
+                  <button
+                    type="button"
+                    onClick={onStartTour}
+                    className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors w-full"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Play className="h-4 w-4 text-muted-foreground" />
+                      Need a refresher? Take the tour
+                    </div>
+                  </button>
+                )}
                 <a
                   href="https://play.google.com/store/apps/details?id=com.offreader.reader"
                   target="_blank"
@@ -106,13 +119,31 @@ export function WelcomeDialog({ mode, lastVersion, onDismiss }: WelcomeDialogPro
               </div>
             </>
           ) : (
-            <AboutContent showChangelog={false} />
+            <AboutContent
+              showChangelog={false}
+              howToUseAction={onStartTour && (
+                <div>
+                  <Button
+                    onClick={onStartTour}
+                    size="lg"
+                    className="w-full"
+                    data-testid="welcome-start-tour"
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Start the tour
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    A quick walkthrough of the basics. Takes about 30 seconds.
+                  </p>
+                </div>
+              )}
+            />
           )}
         </div>
 
         <div className="px-6 py-4 mt-4 border-t shrink-0">
           <Button onClick={onDismiss} className="w-full">
-            Got it
+            {mode === 'first-time' ? "I'll explore on my own" : 'Got it'}
           </Button>
         </div>
       </DialogContent>

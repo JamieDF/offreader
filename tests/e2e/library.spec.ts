@@ -18,6 +18,21 @@ async function importBook(page: Page, filePath: string) {
 test.describe('Library', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // Pre-seed storage so the welcome dialog and onboarding tour don't
+    // appear during these tests. They're tested separately in
+    // onboarding-tour.spec.ts.
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'CapacitorStorage.offreader-last-visit',
+        new Date().toISOString(),
+      );
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem(
+        'CapacitorStorage.offreader-tour-completed',
+        new Date().toISOString(),
+      );
+    });
+    await page.reload();
   });
 
   test('shows empty library on first load', async ({ page }) => {

@@ -10,6 +10,7 @@ export function FloatingActionButton({ onClick }: FloatingActionButtonProps) {
     <Button
       onClick={onClick}
       size="icon"
+      data-tour="fab"
       className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 z-50"
     >
       <Plus className="h-6 w-6" />

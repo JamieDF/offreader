@@ -25,12 +25,20 @@ interface PostImportDialogProps {
     labelIds: string[],
     metadataUpdates?: { title: string; author: string; description: string }
   ) => void;
+  /** Selector for the Title/Author/Description wrapper (used by the
+   *  onboarding tour to anchor on the metadata fields). */
+  dataTourMetadataId?: string;
+  /** Selector for the Shelf + Labels wrapper (used by the onboarding
+   *  tour to anchor on the shelf/labels section). */
+  dataTourShelfId?: string;
 }
 
 export function PostImportDialog({
   isOpen,
   books,
   onConfirm,
+  dataTourMetadataId,
+  dataTourShelfId,
 }: PostImportDialogProps) {
   const [shelves, setShelves] = useState<Shelf[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
@@ -156,7 +164,7 @@ export function PostImportDialog({
         <div className="space-y-4 py-4">
           {isSingleBook ? (
             <>
-              <div className="space-y-3">
+              <div className="space-y-3" data-tour={dataTourMetadataId}>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Title</label>
                   <Input
@@ -196,126 +204,128 @@ export function PostImportDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-              Shelf
-            </label>
+          <div data-tour={dataTourShelfId} className="space-y-2">
+            <div>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                Shelf
+              </label>
 
-            {showNewShelf ? (
-              <div className="flex gap-2">
-                <Input
-                  value={newShelfName}
-                  onChange={(e) => setNewShelfName(e.target.value)}
-                  placeholder="Shelf name"
-                  className="flex-1"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateShelf();
-                    if (e.key === 'Escape') setShowNewShelf(false);
-                  }}
-                />
-                <Button size="sm" onClick={handleCreateShelf}>
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowNewShelf(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <select
-                  value={selectedShelfId || ''}
-                  onChange={(e) => setSelectedShelfId(e.target.value || null)}
-                  className="flex-1 px-3 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Unassigned</option>
-                  {shelves.map(shelf => (
-                    <option key={shelf.id} value={shelf.id}>
-                      {shelf.name}
-                    </option>
-                  ))}
-                </select>
-                <Button variant="outline" size="sm" onClick={() => setShowNewShelf(true)}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Tag className="h-4 w-4 text-muted-foreground" />
-              Labels
-            </label>
-
-            {showNewLabel ? (
-              <div className="space-y-2 p-3 bg-muted/50 rounded-md">
-                <Input
-                  value={newLabelName}
-                  onChange={(e) => setNewLabelName(e.target.value)}
-                  placeholder="Label name"
-                  className="w-full"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateLabel();
-                    if (e.key === 'Escape') setShowNewLabel(false);
-                  }}
-                />
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Color:</span>
-                  <div className="flex gap-1">
-                    {LABEL_COLORS.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => setNewLabelColor(color)}
-                        className={`w-5 h-5 rounded-full border-2 ${
-                          newLabelColor === color ? 'border-foreground' : 'border-transparent'
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
+              {showNewShelf ? (
+                <div className="flex gap-2 mt-1.5">
+                  <Input
+                    value={newShelfName}
+                    onChange={(e) => setNewShelfName(e.target.value)}
+                    placeholder="Shelf name"
+                    className="flex-1"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateShelf();
+                      if (e.key === 'Escape') setShowNewShelf(false);
+                    }}
+                  />
+                  <Button size="sm" onClick={handleCreateShelf}>
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowNewShelf(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2 mt-1.5">
+                  <select
+                    value={selectedShelfId || ''}
+                    onChange={(e) => setSelectedShelfId(e.target.value || null)}
+                    className="flex-1 px-3 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Unassigned</option>
+                    {shelves.map(shelf => (
+                      <option key={shelf.id} value={shelf.id}>
+                        {shelf.name}
+                      </option>
                     ))}
+                  </select>
+                  <Button variant="outline" size="sm" onClick={() => setShowNewShelf(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                Labels
+              </label>
+
+              {showNewLabel ? (
+                <div className="space-y-2 p-3 bg-muted/50 rounded-md mt-1.5">
+                  <Input
+                    value={newLabelName}
+                    onChange={(e) => setNewLabelName(e.target.value)}
+                    placeholder="Label name"
+                    className="w-full"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateLabel();
+                      if (e.key === 'Escape') setShowNewLabel(false);
+                    }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Color:</span>
+                    <div className="flex gap-1">
+                      {LABEL_COLORS.map(color => (
+                        <button
+                          key={color}
+                          onClick={() => setNewLabelColor(color)}
+                          className={`w-5 h-5 rounded-full border-2 ${
+                            newLabelColor ? 'border-foreground' : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleCreateLabel}>Create</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowNewLabel(false)}>Cancel</Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleCreateLabel}>Create</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowNewLabel(false)}>Cancel</Button>
+              ) : labels.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {labels.map(label => {
+                    const isSelected = selectedLabelIds.includes(label.id);
+                    return (
+                      <button
+                        key={label.id}
+                        onClick={() => handleToggleLabel(label.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                          isSelected ? 'text-white' : 'bg-secondary hover:bg-secondary/80'
+                        }`}
+                        style={isSelected ? { backgroundColor: label.color } : {}}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: isSelected ? 'white' : label.color }}
+                        />
+                        {label.name}
+                      </button>
+                    );
+                  })}
+                  <Button variant="outline" size="sm" onClick={() => setShowNewLabel(true)} className="h-8 px-2">
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
-            ) : labels.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {labels.map(label => {
-                  const isSelected = selectedLabelIds.includes(label.id);
-                  return (
-                    <button
-                      key={label.id}
-                      onClick={() => handleToggleLabel(label.id)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                        isSelected ? 'text-white' : 'bg-secondary hover:bg-secondary/80'
-                      }`}
-                      style={isSelected ? { backgroundColor: label.color } : {}}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: isSelected ? 'white' : label.color }}
-                      />
-                      {label.name}
-                    </button>
-                  );
-                })}
-                <Button variant="outline" size="sm" onClick={() => setShowNewLabel(true)} className="h-8 px-2">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">No labels yet</span>
-                <Button variant="outline" size="sm" onClick={() => setShowNewLabel(true)}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Create
-                </Button>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-sm text-muted-foreground">No labels yet</span>
+                  <Button variant="outline" size="sm" onClick={() => setShowNewLabel(true)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

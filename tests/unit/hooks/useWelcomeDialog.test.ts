@@ -33,10 +33,31 @@ describe('useWelcomeDialog', () => {
     vi.clearAllMocks();
   });
 
-  it('shows first-time mode when no last-visit record exists', async () => {
+  it('suppresses first-time mode when tour-completed is also missing (tour handles it)', async () => {
+    // Fresh install with no lastVisit AND no tour-completed: the
+    // onboarding tour handles first-run onboarding, so the welcome
+    // dialog stays closed.
     mockGetItem.mockImplementation((key: string) => {
       if (key === 'offreader-last-visit') return Promise.resolve(null);
       if (key === 'offreader-last-seen-version') return Promise.resolve(null);
+      if (key === 'offreader-tour-completed') return Promise.resolve(null);
+      return Promise.resolve(null);
+    });
+
+    const { result } = renderHook(() => useWelcomeDialog());
+
+    await waitFor(() => {
+      expect(result.current.mode).toBe(null);
+    });
+  });
+
+  it('shows first-time mode when tour-completed is set but last-visit is missing', async () => {
+    // User finished the tour and then somehow lost their lastVisit (e.g.
+    // cleared storage but the tour marker survived). Show first-time.
+    mockGetItem.mockImplementation((key: string) => {
+      if (key === 'offreader-last-visit') return Promise.resolve(null);
+      if (key === 'offreader-last-seen-version') return Promise.resolve(null);
+      if (key === 'offreader-tour-completed') return Promise.resolve('2026-01-01T00:00:00Z');
       return Promise.resolve(null);
     });
 
@@ -82,6 +103,7 @@ describe('useWelcomeDialog', () => {
     mockGetItem.mockImplementation((key: string) => {
       if (key === 'offreader-last-visit') return Promise.resolve(null);
       if (key === 'offreader-last-seen-version') return Promise.resolve(null);
+      if (key === 'offreader-tour-completed') return Promise.resolve('2026-01-01T00:00:00Z');
       return Promise.resolve(null);
     });
 

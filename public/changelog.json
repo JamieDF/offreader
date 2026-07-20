@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.0.0",
+    "date": "2026-07-20",
+    "items": [
+      "Added an interactive guided tour for learning how to import, organize, and open books"
+    ]
+  },
+  {
     "version": "0.9.0",
     "date": "2026-07-06",
     "items": [
