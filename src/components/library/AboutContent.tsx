@@ -5,7 +5,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { BookOpen, ExternalLink, Library, Tag, Upload, WifiOff } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { BookOpen, ChevronDown, ExternalLink, Library, Tag, Upload, WifiOff } from 'lucide-react';
 
 interface ChangelogEntry {
   version: string;
@@ -47,6 +48,8 @@ interface AboutContentProps {
   showChangelog?: boolean;
   /** Restrict the changelog to these versions (and pre-expand them). */
   changelogVersions?: string[];
+  /** Optional content shown directly below the How to use it heading. */
+  howToUseAction?: React.ReactNode;
 }
 
 export function ChangelogAccordion({
@@ -65,7 +68,7 @@ export function ChangelogAccordion({
   return (
     <Accordion type="multiple" defaultValue={defaultExpandedVersions} className="w-full">
       {visible.map(entry => (
-        <AccordionItem key={entry.version} value={entry.version}>
+            <AccordionItem key={entry.version} value={entry.version} className="border-b-0">
           <AccordionTrigger className="text-sm">
             <span className="flex items-center gap-2">
               <span className="font-semibold">v{entry.version}</span>
@@ -91,6 +94,7 @@ export function ChangelogAccordion({
 export function AboutContent({
   showChangelog = true,
   changelogVersions,
+  howToUseAction,
 }: AboutContentProps = {}) {
   const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
 
@@ -126,6 +130,7 @@ export function AboutContent({
 
       <section className="space-y-3">
         <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">How to use it</h2>
+        {howToUseAction}
         <p className="text-sm text-muted-foreground">
           Tap the <span className="text-foreground font-medium">+</span> button on your library to import an EPUB or MOBI file. Open a book to start reading. Your progress saves automatically as you turn pages.
         </p>
@@ -174,10 +179,15 @@ export function AboutContent({
       </section>
 
       {showChangelog && changelog.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Changelog</h2>
-          <ChangelogAccordion entries={changelog} versions={changelogVersions} />
-        </section>
+        <Collapsible className="space-y-3">
+          <CollapsibleTrigger className="flex items-center justify-between w-full group">
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Changelog</h2>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ChangelogAccordion entries={changelog} versions={changelogVersions} />
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );

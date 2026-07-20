@@ -2,9 +2,11 @@ import { ToastContainer } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useWelcomeDialog } from "@/hooks/useWelcomeDialog";
+import { useOnboardingTour, OnboardingTourProvider } from "@/hooks/useOnboardingTour";
 import { WelcomeDialog } from "@/components/library/WelcomeDialog";
+import { OnboardingTour } from "@/components/library/onboarding/OnboardingTour";
 import { Loader2 } from "lucide-react";
 import Library from "./pages/Library";
 import BookDetails from "./pages/BookDetails";
@@ -19,9 +21,10 @@ import { ReaderSettingsProvider } from "@/hooks/useReaderSettings";
 
 const queryClient = new QueryClient();
 
-const App = () => {
+const AppContent = () => {
   const [libraryReady, setLibraryReady] = useState(false);
   const { mode, lastVersion, dismiss } = useWelcomeDialog();
+  const { start: startTour } = useOnboardingTour();
 
   useEffect(() => {
     const initialize = async () => {
@@ -42,6 +45,12 @@ const App = () => {
     initialize();
   }, []);
 
+  // Dismiss the welcome dialog and launch the onboarding tour.
+  const handleStartTour = useCallback(async () => {
+    await dismiss();
+    startTour();
+  }, [dismiss, startTour]);
+
   if (!libraryReady) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -58,7 +67,13 @@ const App = () => {
       <ReaderSettingsProvider>
         <TooltipProvider>
           <ToastContainer />
-          <WelcomeDialog mode={mode} lastVersion={lastVersion} onDismiss={dismiss} />
+          <WelcomeDialog
+            mode={mode}
+            lastVersion={lastVersion}
+            onDismiss={dismiss}
+            onStartTour={handleStartTour}
+          />
+          <OnboardingTour />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Library />} />
@@ -75,5 +90,11 @@ const App = () => {
     </QueryClientProvider>
   );
 };
+
+const App = () => (
+  <OnboardingTourProvider>
+    <AppContent />
+  </OnboardingTourProvider>
+);
 
 export default App;

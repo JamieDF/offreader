@@ -1,6 +1,6 @@
 import { Progress } from "@/components/ui/progress";
 import { Book } from "@/types/book";
-import { BookOpen, FolderInput, Tag } from "lucide-react";
+import { BookOpen, FolderInput } from "lucide-react";
 import { useState, useEffect } from "react";
 import { titleCase } from "@/utils/titleCase";
 import { Label, Shelf } from "@/types/book";
@@ -11,9 +11,12 @@ interface BookCardProps {
   book: Book;
   onSelect: (book: Book) => void;
   labels?: Label[];
+  /** When set, applied to the root element as data-tour for the
+   *  onboarding tour to anchor on. */
+  dataTourId?: string;
 }
 
-export function BookCard({ book, onSelect, labels = [] }: BookCardProps) {
+export function BookCard({ book, onSelect, labels = [], dataTourId }: BookCardProps) {
   const [imageError, setImageError] = useState(false);
   const [shelf, setShelf] = useState<Shelf | null>(null);
   const showFallback = imageError || !book.coverImage;
@@ -46,6 +49,7 @@ export function BookCard({ book, onSelect, labels = [] }: BookCardProps) {
   return (
     <button
       onClick={() => onSelect(book)}
+      data-tour={dataTourId}
       className="group flex flex-col text-left transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg w-full bg-card border border-border overflow-hidden hover:shadow-lg hover:border-primary/30 transition-colors"
     >
       {/* Cover with 2:3 aspect ratio */}

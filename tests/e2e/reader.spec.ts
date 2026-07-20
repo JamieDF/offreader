@@ -14,6 +14,14 @@ test.describe('Reader', () => {
   // Import a book and navigate to reader before each test
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // Pre-seed storage so the welcome dialog and onboarding tour don't
+    // appear during these tests.
+    await page.evaluate(() => {
+      localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
+    });
+    await page.reload();
 
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /import book/i }).click();

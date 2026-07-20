@@ -19,6 +19,13 @@ interface LibraryHeaderProps {
   onAbout: () => void;
   sortBy: SortOption;
   onSortChange: (sort: SortOption) => void;
+  /**
+   * Controlled open state for the mobile settings menu. When the
+   * onboarding tour is on step 6 (settings), the controller opens
+   * this menu so the user can see "Appearance & Settings" inside it.
+   */
+  mobileMenuOpen?: boolean;
+  onMobileMenuOpenChange?: (open: boolean) => void;
 }
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -37,6 +44,8 @@ export function LibraryHeader({
   onAbout,
   sortBy,
   onSortChange,
+  mobileMenuOpen,
+  onMobileMenuOpenChange,
 }: LibraryHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -66,7 +75,7 @@ export function LibraryHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" data-tour="library-header">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -111,7 +120,7 @@ export function LibraryHeader({
               <LineChart className="h-5 w-5" />
               <span className="sr-only">Reading Insights</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={onOpenSettings} className="h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={onOpenSettings} className="h-9 w-9" data-tour="settings-button">
               <Settings2 className="h-5 w-5" />
               <span className="sr-only">Settings</span>
             </Button>
@@ -122,9 +131,12 @@ export function LibraryHeader({
           </div>
 
           <div className="flex md:hidden">
-            <DropdownMenu>
+            <DropdownMenu
+              open={mobileMenuOpen}
+              onOpenChange={onMobileMenuOpenChange}
+            >
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Button variant="ghost" size="icon" className="h-9 w-9" data-tour="library-menu">
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Menu</span>
                 </Button>

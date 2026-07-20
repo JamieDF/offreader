@@ -17,7 +17,7 @@ export function EmptyState({ onBrowse }: EmptyStateProps) {
       <p className="text-muted-foreground mb-6 max-w-xs">
         Start building your collection by importing your first book.
       </p>
-      <Button onClick={onBrowse} size="lg">
+      <Button onClick={onBrowse} size="lg" data-tour="empty-state-import">
         Browse Files
       </Button>
     </div>

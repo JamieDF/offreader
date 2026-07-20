@@ -1,10 +1,23 @@
-import { ArrowLeft, Bug, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Bug, ChevronRight, ExternalLink, Play, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { AboutContent } from '@/components/library/AboutContent';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 
 const About = () => {
   const navigate = useNavigate();
+  const { forceStart: forceStartTour } = useOnboardingTour();
+
+  // Tour steps are anchored on the Library page, so navigate there first
+  // and start the tour on the next frame so the target elements exist.
+  const handleStartTour = async () => {
+    navigate('/');
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // forceStart ignores the persisted completion marker so replay
+    // always works (start() was racy because stop() is async and could
+    // queue a stale `false` after our `true`).
+    await forceStartTour();
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -30,12 +43,27 @@ const About = () => {
 
           <section className="space-y-3 border-t border-border pt-8">
             <button
-              onClick={() => navigate('/privacy')}
+              type="button"
+              onClick={handleStartTour}
               className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors w-full"
             >
-              <span>Privacy Policy</span>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <Play className="h-4 w-4 text-muted-foreground" />
+                Need a refresher? Take the tour
+              </div>
             </button>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.offreader.reader"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-muted-foreground" />
+                Rate this app
+              </div>
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+            </a>
             <a
               href="https://github.com/JamieDF/offreader/issues"
               target="_blank"
@@ -48,6 +76,13 @@ const About = () => {
               </div>
               <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
             </a>
+            <button
+              onClick={() => navigate('/privacy')}
+              className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors w-full"
+            >
+              <span>Privacy Policy</span>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
             <a
               href="https://jamie-fraser.com"
               target="_blank"

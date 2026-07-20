@@ -4,6 +4,14 @@ import { importAndOpenDetail, EPUB_PATH } from './helpers.js';
 test.describe('Book Details', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // Pre-seed storage so the welcome dialog and onboarding tour don't
+    // appear during these tests.
+    await page.evaluate(() => {
+      localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
+    });
+    await page.reload();
     await importAndOpenDetail(page, EPUB_PATH, /alice/i);
     await expect(page).toHaveURL(/\/book\//);
   });
