@@ -160,6 +160,27 @@ export function OnboardingTour() {
         const stepId = currentStepRef.current;
         if (stepId) popover.wrapper.setAttribute('data-tour-step', stepId);
 
+        // Keep focus away from form fields while the highlighted region
+        // contains them. A temporary non-interactive focus target avoids
+        // opening Android's keyboard without putting a focused appearance
+        // on one of the visible tour buttons.
+        if (stepId === 'dialog-metadata' || stepId === 'dialog-shelf') {
+          requestAnimationFrame(() => {
+            if (currentStepRef.current !== stepId) return;
+            const focusGuard = document.createElement('span');
+            focusGuard.tabIndex = -1;
+            focusGuard.setAttribute('aria-hidden', 'true');
+            focusGuard.style.position = 'fixed';
+            focusGuard.style.width = '1px';
+            focusGuard.style.height = '1px';
+            focusGuard.style.opacity = '0';
+            focusGuard.style.pointerEvents = 'none';
+            document.body.appendChild(focusGuard);
+            focusGuard.focus({ preventScroll: true });
+            requestAnimationFrame(() => focusGuard.remove());
+          });
+        }
+
         if (exitConfirmOpenRef.current) {
           // Swap the existing popover elements to become the exit
           // confirm view. Same CSS, same buttons, just different text.
