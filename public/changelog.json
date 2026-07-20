@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.0.1",
+    "date": "2026-07-20",
+    "items": [
+      "Fixed the mobile keyboard opening automatically during guided tour and post-import dialog steps"
+    ]
+  },
+  {
     "version": "1.0.0",
     "date": "2026-07-20",
     "items": [
