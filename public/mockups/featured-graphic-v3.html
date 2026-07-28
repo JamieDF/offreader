@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OffReader — Featured Graphic v3 (Paper Texture)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; margin: 0; padding: 40px; background: #dcd6c9; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .canvas {
+    width: 1024px; height: 500px; flex-shrink: 0; position: relative; overflow: hidden;
+    background-color: #f3ede0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .logo-ring {
+    width: 168px; height: 168px; border-radius: 50%;
+    border: 1.5px solid #b9a98c;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 252, 244, 0.4);
+  }
+  .logo { width: 108px; height: 108px; }
+  .wordmark { font-family: 'Playfair Display', Georgia, serif; font-size: 66px; font-weight: 700; color: #2e241b; margin-top: 22px; }
+  .divider { width: 60px; height: 1px; background: #b9a98c; margin: 16px 0 14px; }
+  .tagline { font-size: 16px; font-weight: 600; color: #7a4d1f; letter-spacing: 0.22em; text-transform: uppercase; }
+  .hint { font-family: 'Inter', sans-serif; font-size: 13px; color: #6b6258; }
+  code { background:#efeae0; padding:2px 6px; border-radius:4px; }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="logo-ring"><img class="logo" src="../offReader.svg" alt="OffReader"></div>
+    <div class="wordmark">OffReader</div>
+    <div class="divider"></div>
+    <div class="tagline">Offline ebook library &amp; reader</div>
+  </div>
+  <p class="hint">Screenshot the <strong>1024 × 500</strong> card above (DevTools → inspect the <code>.canvas</code> node → <code>Capture node screenshot</code>).</p>
+</body>
+</html>

@@ -70,7 +70,16 @@ coverage/
 bun.lock
 
 # npm
-package-lock.json
+# (package-lock.json is intentionally tracked; do not ignore it)
+
+# AI / agent tooling
+.opencode/
+.zcode/
+.claude/
+
+# Cloudflare / Wrangler
+.wrangler/
+worker/
 
 # Playwright
 /tests/results/

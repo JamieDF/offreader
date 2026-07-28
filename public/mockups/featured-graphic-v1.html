@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OffReader — Featured Graphic v1 (Clean Minimal)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; margin: 0; padding: 40px; background: #dcd6c9; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .canvas {
+    width: 1024px; height: 500px; flex-shrink: 0; position: relative; overflow: hidden;
+    background: #f5f0e6; /* warm cream — hsl(40 30% 96%) */
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .logo { width: 150px; height: 150px; }
+  .wordmark { font-size: 66px; font-weight: 700; letter-spacing: -0.02em; color: #33291f; margin-top: 26px; }
+  .tagline { font-size: 25px; font-weight: 400; color: #6b5d4a; margin-top: 12px; }
+  .hint { font-family: 'Inter', sans-serif; font-size: 13px; color: #6b6258; }
+  code { background:#efeae0; padding:2px 6px; border-radius:4px; }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <img class="logo" src="../offReader.svg" alt="OffReader">
+    <div class="wordmark">OffReader</div>
+    <div class="tagline">Offline ebook library &amp; reader</div>
+  </div>
+  <p class="hint">Screenshot the <strong>1024 × 500</strong> card above (DevTools → inspect the <code>.canvas</code> node → <code>Capture node screenshot</code>).</p>
+</body>
+</html>
