@@ -5,7 +5,7 @@
 <h1 align="center">OffReader</h1>
 
 <p align="center">
-  An offline ebook library and reader for web, Android, and Linux desktop. No account. Just your books.
+  An offline ebook library and reader for web, Android, and Linux desktop. Open source. No account. Just your books.
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
 
 ---
 
-OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file and read it; your progress, bookmarks, and reading history all stay local.
+OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file and read it; your progress, bookmarks, and reading history all stay local. It's free and [open source](LICENSE) under the MIT license.
 
 It runs in the browser, as an Android app, or as a Linux desktop AppImage via Capacitor.
 

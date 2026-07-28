@@ -110,7 +110,7 @@ export function AboutContent({
       <section className="space-y-3">
         <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">What it is</h2>
         <p className="text-sm text-muted-foreground">
-          OffReader is a private ebook reader. No account, no sync. Your books and reading data stay entirely on your device.
+          OffReader is a free, open source ebook reader. No account, no sync. Your books and reading data stay entirely on your device.
         </p>
         <ul className="space-y-3 pt-1">
           <li className="flex items-start gap-3 text-sm">
