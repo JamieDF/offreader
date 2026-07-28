@@ -1,8 +1,16 @@
-import { ArrowLeft, Bug, ChevronRight, ExternalLink, Play, Star } from 'lucide-react';
+import { ArrowLeft, Bug, ChevronRight, Download, ExternalLink, Play, Smartphone, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { AboutContent } from '@/components/library/AboutContent';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
+
+// True only when running in a plain web browser — not the Android app
+// or the Electron desktop build. We use it to surface the desktop
+// download link only where it's relevant. Capacitor.getPlatform()
+// returns 'web' in a browser, 'android' in the Android app, and
+// 'electron' in the desktop app.
+const isWebBrowser = typeof window !== 'undefined'
+  && (!window.Capacitor || window.Capacitor.getPlatform() === 'web');
 
 const About = () => {
   const navigate = useNavigate();
@@ -52,6 +60,34 @@ const About = () => {
                 Need a refresher? Take the tour
               </div>
             </button>
+            {isWebBrowser && (
+              <>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.offreader.reader"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-muted-foreground" />
+                    Get the Android app
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </a>
+                <a
+                  href="https://github.com/JamieDF/offreader/releases/latest"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between text-sm text-foreground hover:text-primary transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Download className="h-4 w-4 text-muted-foreground" />
+                    Get the desktop app
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </a>
+              </>
+            )}
             <a
               href="https://play.google.com/store/apps/details?id=com.offreader.reader"
               target="_blank"

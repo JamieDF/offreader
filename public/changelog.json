@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.0.2",
+    "date": "2026-07-28",
+    "items": [
+      "Added download links for the Android and desktop apps on the About page"
+    ]
+  },
+  {
     "version": "1.0.1",
     "date": "2026-07-20",
     "items": [
