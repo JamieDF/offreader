@@ -188,6 +188,16 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   const dialogOnConfirm = showDemoDialog
     ? (shelfId: string | null, labelIds: string[]) => applyDemoImport(shelfId, labelIds)
     : handleApplyImportLabels;
+  // Closing the dialog (X button, Escape, or overlay click) clears the
+  // import state or ends the tour demo, depending on which opened it.
+  const dialogOnClose = () => {
+    if (showDemoDialog) {
+      endDemo();
+    } else {
+      setShowImportDialog(false);
+      setImportedBooks([]);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -286,6 +296,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         isOpen={dialogOpen}
         books={dialogBooks}
         onConfirm={dialogOnConfirm}
+        onClose={dialogOnClose}
         dataTourMetadataId="import-dialog-metadata"
         dataTourShelfId="import-dialog-shelf"
       />

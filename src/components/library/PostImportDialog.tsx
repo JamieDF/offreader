@@ -25,6 +25,9 @@ interface PostImportDialogProps {
     labelIds: string[],
     metadataUpdates?: { title: string; author: string; description: string }
   ) => void;
+  /** Called when the dialog is dismissed via the close button, Escape,
+   *  or overlay click. */
+  onClose?: () => void;
   /** Selector for the Title/Author/Description wrapper (used by the
    *  onboarding tour to anchor on the metadata fields). */
   dataTourMetadataId?: string;
@@ -37,6 +40,7 @@ export function PostImportDialog({
   isOpen,
   books,
   onConfirm,
+  onClose,
   dataTourMetadataId,
   dataTourShelfId,
 }: PostImportDialogProps) {
@@ -152,7 +156,7 @@ export function PostImportDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose?.(); }}>
       <DialogContent
         className="sm:max-w-md"
         onOpenAutoFocus={(event) => event.preventDefault()}
