@@ -19,7 +19,7 @@
 
 OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file and read it; your progress, bookmarks, and reading history all stay local. It's free and [open source](LICENSE) under the MIT license.
 
-It runs in the browser, as an [Android app on Google Play](https://play.google.com/store/apps/details?id=com.offreader.reader), or as a Linux desktop AppImage via Capacitor.
+It runs [in the browser](https://offreader.com), as an [Android app on Google Play](https://play.google.com/store/apps/details?id=com.offreader.reader), or as a Linux desktop AppImage via Capacitor.
 
 ## Why
 
