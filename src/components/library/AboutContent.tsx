@@ -36,11 +36,6 @@ const BOOK_SOURCES: BookSource[] = [
     url: 'https://manybooks.net',
     description: 'Large catalog with a friendly discovery interface.',
   },
-  {
-    name: 'Librivox',
-    url: 'https://librivox.org',
-    description: 'Free public-domain audiobooks. Great for long drives.',
-  },
 ];
 
 interface AboutContentProps {
