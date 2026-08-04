@@ -32,14 +32,14 @@ const BOOK_SOURCES: BookSource[] = [
     description: 'Carefully typeset, public-domain editions. Quality over quantity.',
   },
   {
-    name: 'ManyBooks',
-    url: 'https://manybooks.net',
-    description: 'Large catalog with a friendly discovery interface.',
+    name: 'Wikisource',
+    url: 'https://en.wikisource.org/wiki/Main_Page',
+    description: 'Digitized PDFs of historic reference documents, charters, and legal code. Great for dense reading.',
   },
   {
-    name: 'Librivox',
-    url: 'https://librivox.org',
-    description: 'Free public-domain audiobooks. Great for long drives.',
+    name: 'Folkscanomy (Internet Archive)',
+    url: 'https://archive.org/details/folkscanomy',
+    description: 'User-uploaded technical books, old trade manuals, and niche reference material.',
   },
 ];
 
