@@ -31,11 +31,6 @@ const BOOK_SOURCES: BookSource[] = [
     url: 'https://standardebooks.org',
     description: 'Carefully typeset, public-domain editions. Quality over quantity.',
   },
-  {
-    name: 'ManyBooks',
-    url: 'https://manybooks.net',
-    description: 'Large catalog with a friendly discovery interface.',
-  },
 ];
 
 interface AboutContentProps {
