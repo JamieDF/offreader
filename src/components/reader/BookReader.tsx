@@ -105,6 +105,17 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   const { updateProgress, updateLocation, addBookmark, removeBookmark, getBookmarks } = useBookTracker(propBookId);
   const { settings, isLoaded } = useReaderSettings();
 
+  const extensionForFormat = (format?: Book['format']): string => {
+    switch (format) {
+      case 'PDF': return '.pdf';
+      case 'MOBI': return '.mobi';
+      case 'AZW3': return '.azw3';
+      case 'FB2': return '.fb2';
+      case 'CBZ': return '.cbz';
+      default: return '.epub';
+    }
+  };
+
   // Stable ref for settings — lets initReader use current settings without being a dep
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
@@ -317,7 +328,15 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
 
       const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
-      await view.open(fileUrl);
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) throw new Error(`Failed to fetch stored book: ${fileResponse.status}`);
+      const fileBlob = await fileResponse.blob();
+      const readerFile = new File(
+        [fileBlob],
+        `${book.id}${extensionForFormat(book.format)}`,
+        { type: fileBlob.type },
+      );
+      await view.open(readerFile);
 
       const toc = view.book?.toc;
       const realChapters = mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : []);
@@ -350,7 +369,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           view.renderer.addEventListener('zoom', (e: any) => setPdfZoom(e.detail.scale));
         } else {
-          view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
+          if (typeof view.renderer.setStyles === 'function') {
+            view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
+          }
         }
       }
 
