@@ -35,7 +35,7 @@ export interface Book {
   author: string;
   coverImage: string;
   filePath: string;
-  format?: 'EPUB' | 'MOBI' | 'PDF';
+  format?: 'EPUB' | 'MOBI' | 'PDF' | 'AZW3' | 'FB2' | 'CBZ';
   progress: number; // 0-100
   description?: string;
   totalChapters?: number;
