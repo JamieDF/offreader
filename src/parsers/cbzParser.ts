@@ -52,7 +52,10 @@ export const extractCbzMetadata = async (file: File): Promise<CbzMetadata> => {
   const firstPageData = await zip.file(firstPage)!.async('base64');
   const mediaType = IMAGE_TYPES[imageExtension(firstPage)!];
   const fileName = file.name.replace(/\.[^/.]+$/, '');
-  const { readingTime, pageCount } = calculateReadingMetrics(file.size);
+  const { readingTime: byteBasedReadingTime } = calculateReadingMetrics(file.size);
+  const readingTime = pages.length <= 1
+    ? byteBasedReadingTime
+    : `${Math.max(1, pages.length)}m`;
 
   return {
     title: fileName,
@@ -61,7 +64,7 @@ export const extractCbzMetadata = async (file: File): Promise<CbzMetadata> => {
     chapters: pages.map((page, index) => ({ label: page, href: page, index })),
     totalChapters: pages.length,
     readingTime,
-    pageCount: Math.max(pages.length, pageCount),
+    pageCount: pages.length,
     format: 'CBZ',
     coverImage: `data:${mediaType};base64,${firstPageData}`,
   };

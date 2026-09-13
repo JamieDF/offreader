@@ -27,18 +27,19 @@ interface BookReaderProps {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapTocItems(toc: any[], depth = 0, counter = { n: 0 }): Chapter[] {
+function mapTocItems(toc: any[], depth = 0, counter = { n: 0 }, isComic = false): Chapter[] {
   const result: Chapter[] = [];
   for (const item of toc) {
+    const index = counter.n++;
     result.push({
-      label: item.label || item.title || `Chapter ${counter.n + 1}`,
+      label: isComic ? `Page ${index + 1}` : (item.label || item.title || `Chapter ${index + 1}`),
       href: item.href || '',
       cfi: item.cfi || '',
-      index: counter.n++,
+      index,
       depth,
     });
     if (Array.isArray(item.subitems) && item.subitems.length > 0) {
-      result.push(...mapTocItems(item.subitems, depth + 1, counter));
+      result.push(...mapTocItems(item.subitems, depth + 1, counter, isComic));
     }
   }
   return result;
@@ -223,13 +224,26 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         const totalChapters = flatChapters.length || 1;
         let currentChapterIndex = 0;
 
-        if (detail.tocItem?.label) {
+        const comicRendererIndex = book.format === 'CBZ'
+          ? view.renderer?.index
+          : undefined;
+        if (typeof comicRendererIndex === 'number') {
+          currentChapterIndex = comicRendererIndex;
+        } else if (detail.tocItem?.label) {
           const idx = flatChapters.findIndex(c => c.label === detail.tocItem.label);
           if (idx !== -1) currentChapterIndex = idx;
         }
 
         const progressPercentage = Math.round((detail.fraction || 0) * 100);
-        const { currentPage, totalPages: totalPagesInChapter } = rendererPagesRef.current;
+        const comicPage = book.format === 'CBZ'
+          ? currentChapterIndex + 1
+          : rendererPagesRef.current.currentPage;
+        const comicTotalPages = book.format === 'CBZ'
+          ? Math.max(1, flatChapters.length)
+          : rendererPagesRef.current.totalPages;
+        const currentChapterLabel = book.format === 'CBZ'
+          ? `Page ${comicPage}`
+          : detail.tocItem?.label ?? undefined;
 
         setLocationInfo({
           current: progressPercentage,
@@ -237,12 +251,12 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
           currentChapter: currentChapterIndex + 1,
           totalChapters: Math.max(1, totalChapters),
           fraction: progressPercentage,
-          currentPage,
-          totalPagesInChapter,
-          currentChapterLabel: detail.tocItem?.label ?? undefined,
+          currentPage: comicPage,
+          totalPagesInChapter: comicTotalPages,
+          currentChapterLabel,
         });
 
-        updateProgress(progressPercentage, currentChapterIndex, detail.tocItem?.label ?? undefined, currentPage, totalPagesInChapter);
+        updateProgress(progressPercentage, currentChapterIndex, currentChapterLabel, comicPage, comicTotalPages);
         updateLibraryProgressRef.current(propBookId, progressPercentage);
 
         const location = resolveLocation(detail);
@@ -339,7 +353,12 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       await view.open(readerFile);
 
       const toc = view.book?.toc;
-      const realChapters = mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : []);
+      const realChapters = mapTocItems(
+        Array.isArray(toc) && toc.length > 0 ? toc : [],
+        0,
+        { n: 0 },
+        book.format === 'CBZ',
+      );
       chaptersRef.current = realChapters;
       setChapters(realChapters);
 
@@ -391,7 +410,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
       await view.goTo(targetLocation);
 
-      if (view.book?.metadata?.title) setBookTitle(view.book.metadata.title);
+      if (book.format !== 'CBZ' && view.book?.metadata?.title) {
+        setBookTitle(view.book.metadata.title);
+      }
 
       setIsLoading(false);
       isInitializedRef.current = true;

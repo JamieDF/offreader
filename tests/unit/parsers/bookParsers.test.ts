@@ -172,6 +172,8 @@ describe('bookMetadataParser', () => {
         expect(metadata.title).toBe('comic');
         expect(metadata.format).toBe('CBZ');
         expect(metadata.totalChapters).toBe(2);
+        expect(metadata.pageCount).toBe(2);
+        expect(metadata.readingTime).toBe('2m');
         expect(metadata.coverImage).toMatch(/^data:image\/png;base64,/);
       });
 
