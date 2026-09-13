@@ -10,6 +10,9 @@ import { extractBookMetadata } from "@/parsers/bookMetadataParser";
 import { PdfMetadata } from "@/parsers/pdfParser";
 import { EpubMetadata } from "@/parsers/epubParser";
 import { MobiMetadata } from "@/parsers/mobiParser";
+import { Azw3Metadata } from "@/parsers/azw3Parser";
+import { Fb2Metadata } from "@/parsers/fb2Parser";
+import { CbzMetadata } from "@/parsers/cbzParser";
 import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
@@ -161,7 +164,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
   const importBooks = useCallback(async (onImportComplete?: ImportCallback) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".epub,.mobi,.pdf";
+    input.accept = ".epub,.mobi,.azw3,.fb2,.pdf,.cbz";
     input.multiple = true;
 
     input.onchange = async (event) => {
@@ -182,9 +185,14 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
           const pdfMeta = format === 'PDF' ? (extractedMeta as PdfMetadata) : null;
           const epubMeta = format === 'EPUB' ? (extractedMeta as EpubMetadata) : null;
           const mobiMeta = format === 'MOBI' ? (extractedMeta as MobiMetadata) : null;
+          const azw3Meta = format === 'AZW3' ? (extractedMeta as Azw3Metadata) : null;
+          const fb2Meta = format === 'FB2' ? (extractedMeta as Fb2Metadata) : null;
+          const cbzMeta = format === 'CBZ' ? (extractedMeta as CbzMetadata) : null;
           const { readingTime: calcReadingTime, pageCount: calcPageCount } = calculateReadingMetrics(file.size);
-          const readingTime = pdfMeta?.readingTime ?? epubMeta?.readingTime ?? mobiMeta?.readingTime ?? calcReadingTime;
-          const pageCount = pdfMeta?.pageCount ?? epubMeta?.pageCount ?? mobiMeta?.pageCount ?? calcPageCount;
+          const readingTime = pdfMeta?.readingTime ?? epubMeta?.readingTime ?? mobiMeta?.readingTime
+            ?? azw3Meta?.readingTime ?? fb2Meta?.readingTime ?? cbzMeta?.readingTime ?? calcReadingTime;
+          const pageCount = pdfMeta?.pageCount ?? epubMeta?.pageCount ?? mobiMeta?.pageCount
+            ?? azw3Meta?.pageCount ?? fb2Meta?.pageCount ?? cbzMeta?.pageCount ?? calcPageCount;
 
           const newBook: Book = {
             id: bookId,
@@ -260,7 +268,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
             } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid')) {
               userMessage = `❌ File may be corrupted. Try a different book.`;
             } else if (errorMessage.includes('unsupported') || errorMessage.includes('format')) {
-              userMessage = `❌ File format not supported. Only EPUB, MOBI, and PDF files are supported.`;
+              userMessage = `❌ File format not supported. Only EPUB, MOBI, AZW3, FB2, PDF, and CBZ files are supported.`;
             } else if (errorMessage.includes('metadata')) {
               userMessage = `❌ Could not read book information. The file might be corrupted.`;
             }

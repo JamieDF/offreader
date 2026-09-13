@@ -99,7 +99,7 @@ const ReaderHeader = ({ bookTitle, onBack, onOpenSettings, onOpenBookmarks, onOp
           className="text-sm font-medium text-card-foreground text-center overflow-hidden whitespace-nowrap"
           style={{ maxWidth: '60%' }}
         >
-          {bookTitle || "EPUB Reader"}
+          {bookTitle || "Reader"}
         </div>
       </div>
       

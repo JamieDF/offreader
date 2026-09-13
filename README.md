@@ -29,7 +29,7 @@ There are other great projects that do something similar, but I wanted to build 
 
 ## Features
 
-- Import EPUB, MOBI, and PDF files from your device
+- Import EPUB, MOBI, AZW3, FB2, CBZ, and PDF files from your device
 - **Organize with Shelves**: assign each book to one shelf; create, rename, reorder, and delete shelves
 - **Tag with Labels**: assign multiple colored labels per book; filter your library by shelf or labels
 - **10+ reader themes** (light, sepia, dark, day, parchment, neon, noir, meadow, coast, storm) plus typography controls (font, size, line height, spacing)
@@ -84,7 +84,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Import Book** and select an EPUB, MOBI, or PDF file to get started.
+Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Import Book** and select an EPUB, MOBI, AZW3, FB2, CBZ, or PDF file to get started.
 
 ---
 
@@ -122,7 +122,7 @@ E2E tests run against a real browser; Chromium is required (`npx playwright inst
 - [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/): UI framework
 - [Vite](https://vitejs.dev/): build tool
 - [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/): styling and components
-- [foliate-js](https://github.com/JamieDF/foliate-js): EPUB/MOBI/PDF rendering engine (Vite-compatible fork)
+- [foliate-js](https://github.com/JamieDF/foliate-js): EPUB/MOBI/AZW3/FB2/CBZ/PDF rendering engine (Vite-compatible fork)
 - [PDF.js](https://mozilla.github.io/pdf.js/): PDF rendering (via pdfjs-dist)
 - [Capacitor](https://capacitorjs.com/): Android/iOS/Linux bridge and native storage
 - [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/): testing
