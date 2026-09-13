@@ -83,6 +83,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   const overlayerRef = useRef<any>(null);
   const overlayRef = useRef<ReaderOverlayHandle>(null);
   const rendererPagesRef = useRef({ currentPage: 1, totalPages: 1 });
+  const navigationInProgressRef = useRef(false);
   const isInitializedRef = useRef(false);
   const chaptersRef = useRef<Chapter[]>([]);
 
@@ -171,11 +172,17 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   }, []);
 
   const handlePrev = async () => {
+    if (navigationInProgressRef.current) return;
+    navigationInProgressRef.current = true;
     try { await viewRef.current?.prev(); } catch (err) { console.error('Failed to go to previous page:', err); }
+    finally { navigationInProgressRef.current = false; }
   };
 
   const handleNext = async () => {
+    if (navigationInProgressRef.current) return;
+    navigationInProgressRef.current = true;
     try { await viewRef.current?.next(); } catch (err) { console.error('Failed to go to next page:', err); }
+    finally { navigationInProgressRef.current = false; }
   };
 
   const handleRotationChange = useCallback((rotation: number) => {
