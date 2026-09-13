@@ -17,7 +17,7 @@
 
 ---
 
-OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file and read it; your progress, bookmarks, and reading history all stay local. It's free and [open source](LICENSE) under the MIT license.
+OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, AZW3, FB2, CBZ, or PDF file and read it; your progress, bookmarks, and reading history all stay local. It's free and [open source](LICENSE) under the MIT license.
 
 It runs [in the browser](https://offreader.com), as an [Android app on Google Play](https://play.google.com/store/apps/details?id=com.offreader.reader), or as a Linux desktop AppImage via Capacitor.
 
@@ -35,7 +35,7 @@ There are other great projects that do something similar, but I wanted to build 
 - **10+ reader themes** (light, sepia, dark, day, parchment, neon, noir, meadow, coast, storm) plus typography controls (font, size, line height, spacing)
 - Per-chapter page tracking and overall progress
 - Bookmarks with jump-to navigation
-- **Full-text search**: search inside any book across EPUB, PDF, and MOBI; results show context with highlighted matches and click-to-navigate
+- **Full-text search**: search inside reflowable books across EPUB, PDF, MOBI, AZW3, and FB2; results show context with highlighted matches and click-to-navigate
 - **Editable metadata**: fix titles, authors, and descriptions on any book; review and edit right after import
 - Reading time tracking, streaks, and activity history
 - **Reading Insights** dashboard with charts for time read, streaks, and activity

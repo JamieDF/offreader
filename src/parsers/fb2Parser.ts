@@ -26,7 +26,7 @@ export interface Fb2Metadata {
 const text = (element: Element | null): string =>
   element?.textContent?.replace(/\s+/g, ' ').trim() || '';
 
-const first = (root: Document, localName: string): Element | null =>
+const first = (root: Document | Element, localName: string): Element | null =>
   root.getElementsByTagNameNS('*', localName)[0]
   || root.getElementsByTagName(localName)[0]
   || null;
@@ -55,19 +55,20 @@ export const extractFb2Metadata = async (file: File): Promise<Fb2Metadata> => {
   }
 
   const description = first(document, 'description');
-  const titleInfo = description ? first(description.ownerDocument!, 'title-info') : null;
-  const bookTitle = text(titleInfo ? first(titleInfo.ownerDocument!, 'book-title') : null);
-  const authorElement = titleInfo ? first(titleInfo.ownerDocument!, 'author') : null;
+  const titleInfo = description ? first(description, 'title-info') : null;
+  const bookTitle = text(titleInfo ? first(titleInfo, 'book-title') : null);
+  const authorElement = titleInfo ? first(titleInfo, 'author') : null;
   const author = authorElement
-    ? [text(first(authorElement.ownerDocument!, 'first-name')), text(first(authorElement.ownerDocument!, 'middle-name')), text(first(authorElement.ownerDocument!, 'last-name'))].filter(Boolean).join(' ')
+    ? [text(first(authorElement, 'first-name')), text(first(authorElement, 'middle-name')), text(first(authorElement, 'last-name'))].filter(Boolean).join(' ')
     : '';
-  const annotation = text(titleInfo ? first(titleInfo.ownerDocument!, 'annotation') : null);
-  const genre = text(titleInfo ? first(titleInfo.ownerDocument!, 'genre') : null);
+  const annotation = text(titleInfo ? first(titleInfo, 'annotation') : null);
+  const genre = text(titleInfo ? first(titleInfo, 'genre') : null);
   const publishInfo = first(document, 'publish-info');
-  const publisher = text(publishInfo ? first(publishInfo.ownerDocument!, 'publisher') : null);
-  const year = text(publishInfo ? first(publishInfo.ownerDocument!, 'year') : null);
-  const lang = text(titleInfo ? first(titleInfo.ownerDocument!, 'lang') : null);
-  const documentId = text(description ? first(description.ownerDocument!, 'document-info') : null);
+  const publisher = text(publishInfo ? first(publishInfo, 'publisher') : null);
+  const year = text(publishInfo ? first(publishInfo, 'year') : null);
+  const lang = text(titleInfo ? first(titleInfo, 'lang') : null);
+  const documentInfo = description ? first(description, 'document-info') : null;
+  const documentId = text(documentInfo ? first(documentInfo, 'id') : null);
   const sections = Array.from(document.getElementsByTagNameNS('*', 'section'));
   const fileName = file.name.replace(/\.[^/.]+$/, '');
   const title = bookTitle || fileName;
@@ -84,7 +85,7 @@ export const extractFb2Metadata = async (file: File): Promise<Fb2Metadata> => {
     description: annotation || `An FB2 book by ${author || 'Unknown Author'}.`,
     subjects: genre ? [genre] : [],
     chapters: sections.map((section, index) => ({
-      label: text(first(section.ownerDocument!, 'title')) || `Section ${index + 1}`,
+      label: text(first(section, 'title')) || `Section ${index + 1}`,
       href: section.id ? `#${section.id}` : `section-${index}`,
       index,
     })),

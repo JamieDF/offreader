@@ -183,8 +183,8 @@ describe('bookMetadataParser', () => {
       });
     });
 
-    it('throws on unsupported file format', async () => {
-      const file = new File(['content'], 'book.azw', { type: 'application/octet-stream' });
+    it.each(['azw', 'azw4', 'kfx', 'cbr'])('rejects unsupported .%s files', async (extension) => {
+      const file = new File(['content'], `book.${extension}`, { type: 'application/octet-stream' });
       await expect(extractBookMetadata(file)).rejects.toThrow('Unsupported file format');
     });
   });
