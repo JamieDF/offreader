@@ -58,7 +58,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'import',
     targetSelector: '[data-tour="fab"]',
     title: 'Add a book',
-    body: 'ADD_BOOK_INTRO|EPUB|MOBI|PDF',
+    body: 'ADD_BOOK_INTRO|EPUB|MOBI|AZW3|FB2|CBZ|PDF',
     side: 'left',
     align: 'center',
   },
