@@ -36,7 +36,7 @@ const describeIf = (condition: boolean) => (condition ? describe : describe.skip
 function parseCSP(csp: string): Record<string, string> {
   const result: Record<string, string> = {};
   let i = 0;
-  let current = '';
+  const current = '';
 
   const advancePastSpace = () => { while (i < csp.length && csp[i] === ' ') i++; };
 
@@ -105,17 +105,18 @@ describeIf(DIST_EXISTS)('index.html CSP configuration', () => {
 describeIf(ELECTRON_APP_EXISTS)('electron/app CSP (runtime-injected by setup.ts)', () => {
   // The electron/app/index.html CSP is injected at runtime by electron/src/setup.ts.
   // We test that the setup code exists and produces correct CSP headers.
-  const electronAppHtml = readFileSync(path.join(ELECTRON_APP_DIR, 'index.html'), 'utf-8');
-
   it('has a CSP meta tag', () => {
+    const electronAppHtml = readFileSync(path.join(ELECTRON_APP_DIR, 'index.html'), 'utf-8');
     expect(electronAppHtml).toMatch(/<meta[^>]+http-equiv=["']Content-Security-Policy["']/i);
   });
 
   it('CSP includes blob: for PDF workers', () => {
+    const electronAppHtml = readFileSync(path.join(ELECTRON_APP_DIR, 'index.html'), 'utf-8');
     expect(electronAppHtml).toContain('blob:');
   });
 
   it('CSP does not allow unsafe-eval in production Electron', () => {
+    const electronAppHtml = readFileSync(path.join(ELECTRON_APP_DIR, 'index.html'), 'utf-8');
     // Production Electron (not dev) should not have unsafe-eval
     // The dev mode CSP includes unsafe-eval but production should not
     expect(electronAppHtml).not.toMatch(/script-src[^;]*'unsafe-eval'/);

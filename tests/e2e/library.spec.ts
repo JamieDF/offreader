@@ -14,6 +14,17 @@ async function importBook(page: Page, filePath: string) {
   await page.getByRole('button', { name: /import book/i }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(filePath);
+  await page.getByRole('button', { name: /^done$/i }).click();
+}
+
+async function openManageLibrary(page: Page) {
+  const isMobile = await page.evaluate(() => window.innerWidth < 768);
+  if (!isMobile) {
+    await page.locator('button').filter({ hasText: 'Manage Library' }).click();
+  } else {
+    await page.getByRole('button', { name: 'Menu' }).click();
+    await page.getByRole('menuitem', { name: /manage library/i }).click();
+  }
 }
 
 test.describe('Library', () => {
@@ -43,17 +54,17 @@ test.describe('Library', () => {
 
   test('imports an EPUB book', async ({ page }) => {
     await importBook(page, EPUB_PATH);
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('imports a MOBI book', async ({ page }) => {
     await importBook(page, MOBI_PATH);
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('shows book in library after import', async ({ page }) => {
     await importBook(page, EPUB_PATH);
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
 
     // Reload and check book persists
     await page.reload();
@@ -86,7 +97,7 @@ test.describe('Library', () => {
 
     await page.getByRole('button', { name: /search/i }).click();
     await page.getByPlaceholder('Search books...').fill('alice');
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible();
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible();
 
     await page.getByPlaceholder('Search books...').fill('xyznotabook');
     await expect(page.locator('h3').filter({ hasText: /alice/i })).not.toBeVisible();
@@ -112,7 +123,7 @@ test.describe('Library', () => {
     await fileChooser.setFiles(BAD_FILE_PATH);
 
     // Should show an error — not add the file to the library
-    await expect(page.getByText(/corrupted|invalid|not supported/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/failed to import|corrupted|invalid|not supported/i)).toBeVisible({ timeout: 5000 });
     await expect(page.locator('h3').filter({ hasText: /bad-file/i })).not.toBeVisible();
   });
 });
@@ -120,17 +131,23 @@ test.describe('Library', () => {
 test.describe('Shelves and Labels', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.evaluate((version) => {
+      localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', version);
+      localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
+    }, APP_VERSION);
+    await page.reload();
   });
 
   test('creates a shelf via Manage Library', async ({ page }) => {
     // Open Manage Library
-    await page.getByRole('button', { name: /manage library/i }).click();
-    await expect(page.getByText('Manage Library')).toBeVisible();
+    await openManageLibrary(page);
+    await expect(page.getByRole('heading', { name: 'Manage Library' })).toBeVisible();
 
     // Create new shelf
-    await page.getByRole('button', { name: /add shelf/i }).click();
+    await page.getByRole('button', { name: /new shelf/i }).click();
     await page.getByPlaceholder('Shelf name').fill('My Test Shelf');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
 
     // Verify shelf appears
     await expect(page.getByText('My Test Shelf')).toBeVisible();
@@ -138,13 +155,13 @@ test.describe('Shelves and Labels', () => {
 
   test('creates a label via Manage Library', async ({ page }) => {
     // Open Manage Library
-    await page.getByRole('button', { name: /manage library/i }).click();
-    await expect(page.getByText('Manage Library')).toBeVisible();
+    await openManageLibrary(page);
+    await expect(page.getByRole('heading', { name: 'Manage Library' })).toBeVisible();
 
     // Create new label
-    await page.getByRole('button', { name: /add label/i }).click();
+    await page.getByRole('button', { name: /^(New Label|Create Label)$/ }).click();
     await page.getByPlaceholder('Label name').fill('Fiction');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
 
     // Verify label appears
     await expect(page.getByText('Fiction')).toBeVisible();
@@ -158,12 +175,12 @@ test.describe('Shelves and Labels', () => {
     await fileChooser.setFiles(EPUB_PATH);
 
     // Wait for import dialog to appear
-    await expect(page.getByText('Assign to shelf')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Shelf', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Create a new shelf in the dialog
-    await page.getByText('Create new shelf').click();
+    await page.getByRole('button', { name: 'Create shelf' }).click();
     await page.getByPlaceholder('Shelf name').fill('Reading List');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Save shelf' }).click();
 
     // Apply the import
     await page.getByRole('button', { name: /done/i }).click();
@@ -183,18 +200,18 @@ test.describe('Shelves and Labels', () => {
     await fileChooser.setFiles(EPUB_PATH);
 
     // Wait for import dialog to appear
-    await expect(page.getByText('Assign labels')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Labels', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Create a new label in the dialog
-    await page.getByText('Create new label').click();
+    await page.getByRole('button', { name: 'Create label' }).click();
     await page.getByPlaceholder('Label name').fill('Sci-Fi');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Save label' }).click();
 
     // Apply the import
     await page.getByRole('button', { name: /done/i }).click();
 
     // Verify book appears in library
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
 
     // Verify label pill appears on BookCard
     await expect(page.getByText('Sci-Fi').first()).toBeVisible();
@@ -207,30 +224,31 @@ test.describe('Shelves and Labels', () => {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(EPUB_PATH);
 
-    await expect(page.getByText('Assign to shelf')).toBeVisible({ timeout: 5000 });
-    await page.getByText('Create new shelf').click();
+    await expect(page.getByText('Shelf', { exact: true })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Create shelf' }).click();
     await page.getByPlaceholder('Shelf name').fill('Favorites');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Save shelf' }).click();
     await page.getByRole('button', { name: /done/i }).click();
 
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
 
     // Import a second book without shelf
     const fileChooserPromise2 = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /import book/i }).click();
     const fileChooser2 = await fileChooserPromise2;
     await fileChooser2.setFiles(MOBI_PATH);
-    await expect(page.getByText('Assign to shelf')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Shelf', { exact: true })).toBeVisible({ timeout: 5000 });
+    await page.locator('select').first().selectOption({ label: 'Unassigned' });
     await page.getByRole('button', { name: /done/i }).click();
 
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
 
     // Filter by shelf
     await page.getByRole('button', { name: /shelf/i }).click();
-    await page.getByText('Favorites').click();
+    await page.getByRole('button', { name: 'Favorites', exact: true }).click();
 
     // Verify only the book with shelf is shown
-    await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible();
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible();
     // Should only see 1 book (the one with shelf)
     const bookCards = page.locator('button:has(h3)');
     await expect(bookCards).toHaveCount(1);
@@ -243,17 +261,17 @@ test.describe('Shelves and Labels', () => {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(EPUB_PATH);
 
-    await expect(page.getByText('Assign labels')).toBeVisible({ timeout: 5000 });
-    await page.getByText('Create new label').click();
+    await expect(page.getByText('Labels', { exact: true })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Create label' }).click();
     await page.getByPlaceholder('Label name').fill('Adventure');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Save label' }).click();
     await page.getByRole('button', { name: /done/i }).click();
 
     await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
 
     // Filter by label
     await page.getByRole('button', { name: /labels/i }).click();
-    await page.getByText('Adventure').click();
+    await page.getByRole('button', { name: 'Adventure', exact: true }).click();
 
     // Verify the book with label is shown
     await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible();
@@ -266,20 +284,20 @@ test.describe('Shelves and Labels', () => {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(EPUB_PATH);
 
-    await expect(page.getByText('Assign to shelf')).toBeVisible({ timeout: 5000 });
-    await page.getByText('Create new shelf').click();
+    await expect(page.getByText('Shelf', { exact: true })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Create shelf' }).click();
     await page.getByPlaceholder('Shelf name').fill('Reading');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Save shelf' }).click();
     await page.getByRole('button', { name: /done/i }).click();
 
     await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
 
     // Apply a filter
     await page.getByRole('button', { name: /shelf/i }).click();
-    await page.getByText('Reading').click();
+    await page.getByRole('button', { name: 'Reading', exact: true }).click();
 
     // Verify filter is applied (book count shows something)
-    await expect(page.getByText('Reading')).toBeVisible();
+    await expect(page.getByText('Reading', { exact: true }).first()).toBeVisible();
 
     // Click clear
     await page.getByRole('button', { name: /clear/i }).click();
@@ -295,19 +313,19 @@ test.describe('Shelves and Labels', () => {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(EPUB_PATH);
 
-    await expect(page.getByText('Assign labels')).toBeVisible({ timeout: 5000 });
-    await page.getByText('Create new label').click();
+    await expect(page.getByText('Labels', { exact: true })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Create label' }).click();
     await page.getByPlaceholder('Label name').fill('To Read');
-    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: 'Save label' }).click();
     await page.getByRole('button', { name: /done/i }).click();
 
     await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
 
     // Open Manage Library
-    await page.getByRole('button', { name: /manage library/i }).click();
+    await openManageLibrary(page);
 
     // Delete the label
-    await page.getByText('To Read').hover();
+    await page.getByRole('dialog').getByText('To Read', { exact: true }).locator('..').getByRole('button').click();
     await page.getByRole('button', { name: /delete/i }).click();
 
     // Close Manage Library

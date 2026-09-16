@@ -231,7 +231,7 @@ export function PostImportDialog({
                       if (e.key === 'Escape') setShowNewShelf(false);
                     }}
                   />
-                  <Button size="sm" onClick={handleCreateShelf}>
+                  <Button size="sm" aria-label="Save shelf" onClick={handleCreateShelf}>
                     <Check className="h-4 w-4" />
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setShowNewShelf(false)}>
@@ -252,7 +252,12 @@ export function PostImportDialog({
                       </option>
                     ))}
                   </select>
-                  <Button variant="outline" size="sm" onClick={() => setShowNewShelf(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label="Create shelf"
+                    onClick={() => setShowNewShelf(true)}
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -294,7 +299,7 @@ export function PostImportDialog({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleCreateLabel}>Create</Button>
+                    <Button size="sm" aria-label="Save label" onClick={handleCreateLabel}>Create</Button>
                     <Button size="sm" variant="ghost" onClick={() => setShowNewLabel(false)}>Cancel</Button>
                   </div>
                 </div>
@@ -319,14 +324,25 @@ export function PostImportDialog({
                       </button>
                     );
                   })}
-                  <Button variant="outline" size="sm" onClick={() => setShowNewLabel(true)} className="h-8 px-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label="Create label"
+                    onClick={() => setShowNewLabel(true)}
+                    className="h-8 px-2"
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="text-sm text-muted-foreground">No labels yet</span>
-                  <Button variant="outline" size="sm" onClick={() => setShowNewLabel(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label="Create label"
+                    onClick={() => setShowNewLabel(true)}
+                  >
                     <Plus className="h-4 w-4 mr-1" />
                     Create
                   </Button>

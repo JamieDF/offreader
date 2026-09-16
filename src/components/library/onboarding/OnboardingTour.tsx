@@ -69,6 +69,11 @@ export function OnboardingTour() {
         setExitConfirmOpen(true);
       },
       onNextClick: (_element, step, opts) => {
+        if (exitConfirmOpenRef.current) {
+          setExitConfirmOpen(false);
+          opts?.driver?.destroy();
+          return;
+        }
         const stepId = (step as { data?: { stepId?: string } }).data?.stepId;
         if (stepId === 'import') {
           // Open the demo dialog. The dialog mount is asynchronous
