@@ -9,7 +9,7 @@ test.use({ baseURL: process.env.E2E_BASE_URL || 'http://localhost:5000' });
 async function clearStorage(page: Page) {
   await page.context().clearCookies();
   await page.evaluate(() => {
-    try { localStorage.clear(); } catch {}
+    localStorage.clear();
   });
 }
 
@@ -115,6 +115,7 @@ test.describe('Onboarding tour', () => {
     });
 
     await page.goto('/about');
+    await page.getByRole('button', { name: 'Got it' }).click();
     await expect(page.getByText(/take the tour/i)).toBeVisible();
 
     await page.getByText(/take the tour/i).click();

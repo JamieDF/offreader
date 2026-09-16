@@ -1,8 +1,10 @@
 import { Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 export const __dirname = path.dirname(fileURLToPath(import.meta.url));
+export const APP_VERSION = createRequire(import.meta.url)('../../package.json').version as string;
 
 export const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
 export const MOBI_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.mobi');
@@ -14,6 +16,7 @@ export async function importBook(page: Page, filePath: string): Promise<void> {
   await page.getByRole('button', { name: /import book/i }).click();
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(filePath);
+  await page.getByRole('button', { name: /^done$/i }).click();
 }
 
 export async function importAndOpenDetail(

@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { APP_VERSION } from './helpers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
@@ -21,17 +22,17 @@ test.describe('Library', () => {
     // Pre-seed storage so the welcome dialog and onboarding tour don't
     // appear during these tests. They're tested separately in
     // onboarding-tour.spec.ts.
-    await page.evaluate(() => {
+    await page.evaluate((version) => {
       localStorage.setItem(
         'CapacitorStorage.offreader-last-visit',
         new Date().toISOString(),
       );
-      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', version);
       localStorage.setItem(
         'CapacitorStorage.offreader-tour-completed',
         new Date().toISOString(),
       );
-    });
+    }, APP_VERSION);
     await page.reload();
   });
 

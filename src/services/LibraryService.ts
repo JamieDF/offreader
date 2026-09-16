@@ -42,8 +42,10 @@ class LibraryService {
               return null;
             }
 
-            const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
-            return { ...book, filePath: fileUrl };
+            // Keep book content out of the native bridge until the user opens it.
+            // The reader retrieves the file on demand, so creating startup blob
+            // URLs would read every stored book into memory unnecessarily.
+            return { ...book, filePath: '' };
           } catch (error) {
             console.error(`Failed to retrieve file for book ${book.id}:`, error);
             return null;

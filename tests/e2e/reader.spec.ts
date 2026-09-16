@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { APP_VERSION } from './helpers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
@@ -16,17 +17,18 @@ test.describe('Reader', () => {
     await page.goto('/');
     // Pre-seed storage so the welcome dialog and onboarding tour don't
     // appear during these tests.
-    await page.evaluate(() => {
+    await page.evaluate((version) => {
       localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
-      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', version);
       localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
-    });
+    }, APP_VERSION);
     await page.reload();
 
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /import book/i }).click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(EPUB_PATH);
+    await page.getByRole('button', { name: /^done$/i }).click();
 
     await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
 

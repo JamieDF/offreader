@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { PDF_PATH, importAndOpenReader, waitForReaderReady, openReaderOverlay } from './helpers';
+import { APP_VERSION, PDF_PATH, importAndOpenReader, waitForReaderReady, openReaderOverlay } from './helpers';
 
 test.describe('PDF Reader', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.evaluate(() => {
+    await page.evaluate((version) => {
       localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
-      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', version);
       localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
-    });
+    }, APP_VERSION);
     await page.reload();
     await importAndOpenReader(page, PDF_PATH, /minimal/i);
   });
