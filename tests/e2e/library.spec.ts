@@ -6,6 +6,10 @@ import { APP_VERSION } from './helpers.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
 const MOBI_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.mobi');
+const PDF_PATH = path.resolve(__dirname, '../books/minimal-document.pdf');
+const AZW3_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.azw3');
+const FB2_PATH = path.resolve(__dirname, '../books/test-book.fb2');
+const CBZ_PATH = path.resolve(__dirname, '../books/test-comic.cbz');
 const BAD_FILE_PATH = path.resolve(__dirname, '../books/bad-file.epub');
 
 // Helper to click the import FAB and set files
@@ -60,6 +64,26 @@ test.describe('Library', () => {
   test('imports a MOBI book', async ({ page }) => {
     await importBook(page, MOBI_PATH);
     await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('imports a PDF book', async ({ page }) => {
+    await importBook(page, PDF_PATH);
+    await expect(page.locator('h3').filter({ hasText: /minimal/i }).first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('imports an AZW3 book', async ({ page }) => {
+    await importBook(page, AZW3_PATH);
+    await expect(page.locator('h3').filter({ hasText: /alice/i }).first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('imports an FB2 book', async ({ page }) => {
+    await importBook(page, FB2_PATH);
+    await expect(page.locator('h3').filter({ hasText: /test-book/i }).first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('imports a CBZ book', async ({ page }) => {
+    await importBook(page, CBZ_PATH);
+    await expect(page.locator('h3').filter({ hasText: /test-comic/i }).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('shows book in library after import', async ({ page }) => {

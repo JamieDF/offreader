@@ -1,7 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { APP_VERSION } from './helpers.js';
+import { APP_VERSION, openReaderOverlay } from './helpers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
@@ -164,14 +164,15 @@ test.describe('Reader', () => {
   test('reading progress persists after leaving and returning', async ({ page }) => {
     await waitForReaderReady(page);
 
-    // Navigate a few pages to build up progress
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowRight');
+    // Open overlay and page-turn via side nav (keyboard arrows are unreliable on mobile).
+    await openReaderOverlay(page);
+    const nextPage = page.getByRole('button', { name: /next page/i });
+    for (let i = 0; i < 3; i++) {
+      await nextPage.click();
+      await page.waitForTimeout(300);
+    }
 
-    // Go back to library
-    await page.locator('.reader-container').click();
-    await page.getByRole('button', { name: /back/i }).click();
+    await page.getByRole('button', { name: /back to library/i }).click();
     await expect(page).toHaveURL('/');
 
     // Re-open book detail — "Today" for Last Read confirms reading was tracked

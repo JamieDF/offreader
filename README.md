@@ -150,7 +150,8 @@ See also the list of [contributors](../../contributors) who have participated in
 ## Acknowledgments
 
 - [foliate-js](https://github.com/johnfactotum/foliate-js) by johnfactotum, the rendering engine that makes this possible, forked at [JamieDF/foliate-js](https://github.com/JamieDF/foliate-js) to add Vite compatibility and PDF zoom/pan improvements
-- [Project Gutenberg](https://www.gutenberg.org/): public domain ebooks used in tests
+- [Project Gutenberg](https://www.gutenberg.org/): public domain ebooks used in tests (e.g. *Alice's Adventures in Wonderland*)
+- [sample_reading_media](https://github.com/clach04/sample_reading_media) by clach04: sample ebooks and comics used as test fixtures ([LGPL-2.1](https://github.com/clach04/sample_reading_media/blob/main/LICENSE)); the Bobby Make-Believe comic pages included there are public domain
 - [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2): README template
 
 ---

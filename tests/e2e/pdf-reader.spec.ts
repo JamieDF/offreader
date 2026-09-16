@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { APP_VERSION, PDF_PATH, importAndOpenReader, waitForReaderReady, openReaderOverlay } from './helpers';
+import { APP_VERSION, PDF_PATH, importAndOpenReader, waitForReaderReady, openReaderOverlay, closeReaderOverlay } from './helpers';
 
 test.describe('PDF Reader', () => {
   test.beforeEach(async ({ page }) => {
@@ -36,7 +36,7 @@ test.describe('PDF Reader', () => {
     await expect(page.getByTestId('pdf-zoom-toolbar')).not.toHaveClass(/pointer-events-none/);
 
     // Toggle overlay off
-    await openReaderOverlay(page);
+    await closeReaderOverlay(page);
     await expect(page.getByTestId('pdf-zoom-toolbar')).toHaveClass(/pointer-events-none/);
   });
 

@@ -57,6 +57,47 @@ describe('epubParser', () => {
   });
 });
 
+describe('azw3Parser', () => {
+  describe('extractAzw3Metadata', () => {
+    it('parses a valid AZW3 fixture and returns metadata', async () => {
+      const file = makeFile('alice-in-wonderland.azw3', 'application/vnd.amazon.ebook');
+      const metadata = await extractAzw3Metadata(file);
+
+      expect(metadata.title).toBeTruthy();
+      expect(metadata.format).toBe('AZW3');
+    });
+  });
+});
+
+describe('fb2Parser', () => {
+  describe('extractFb2Metadata', () => {
+    it('parses test-book.fb2 and returns metadata', async () => {
+      const file = makeFile('test-book.fb2', 'application/x-fictionbook+xml');
+      const metadata = await extractFb2Metadata(file);
+
+      expect(metadata.title).toBe('test-book');
+      expect(metadata.author).toBe('Unknown Author');
+      expect(metadata.format).toBe('FB2');
+      expect(metadata.totalChapters).toBe(4);
+    });
+  });
+});
+
+describe('cbzParser', () => {
+  describe('extractCbzMetadata', () => {
+    it('parses test-comic.cbz and returns metadata', async () => {
+      const file = makeFile('test-comic.cbz', 'application/vnd.comicbook+zip');
+      const metadata = await extractCbzMetadata(file);
+
+      expect(metadata.title).toBe('test-comic');
+      expect(metadata.format).toBe('CBZ');
+      expect(metadata.pageCount).toBe(4);
+      expect(metadata.readingTime).toBe('4m');
+      expect(metadata.coverImage).toMatch(/^data:image\/jpeg;base64,/);
+    });
+  });
+});
+
 describe('mobiParser', () => {
   describe('extractMobiMetadata', () => {
     it('parses a valid MOBI and returns metadata', async () => {
@@ -110,18 +151,24 @@ describe('bookMetadataParser', () => {
       expect(metadata.format).toBe('PDF');
     });
 
+    it('dispatches to the AZW3 parser for .azw3 files', async () => {
+      const file = makeFile('alice-in-wonderland.azw3', 'application/vnd.amazon.ebook');
+      const metadata = await extractBookMetadata(file);
+      expect(metadata.format).toBe('AZW3');
+    });
+
     it('dispatches to the FB2 parser for .fb2 files', async () => {
-      const file = new File(['<?xml version="1.0"?><FictionBook><description><title-info><book-title>Test FB2</book-title></title-info></description><body><section><title><p>Chapter one</p></title><p>Text</p></section></body></FictionBook>'], 'book.fb2', { type: 'application/x-fictionbook+xml' });
+      const file = makeFile('test-book.fb2', 'application/x-fictionbook+xml');
       const metadata = await extractBookMetadata(file);
       expect(metadata.format).toBe('FB2');
+      expect(metadata.title).toBe('test-book');
     });
 
     it('dispatches to the CBZ parser for .cbz files', async () => {
-      const zip = new JSZip();
-      zip.file('page-1.png', new Uint8Array([0x89, 0x50, 0x4e, 0x47]));
-      const file = new File([await zip.generateAsync({ type: 'uint8array' })], 'comic.cbz', { type: 'application/vnd.comicbook+zip' });
+      const file = makeFile('test-comic.cbz', 'application/vnd.comicbook+zip');
       const metadata = await extractBookMetadata(file);
       expect(metadata.format).toBe('CBZ');
+      expect(metadata.pageCount).toBe(4);
     });
 
     it('propagates validation errors from PDF parser', async () => {
@@ -194,6 +241,11 @@ describe('bookMetadataParser', () => {
 
 describe('pdfParser', () => {
   describe('extractPdfMetadata', () => {
+    it('reads real PDF fixture bytes (pdf.js is mocked; see e2e for full parse)', async () => {
+      const bytes = readFileSync(path.join(BOOKS_DIR, 'minimal-document.pdf'));
+      expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+    });
+
     it('parses a valid PDF and returns metadata', async () => {
       const file = makeFile('minimal-document.pdf', 'application/pdf');
       const metadata = await extractPdfMetadata(file);

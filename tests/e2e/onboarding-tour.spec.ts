@@ -1,11 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 import { APP_VERSION } from './helpers';
 
-// Tests in this file use an explicit baseURL so they can run against any
-// locally-running dev server (5173, 5000, or whatever Playwright starts).
-// The webServer config in playwright.config.ts will launch its own if none
-// is running, on port 5000.
-test.use({ baseURL: process.env.E2E_BASE_URL || 'http://127.0.0.1:5001' });
+// Match playwright.config.ts (port 5000). Override via E2E_BASE_URL if needed.
+test.use({ baseURL: process.env.E2E_BASE_URL || 'http://localhost:5000' });
 
 async function clearStorage(page: Page) {
   await page.context().clearCookies();
@@ -23,7 +20,7 @@ async function startTour(page: Page) {
   await page.goto('/about');
   const gotIt = page.getByRole('button', { name: 'Got it' });
   if (await gotIt.isVisible().catch(() => false)) await gotIt.click();
-  await page.getByText(/take the tour/i).click();
+  await page.getByRole('button', { name: /take the tour/i }).click();
 }
 
 test.describe('Onboarding tour', () => {
@@ -131,9 +128,10 @@ test.describe('Onboarding tour', () => {
 
     await page.goto('/about');
     await page.getByRole('button', { name: 'Got it' }).click();
-    await expect(page.getByText(/take the tour/i)).toBeVisible();
+    const tourButton = page.getByRole('button', { name: /take the tour/i });
+    await expect(tourButton).toBeVisible();
 
-    await page.getByText(/take the tour/i).click();
+    await tourButton.click();
 
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 5000 });
   });
