@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.1.0",
+    "date": "2026-09-16",
+    "items": [
+      "Added support for AZW3, FB2, and CBZ books",
+      "Improved book import, metadata, reading progress, and library organization"
+    ]
+  },
+  {
     "version": "1.0.4",
     "date": "2026-07-31",
     "items": [
