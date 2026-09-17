@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.offreader.reader"><img src="https://img.shields.io/badge/Google_Play-Get_it_on_Google_Play-green?logo=google-play&logoColor=white" alt="Get it on Google Play" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/version-1.0.4-blue.svg" alt="Version 1.0.4" />
+  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 

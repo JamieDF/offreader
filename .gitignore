@@ -24,6 +24,9 @@ ios/App/Pods/
 ios/App/build/
 ios/DerivedData/
 
+# Local CI Android toolchain (JDK + SDK for local APK builds)
+.ci-android/
+
 # Android
 *.apk
 *.aab
