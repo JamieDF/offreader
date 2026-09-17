@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { APP_VERSION, openReaderOverlay } from './helpers.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EPUB_PATH = path.resolve(__dirname, '../books/alice-in-wonderland.epub');
@@ -16,17 +17,18 @@ test.describe('Reader', () => {
     await page.goto('/');
     // Pre-seed storage so the welcome dialog and onboarding tour don't
     // appear during these tests.
-    await page.evaluate(() => {
+    await page.evaluate((version) => {
       localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
-      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', version);
       localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
-    });
+    }, APP_VERSION);
     await page.reload();
 
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: /import book/i }).click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(EPUB_PATH);
+    await page.getByRole('button', { name: /^done$/i }).click();
 
     await expect(page.locator('h3').filter({ hasText: /alice/i })).toBeVisible({ timeout: 10000 });
 
@@ -67,7 +69,7 @@ test.describe('Reader', () => {
     await expect(page.getByText(/loading book/i)).not.toBeVisible({ timeout: 15000 });
 
     await page.locator('.reader-container').click();
-    await expect(page.getByText(/chapter \d+ of \d+/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/page \d+ of \d+/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('back button returns to library', async ({ page }) => {
@@ -162,14 +164,15 @@ test.describe('Reader', () => {
   test('reading progress persists after leaving and returning', async ({ page }) => {
     await waitForReaderReady(page);
 
-    // Navigate a few pages to build up progress
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowRight');
+    // Open overlay and page-turn via side nav (keyboard arrows are unreliable on mobile).
+    await openReaderOverlay(page);
+    const nextPage = page.getByRole('button', { name: /next page/i });
+    for (let i = 0; i < 3; i++) {
+      await nextPage.click();
+      await page.waitForTimeout(300);
+    }
 
-    // Go back to library
-    await page.locator('.reader-container').click();
-    await page.getByRole('button', { name: /back/i }).click();
+    await page.getByRole('button', { name: /back to library/i }).click();
     await expect(page).toHaveURL('/');
 
     // Re-open book detail — "Today" for Last Read confirms reading was tracked

@@ -27,18 +27,19 @@ interface BookReaderProps {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapTocItems(toc: any[], depth = 0, counter = { n: 0 }): Chapter[] {
+function mapTocItems(toc: any[], depth = 0, counter = { n: 0 }, isComic = false): Chapter[] {
   const result: Chapter[] = [];
   for (const item of toc) {
+    const index = counter.n++;
     result.push({
-      label: item.label || item.title || `Chapter ${counter.n + 1}`,
+      label: isComic ? `Page ${index + 1}` : (item.label || item.title || `Chapter ${index + 1}`),
       href: item.href || '',
       cfi: item.cfi || '',
-      index: counter.n++,
+      index,
       depth,
     });
     if (Array.isArray(item.subitems) && item.subitems.length > 0) {
-      result.push(...mapTocItems(item.subitems, depth + 1, counter));
+      result.push(...mapTocItems(item.subitems, depth + 1, counter, isComic));
     }
   }
   return result;
@@ -82,6 +83,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   const overlayerRef = useRef<any>(null);
   const overlayRef = useRef<ReaderOverlayHandle>(null);
   const rendererPagesRef = useRef({ currentPage: 1, totalPages: 1 });
+  const navigationInProgressRef = useRef(false);
   const isInitializedRef = useRef(false);
   const chaptersRef = useRef<Chapter[]>([]);
 
@@ -104,6 +106,17 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   const { addSession } = useReadingStats();
   const { updateProgress, updateLocation, addBookmark, removeBookmark, getBookmarks } = useBookTracker(propBookId);
   const { settings, isLoaded } = useReaderSettings();
+
+  const extensionForFormat = (format?: Book['format']): string => {
+    switch (format) {
+      case 'PDF': return '.pdf';
+      case 'MOBI': return '.mobi';
+      case 'AZW3': return '.azw3';
+      case 'FB2': return '.fb2';
+      case 'CBZ': return '.cbz';
+      default: return '.epub';
+    }
+  };
 
   // Stable ref for settings — lets initReader use current settings without being a dep
   const settingsRef = useRef(settings);
@@ -159,11 +172,17 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
   }, []);
 
   const handlePrev = async () => {
+    if (navigationInProgressRef.current) return;
+    navigationInProgressRef.current = true;
     try { await viewRef.current?.prev(); } catch (err) { console.error('Failed to go to previous page:', err); }
+    finally { navigationInProgressRef.current = false; }
   };
 
   const handleNext = async () => {
+    if (navigationInProgressRef.current) return;
+    navigationInProgressRef.current = true;
     try { await viewRef.current?.next(); } catch (err) { console.error('Failed to go to next page:', err); }
+    finally { navigationInProgressRef.current = false; }
   };
 
   const handleRotationChange = useCallback((rotation: number) => {
@@ -212,13 +231,26 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         const totalChapters = flatChapters.length || 1;
         let currentChapterIndex = 0;
 
-        if (detail.tocItem?.label) {
+        const comicRendererIndex = book.format === 'CBZ'
+          ? view.renderer?.index
+          : undefined;
+        if (typeof comicRendererIndex === 'number') {
+          currentChapterIndex = comicRendererIndex;
+        } else if (detail.tocItem?.label) {
           const idx = flatChapters.findIndex(c => c.label === detail.tocItem.label);
           if (idx !== -1) currentChapterIndex = idx;
         }
 
         const progressPercentage = Math.round((detail.fraction || 0) * 100);
-        const { currentPage, totalPages: totalPagesInChapter } = rendererPagesRef.current;
+        const comicPage = book.format === 'CBZ'
+          ? currentChapterIndex + 1
+          : rendererPagesRef.current.currentPage;
+        const comicTotalPages = book.format === 'CBZ'
+          ? Math.max(1, flatChapters.length)
+          : rendererPagesRef.current.totalPages;
+        const currentChapterLabel = book.format === 'CBZ'
+          ? `Page ${comicPage}`
+          : detail.tocItem?.label ?? undefined;
 
         setLocationInfo({
           current: progressPercentage,
@@ -226,12 +258,12 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
           currentChapter: currentChapterIndex + 1,
           totalChapters: Math.max(1, totalChapters),
           fraction: progressPercentage,
-          currentPage,
-          totalPagesInChapter,
-          currentChapterLabel: detail.tocItem?.label ?? undefined,
+          currentPage: comicPage,
+          totalPagesInChapter: comicTotalPages,
+          currentChapterLabel,
         });
 
-        updateProgress(progressPercentage, currentChapterIndex, detail.tocItem?.label ?? undefined, currentPage, totalPagesInChapter);
+        updateProgress(progressPercentage, currentChapterIndex, currentChapterLabel, comicPage, comicTotalPages);
         updateLibraryProgressRef.current(propBookId, progressPercentage);
 
         const location = resolveLocation(detail);
@@ -317,10 +349,23 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
 
       const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
-      await view.open(fileUrl);
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) throw new Error(`Failed to fetch stored book: ${fileResponse.status}`);
+      const fileBlob = await fileResponse.blob();
+      const readerFile = new File(
+        [fileBlob],
+        `${book.id}${extensionForFormat(book.format)}`,
+        { type: fileBlob.type },
+      );
+      await view.open(readerFile);
 
       const toc = view.book?.toc;
-      const realChapters = mapTocItems(Array.isArray(toc) && toc.length > 0 ? toc : []);
+      const realChapters = mapTocItems(
+        Array.isArray(toc) && toc.length > 0 ? toc : [],
+        0,
+        { n: 0 },
+        book.format === 'CBZ',
+      );
       chaptersRef.current = realChapters;
       setChapters(realChapters);
 
@@ -350,7 +395,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           view.renderer.addEventListener('zoom', (e: any) => setPdfZoom(e.detail.scale));
         } else {
-          view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
+          if (typeof view.renderer.setStyles === 'function') {
+            view.renderer.setStyles(buildReaderStylesheet(settingsRef.current));
+          }
         }
       }
 
@@ -370,7 +417,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
       await view.goTo(targetLocation);
 
-      if (view.book?.metadata?.title) setBookTitle(view.book.metadata.title);
+      if (book.format !== 'CBZ' && view.book?.metadata?.title) {
+        setBookTitle(view.book.metadata.title);
+      }
 
       setIsLoading(false);
       isInitializedRef.current = true;

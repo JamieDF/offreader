@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { PDF_PATH, importAndOpenReader, waitForReaderReady, openReaderOverlay } from './helpers';
+import { APP_VERSION, PDF_PATH, importAndOpenReader, waitForReaderReady, openReaderOverlay, closeReaderOverlay } from './helpers';
 
 test.describe('PDF Reader', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.evaluate(() => {
+    await page.evaluate((version) => {
       localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
-      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', '0.9.0');
+      localStorage.setItem('CapacitorStorage.offreader-last-seen-version', version);
       localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
-    });
+    }, APP_VERSION);
     await page.reload();
     await importAndOpenReader(page, PDF_PATH, /minimal/i);
   });
@@ -36,7 +36,7 @@ test.describe('PDF Reader', () => {
     await expect(page.getByTestId('pdf-zoom-toolbar')).not.toHaveClass(/pointer-events-none/);
 
     // Toggle overlay off
-    await openReaderOverlay(page);
+    await closeReaderOverlay(page);
     await expect(page.getByTestId('pdf-zoom-toolbar')).toHaveClass(/pointer-events-none/);
   });
 
@@ -53,7 +53,7 @@ test.describe('PDF Reader', () => {
     await openReaderOverlay(page);
 
     await page.getByRole('button', { name: 'Zoom in' }).click();
-    await expect(page.getByTestId('zoom-label')).toHaveText('125%');
+    await expect(page.getByTestId('zoom-label')).toHaveText('110%');
   });
 
   test('can zoom out from named mode', async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe('PDF Reader', () => {
     await openReaderOverlay(page);
 
     await page.getByRole('button', { name: 'Zoom out' }).click();
-    await expect(page.getByTestId('zoom-label')).toHaveText('75%');
+    await expect(page.getByTestId('zoom-label')).toHaveText('90%');
   });
 
   test('can reset to Fit Page after numeric zoom', async ({ page }) => {
@@ -69,7 +69,7 @@ test.describe('PDF Reader', () => {
     await openReaderOverlay(page);
 
     await page.getByRole('button', { name: 'Zoom in' }).click();
-    await expect(page.getByTestId('zoom-label')).toHaveText('125%');
+    await expect(page.getByTestId('zoom-label')).toHaveText('110%');
 
     await page.getByRole('button', { name: 'Fit Page' }).click();
     await expect(page.getByTestId('zoom-label')).toHaveText('Fit Page');

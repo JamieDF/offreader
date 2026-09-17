@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { libraryService } from '@/services/LibraryService';
 import { Book } from '@/types/book';
+import { fileStorage } from '@/services/fileStorage';
+import { storageService } from '@/services/storage';
 
 // Mock the dependencies
 vi.mock('@/services/fileStorage');
@@ -77,6 +79,22 @@ describe('LibraryService', () => {
       const books: Book[] = [makeBook()];
       libraryService.updateBooks(books);
       expect(libraryService.getBooks()).toEqual(books);
+    });
+
+    describe('Initialization', () => {
+      it('does not read full book files while rehydrating the library', async () => {
+        const book = makeBook({ id: 'book-1', filePath: '/old-url' });
+        vi.mocked(storageService.getItem).mockResolvedValueOnce(JSON.stringify([book]));
+        vi.mocked(fileStorage.fileExists).mockResolvedValueOnce(true);
+
+        await libraryService.initialize();
+
+        expect(fileStorage.retrieveFile).not.toHaveBeenCalled();
+        expect(libraryService.getBooks()[0]).toMatchObject({
+          id: book.id,
+          filePath: '',
+        });
+      });
     });
   });
 });

@@ -1,7 +1,7 @@
 {
   "name": "OffReader",
-  "version": "1.0.4",
-  "description": "OffReader — offline ebook reader for Linux desktop",
+  "version": "1.1.0",
+  "description": "OffReader: Ebook reader and library for web, linux and android",
   "author": {
     "name": "OffReader",
     "email": "mail@offreader.com"

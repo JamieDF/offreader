@@ -17,7 +17,7 @@ import { readFileSync as readFile } from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 
-function readJson(filepath: string): any {
+function readJson(filepath: string): Record<string, unknown> {
   return JSON.parse(readFile(filepath, 'utf-8'));
 }
 
@@ -83,7 +83,7 @@ describe('electron/package.json', () => {
     });
 
     it('has output directory configured', () => {
-      expect(pkg.build?.directories?.output).toBe('dist');
+      expect(pkg.build?.directories?.output).toBe('../dist-electron');
     });
 
     it('has build files include app and assets', () => {

@@ -34,7 +34,7 @@ describe('useOnboardingTour', () => {
     vi.clearAllMocks();
   });
 
-  it('auto-starts on fresh install (no last-visit, no tour-completed)', async () => {
+  it('does not auto-start on fresh install', async () => {
     mockGetItem.mockImplementation((key: string) => {
       if (key === 'offreader-tour-completed') return Promise.resolve(null);
       if (key === 'offreader-last-visit') return Promise.resolve(null);
@@ -43,9 +43,8 @@ describe('useOnboardingTour', () => {
 
     const { result } = renderHook(() => useOnboardingTour(), { wrapper });
 
-    await waitFor(() => {
-      expect(result.current.isOpen).toBe(true);
-    });
+    await waitFor(() => expect(result.current.hasCompleted).toBe(false));
+    expect(result.current.isOpen).toBe(false);
     expect(result.current.hasCompleted).toBe(false);
   });
 
@@ -108,7 +107,10 @@ describe('useOnboardingTour', () => {
     });
 
     const { result } = renderHook(() => useOnboardingTour(), { wrapper });
-    await waitFor(() => expect(result.current.isOpen).toBe(true));
+    await waitFor(() => expect(result.current.hasCompleted).toBe(false));
+
+    act(() => result.current.start());
+    expect(result.current.isOpen).toBe(true);
 
     await act(async () => {
       await result.current.stop();
@@ -130,7 +132,10 @@ describe('useOnboardingTour', () => {
     });
 
     const { result } = renderHook(() => useOnboardingTour(), { wrapper });
-    await waitFor(() => expect(result.current.isOpen).toBe(true));
+    await waitFor(() => expect(result.current.hasCompleted).toBe(false));
+
+    act(() => result.current.start());
+    expect(result.current.isOpen).toBe(true);
 
     await act(async () => {
       await result.current.stop();
@@ -217,7 +222,9 @@ describe('useOnboardingTour demo state', () => {
     });
 
     const { result } = renderHook(() => useOnboardingTour(), { wrapper });
-    await waitFor(() => expect(result.current.isOpen).toBe(true));
+    await waitFor(() => expect(result.current.hasCompleted).toBe(false));
+    act(() => result.current.start());
+    expect(result.current.isOpen).toBe(true);
 
     act(() => {
       result.current.startDemoImport();

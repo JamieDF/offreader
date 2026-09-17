@@ -104,12 +104,15 @@ describe('CapacitorFileStorage', () => {
   });
 
   describe('listStoredFiles', () => {
-    it('returns only .epub files', async () => {
+    it('returns files with supported book extensions', async () => {
       mockReaddir.mockResolvedValue({
         files: [
           { name: 'book1.epub', type: 'file' },
           { name: 'readme.txt', type: 'file' },
           { name: 'book2.epub', type: 'file' },
+          { name: 'book3.azw3', type: 'file' },
+          { name: 'book4.fb2', type: 'file' },
+          { name: 'book5.cbz', type: 'file' },
           { name: 'subdir', type: 'directory' },
         ],
       });
@@ -117,9 +120,15 @@ describe('CapacitorFileStorage', () => {
 
       const files = await fileStorage.listStoredFiles();
 
-      expect(files).toHaveLength(2);
-      expect(files.map(f => f.filename)).toEqual(['book1.epub', 'book2.epub']);
-      expect(files.map(f => f.id)).toEqual(['book1', 'book2']);
+      expect(files).toHaveLength(5);
+      expect(files.map(f => f.filename)).toEqual([
+        'book1.epub',
+        'book2.epub',
+        'book3.azw3',
+        'book4.fb2',
+        'book5.cbz',
+      ]);
+      expect(files.map(f => f.id)).toEqual(['book1', 'book2', 'book3', 'book4', 'book5']);
     });
 
     it('returns empty array when directory does not exist', async () => {

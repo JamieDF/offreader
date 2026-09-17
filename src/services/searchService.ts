@@ -159,7 +159,7 @@ export const searchService = {
       if (pdfDoc) {
         chapters = await extractTextFromPdfFile(pdfDoc);
       }
-    } else if (libraryBook.format === 'MOBI') {
+    } else if (libraryBook.format === 'MOBI' || libraryBook.format === 'AZW3') {
       chapters = await extractTextFromMobi(view, mapping);
     } else {
       chapters = await extractTextFromEpub(view, mapping);

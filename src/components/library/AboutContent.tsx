@@ -115,7 +115,7 @@ export function AboutContent({
         <ul className="space-y-3 pt-1">
           <li className="flex items-start gap-3 text-sm">
             <Upload className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-            <span>Import EPUB or MOBI files directly from your device</span>
+            <span>Import EPUB, MOBI, AZW3, FB2, CBZ, and PDF files directly from your device</span>
           </li>
           <li className="flex items-start gap-3 text-sm">
             <BookOpen className="w-4 h-4 mt-0.5 text-primary shrink-0" />
@@ -132,7 +132,7 @@ export function AboutContent({
         <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">How to use it</h2>
         {howToUseAction}
         <p className="text-sm text-muted-foreground">
-          Tap the <span className="text-foreground font-medium">+</span> button on your library to import an EPUB or MOBI file. Open a book to start reading. Your progress saves automatically as you turn pages.
+          Tap the <span className="text-foreground font-medium">+</span> button on your library to import an EPUB, MOBI, AZW3, FB2, CBZ, or PDF file. Open a book to start reading. Your progress saves automatically as you turn pages.
         </p>
         <p className="text-sm text-muted-foreground">
           Use shelves to group books by project (like "Research" or "Weekend reading") and labels to tag them by mood, genre, or anything else.

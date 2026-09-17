@@ -1,16 +1,26 @@
 import { test, expect, Page } from '@playwright/test';
+import { APP_VERSION } from './helpers';
 
-// Tests in this file use an explicit baseURL so they can run against any
-// locally-running dev server (5173, 5000, or whatever Playwright starts).
-// The webServer config in playwright.config.ts will launch its own if none
-// is running, on port 5000.
+// Match playwright.config.ts (port 5000). Override via E2E_BASE_URL if needed.
 test.use({ baseURL: process.env.E2E_BASE_URL || 'http://localhost:5000' });
 
 async function clearStorage(page: Page) {
   await page.context().clearCookies();
   await page.evaluate(() => {
-    try { localStorage.clear(); } catch {}
+    localStorage.clear();
   });
+}
+
+async function startTour(page: Page) {
+  await page.evaluate((version) => {
+    localStorage.setItem('CapacitorStorage.offreader-tour-completed', new Date().toISOString());
+    localStorage.setItem('CapacitorStorage.offreader-last-visit', new Date().toISOString());
+    localStorage.setItem('CapacitorStorage.offreader-last-seen-version', version);
+  }, APP_VERSION);
+  await page.goto('/about');
+  const gotIt = page.getByRole('button', { name: 'Got it' });
+  if (await gotIt.isVisible().catch(() => false)) await gotIt.click();
+  await page.getByRole('button', { name: /take the tour/i }).click();
 }
 
 test.describe('Onboarding tour', () => {
@@ -22,8 +32,9 @@ test.describe('Onboarding tour', () => {
   });
 
   test('auto-launches on first load with the welcome step (fully dimmed)', async ({ page }) => {
+    await startTour(page);
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('.driver-popover-title')).toContainText(/welcome to offreader/i);
+    await expect(page.locator('.driver-popover-title')).toContainText(/take the guided tour/i);
     await expect(page.locator('.driver-popover-progress-text')).toContainText('1 of 6');
 
     // The welcome step uses driver.js's centered welcome mode — the overlay
@@ -34,6 +45,7 @@ test.describe('Onboarding tour', () => {
   });
 
   test('advances through all 6 steps and closes the tour', async ({ page }) => {
+    await startTour(page);
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 5000 });
 
     // Step 1 -> 2 (Add a book). Step 2's Next click also opens the demo
@@ -115,46 +127,50 @@ test.describe('Onboarding tour', () => {
     });
 
     await page.goto('/about');
-    await expect(page.getByText(/take the tour/i)).toBeVisible();
+    await page.getByRole('button', { name: 'Got it' }).click();
+    const tourButton = page.getByRole('button', { name: /take the tour/i });
+    await expect(tourButton).toBeVisible();
 
-    await page.getByText(/take the tour/i).click();
+    await tourButton.click();
 
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 5000 });
   });
 
   test('clicking outside the popover shows the exit-confirm bubble', async ({ page }) => {
+    await startTour(page);
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 5000 });
 
     // Click outside the popover (top-left corner of viewport). Use the
     // mouse directly so we land on the overlay, not on the popover's
     // own click area.
-    await page.mouse.click(50, 50);
+    await page.locator('svg.driver-overlay').click({ position: { x: 5, y: 5 } });
     await page.waitForTimeout(400);
 
-    const exitConfirm = page.locator('[data-testid="tour-exit-confirm"]');
-    await expect(exitConfirm).toBeAttached();
-    await expect(exitConfirm).toContainText(/end the tour\?/i);
+    const exitConfirm = page.locator('.driver-popover-title');
+    await expect(exitConfirm).toHaveText('End the tour?');
 
     // "Stay on tour" dismisses the bubble without ending the tour.
-    await page.locator('[data-testid="tour-stay"]').click();
+    await page.locator('[data-tour-stay]').click();
     await page.waitForTimeout(300);
-    await expect(exitConfirm).not.toBeAttached();
+    await expect(exitConfirm).not.toHaveText('End the tour?');
     await expect(page.locator('.driver-popover')).toBeVisible();
   });
 
   test('clicking outside the popover and confirming "End tour" closes the tour', async ({ page }) => {
+    await startTour(page);
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 5000 });
-    await page.mouse.click(50, 50);
+    await page.locator('svg.driver-overlay').click({ position: { x: 5, y: 5 } });
     await page.waitForTimeout(400);
 
-    await expect(page.locator('[data-testid="tour-exit-confirm"]')).toBeAttached();
+    await expect(page.locator('.driver-popover-title')).toHaveText('End the tour?');
 
-    await page.locator('[data-testid="tour-end"]').click();
+    await page.getByRole('button', { name: 'End tour', exact: true }).click();
     await expect(page.locator('.driver-popover')).not.toBeVisible({ timeout: 3000 });
   });
 
   test('welcome popover is centered on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 412, height: 800 });
+    await startTour(page);
 
     await expect(page.locator('.driver-popover')).toBeVisible({ timeout: 5000 });
 

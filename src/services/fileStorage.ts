@@ -22,7 +22,7 @@ export interface StorageCheckResult {
   message?: string;
 }
 
-const KNOWN_EXTENSIONS = ['.epub', '.pdf', '.mobi'] as const;
+const KNOWN_EXTENSIONS = ['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz'] as const;
 
 class CapacitorFileStorage {
   private readonly BOOKS_DIR = 'books';
@@ -31,6 +31,9 @@ class CapacitorFileStorage {
   private extForFormat(format?: string): string {
     if (format === 'PDF') return '.pdf';
     if (format === 'MOBI') return '.mobi';
+    if (format === 'AZW3') return '.azw3';
+    if (format === 'FB2') return '.fb2';
+    if (format === 'CBZ') return '.cbz';
     return '.epub';
   }
 
@@ -38,12 +41,18 @@ class CapacitorFileStorage {
     const name = file.name.toLowerCase();
     if (name.endsWith('.pdf')) return '.pdf';
     if (name.endsWith('.mobi')) return '.mobi';
+    if (name.endsWith('.azw3')) return '.azw3';
+    if (name.endsWith('.fb2')) return '.fb2';
+    if (name.endsWith('.cbz')) return '.cbz';
     return '.epub';
   }
 
   private mimeTypeForExt(ext: string): string {
     if (ext === '.pdf') return 'application/pdf';
     if (ext === '.mobi') return 'application/x-mobipocket-ebook';
+    if (ext === '.azw3') return 'application/vnd.amazon.ebook';
+    if (ext === '.fb2') return 'application/x-fictionbook+xml';
+    if (ext === '.cbz') return 'application/vnd.comicbook+zip';
     return 'application/epub+zip';
   }
 

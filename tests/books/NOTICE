@@ -1,0 +1,12 @@
+Some files in this directory are from sample_reading_media by clach04:
+https://github.com/clach04/sample_reading_media
+
+Licensed under LGPL-2.1 (see LICENSE in that repository).
+
+Files derived from that project (v0.2 release):
+- test-book.fb2 (from test_book_fb2.fb2)
+- test-comic.cbz (from bobby_make_believe_sample.cbz; comic pages are public domain)
+- minimal-document.pdf (from test_book_pdf.pdf)
+
+Other fixtures (alice-in-wonderland.*, bad-file.*, epub-test-scripted.epub) are from
+Project Gutenberg or generated for error-path tests.

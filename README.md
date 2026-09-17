@@ -17,7 +17,7 @@
 
 ---
 
-OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, or PDF file and read it; your progress, bookmarks, and reading history all stay local. It's free and [open source](LICENSE) under the MIT license.
+OffReader is a personal ebook library and reader built around one idea: your books should live on your device, not a server. Import an EPUB, MOBI, AZW3, FB2, CBZ, or PDF file and read it; your progress, bookmarks, and reading history all stay local. It's free and [open source](LICENSE) under the MIT license.
 
 It runs [in the browser](https://offreader.com), as an [Android app on Google Play](https://play.google.com/store/apps/details?id=com.offreader.reader), or as a Linux desktop AppImage via Capacitor.
 
@@ -29,13 +29,13 @@ There are other great projects that do something similar, but I wanted to build 
 
 ## Features
 
-- Import EPUB, MOBI, and PDF files from your device
+- Import EPUB, MOBI, AZW3, FB2, CBZ, and PDF files from your device
 - **Organize with Shelves**: assign each book to one shelf; create, rename, reorder, and delete shelves
 - **Tag with Labels**: assign multiple colored labels per book; filter your library by shelf or labels
 - **10+ reader themes** (light, sepia, dark, day, parchment, neon, noir, meadow, coast, storm) plus typography controls (font, size, line height, spacing)
 - Per-chapter page tracking and overall progress
 - Bookmarks with jump-to navigation
-- **Full-text search**: search inside any book across EPUB, PDF, and MOBI; results show context with highlighted matches and click-to-navigate
+- **Full-text search**: search inside reflowable books across EPUB, PDF, MOBI, AZW3, and FB2; results show context with highlighted matches and click-to-navigate
 - **Editable metadata**: fix titles, authors, and descriptions on any book; review and edit right after import
 - Reading time tracking, streaks, and activity history
 - **Reading Insights** dashboard with charts for time read, streaks, and activity
@@ -84,7 +84,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Import Book** and select an EPUB, MOBI, or PDF file to get started.
+Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Import Book** and select an EPUB, MOBI, AZW3, FB2, CBZ, or PDF file to get started.
 
 ---
 
@@ -122,7 +122,7 @@ E2E tests run against a real browser; Chromium is required (`npx playwright inst
 - [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/): UI framework
 - [Vite](https://vitejs.dev/): build tool
 - [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/): styling and components
-- [foliate-js](https://github.com/JamieDF/foliate-js): EPUB/MOBI/PDF rendering engine (Vite-compatible fork)
+- [foliate-js](https://github.com/JamieDF/foliate-js): EPUB/MOBI/AZW3/FB2/CBZ/PDF rendering engine (Vite-compatible fork)
 - [PDF.js](https://mozilla.github.io/pdf.js/): PDF rendering (via pdfjs-dist)
 - [Capacitor](https://capacitorjs.com/): Android/iOS/Linux bridge and native storage
 - [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/): testing
@@ -150,7 +150,8 @@ See also the list of [contributors](../../contributors) who have participated in
 ## Acknowledgments
 
 - [foliate-js](https://github.com/johnfactotum/foliate-js) by johnfactotum, the rendering engine that makes this possible, forked at [JamieDF/foliate-js](https://github.com/JamieDF/foliate-js) to add Vite compatibility and PDF zoom/pan improvements
-- [Project Gutenberg](https://www.gutenberg.org/): public domain ebooks used in tests
+- [Project Gutenberg](https://www.gutenberg.org/): public domain ebooks used in tests (e.g. *Alice's Adventures in Wonderland*)
+- [sample_reading_media](https://github.com/clach04/sample_reading_media) by clach04: sample ebooks and comics used as test fixtures ([LGPL-2.1](https://github.com/clach04/sample_reading_media/blob/main/LICENSE)); the Bobby Make-Believe comic pages included there are public domain
 - [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2): README template
 
 ---
