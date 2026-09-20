@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Copy, Minus, Square, X } from 'lucide-react';
 
-// Custom titlebar for the frameless Electron window (mockup: variant A in
-// public/mockups/electron-titlebar-v1.html). Renders nothing outside the
-// desktop app — window.offreaderWindow only exists when the preload ran.
+// Custom titlebar for the frameless Electron window. Renders nothing outside
+// the desktop app — window.offreaderWindow only exists when the preload ran.
 export const ElectronTitleBar = () => {
   const api = window.offreaderWindow;
   const [isMaximized, setIsMaximized] = useState(false);

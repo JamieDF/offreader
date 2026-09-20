@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.2.0",
+    "date": "2026-09-20",
+    "items": [
+      "Added a themed custom title bar to the desktop app: frameless window with in-app minimize, maximize, and close controls"
+    ]
+  },
+  {
     "version": "1.1.0",
     "date": "2026-09-16",
     "items": [
