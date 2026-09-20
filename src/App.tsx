@@ -18,8 +18,13 @@ import { libraryService } from "@/services/LibraryService";
 import { shelfService } from "@/services/shelfService";
 import { labelService } from "@/services/labelService";
 import { ReaderSettingsProvider } from "@/hooks/useReaderSettings";
+import { ElectronTitleBar } from "@/components/electron/ElectronTitleBar";
 
 const queryClient = new QueryClient();
+
+// The Electron build is frameless — the app draws its own titlebar and the
+// shell remaps page-level `h-screen` to the area below it (see index.css).
+const isElectron = typeof window !== 'undefined' && window.Capacitor?.getPlatform() === 'electron';
 
 const AppContent = () => {
   const [libraryReady, setLibraryReady] = useState(false);
@@ -53,10 +58,13 @@ const AppContent = () => {
 
   if (!libraryReady) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading library...</p>
+      <div className={isElectron ? 'electron-shell flex h-screen flex-col' : 'contents'}>
+        <ElectronTitleBar />
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-background">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading library...</p>
+          </div>
         </div>
       </div>
     );
@@ -66,25 +74,30 @@ const AppContent = () => {
     <QueryClientProvider client={queryClient}>
       <ReaderSettingsProvider>
         <TooltipProvider>
-          <ToastContainer />
-          <WelcomeDialog
-            mode={mode}
-            lastVersion={lastVersion}
-            onDismiss={dismiss}
-            onStartTour={handleStartTour}
-          />
-          <OnboardingTour />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Library />} />
-              <Route path="/book/:bookId" element={<BookDetails />} />
-              <Route path="/reader" element={<Reader />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/privacy" element={<Privacy />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <div className={isElectron ? 'electron-shell flex h-screen flex-col' : 'contents'}>
+            <ElectronTitleBar />
+            <div className={isElectron ? 'min-h-0 flex-1 overflow-hidden' : 'contents'}>
+              <ToastContainer />
+              <WelcomeDialog
+                mode={mode}
+                lastVersion={lastVersion}
+                onDismiss={dismiss}
+                onStartTour={handleStartTour}
+              />
+              <OnboardingTour />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Library />} />
+                  <Route path="/book/:bookId" element={<BookDetails />} />
+                  <Route path="/reader" element={<Reader />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </div>
+          </div>
         </TooltipProvider>
       </ReaderSettingsProvider>
     </QueryClientProvider>

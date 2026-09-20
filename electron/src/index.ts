@@ -1,7 +1,7 @@
 import type { CapacitorElectronConfig } from '@capacitor-community/electron';
 import { getCapacitorElectronConfig, setupElectronDeepLinking } from '@capacitor-community/electron';
 import type { MenuItemConstructorOptions } from 'electron';
-import { app, MenuItem } from 'electron';
+import { app, ipcMain, MenuItem } from 'electron';
 import electronIsDev from 'electron-is-dev';
 import unhandled from 'electron-unhandled';
 import { autoUpdater } from 'electron-updater';
@@ -71,3 +71,25 @@ app.on('activate', async function () {
 });
 
 // Place all ipc or other electron api calls and custom functionality under this line
+
+// Window controls for the frameless custom titlebar. Handlers resolve the
+// window lazily so they keep working if the window is recreated on activate.
+ipcMain.handle('offreader:window-minimize', () => {
+  myCapacitorApp.getMainWindow()?.minimize();
+});
+ipcMain.handle('offreader:window-toggle-maximize', () => {
+  const win = myCapacitorApp.getMainWindow();
+  if (!win) return false;
+  if (win.isMaximized()) {
+    win.unmaximize();
+    return false;
+  }
+  win.maximize();
+  return true;
+});
+ipcMain.handle('offreader:window-close', () => {
+  myCapacitorApp.getMainWindow()?.close();
+});
+ipcMain.handle('offreader:window-is-maximized', () => {
+  return myCapacitorApp.getMainWindow()?.isMaximized() ?? false;
+});
