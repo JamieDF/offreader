@@ -371,6 +371,31 @@ foliate-view p {
   filter: invert(0.9) hue-rotate(180deg);
 }
 
+/* Frameless Electron shell: custom titlebar + remapped page heights.
+   Pages declare h-screen at their roots; inside the shell that must mean
+   "the area below the titlebar", not the viewport. */
+.electron-shell .h-screen {
+  height: 100%;
+}
+
+.electron-shell .min-h-screen {
+  min-height: 100%;
+}
+
+.electron-shell foliate-view {
+  height: 100%;
+  max-height: 100%;
+}
+
+.electron-titlebar {
+  -webkit-app-region: drag;
+}
+
+.electron-titlebar button,
+.electron-titlebar .app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
 /* Style the reader container */
 .reader-container {
   background: hsl(var(--reader-bg));

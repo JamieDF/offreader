@@ -110,6 +110,9 @@ export class ElectronCapacitorApp {
     this.MainWindow = new BrowserWindow({
       icon,
       show: false,
+      // Frameless: the web app draws its own themed titlebar instead of
+      // the OS chrome (see ElectronTitleBar + offreader:* IPC channels).
+      frame: false,
       x: this.mainWindowState.x,
       y: this.mainWindowState.y,
       width: this.mainWindowState.width,
@@ -123,6 +126,14 @@ export class ElectronCapacitorApp {
       },
     });
     this.mainWindowState.manage(this.MainWindow);
+
+    // Keep the renderer's custom titlebar in sync with maximize state.
+    this.MainWindow.on('maximize', () => {
+      this.MainWindow?.webContents.send('offreader:window-maximized-change', true);
+    });
+    this.MainWindow.on('unmaximize', () => {
+      this.MainWindow?.webContents.send('offreader:window-maximized-change', false);
+    });
 
     if (this.CapacitorFileConfig.backgroundColor) {
       this.MainWindow.setBackgroundColor(this.CapacitorFileConfig.electron.backgroundColor);
