@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, FolderInput, Tag, BookOpen } from "lucide-react";
+import { X, FolderInput, Tag, BookOpen, ListChecks } from "lucide-react";
 import { Label } from "@/types/book";
 import { Shelf } from "@/types/book";
 import { LibraryFilters, ReadingStatus } from "@/hooks/useLibrary";
@@ -12,6 +12,8 @@ interface FilterToolbarProps {
   onClearFilters: () => void;
   activeFilterCount: number;
   bookCount: number;
+  selectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
 }
 
 const statusOptions: { value: ReadingStatus; label: string }[] = [
@@ -167,6 +169,8 @@ export function FilterToolbar({
   onClearFilters,
   activeFilterCount,
   bookCount,
+  selectionMode = false,
+  onToggleSelectionMode,
 }: FilterToolbarProps) {
   const [openPopup, setOpenPopup] = useState<PopupType>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -287,6 +291,19 @@ export function FilterToolbar({
         </div>
 
         <div className="flex items-center gap-2">
+          {onToggleSelectionMode && (
+            <button
+              onClick={onToggleSelectionMode}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                selectionMode
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <ListChecks className="h-3 w-3" />
+              {selectionMode ? 'Done' : 'Select'}
+            </button>
+          )}
           <span className="text-sm text-muted-foreground hidden sm:inline">
             <span className="font-medium text-foreground">{bookCount}</span> books
           </span>

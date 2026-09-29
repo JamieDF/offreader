@@ -18,6 +18,19 @@ import { ThemeSettingsDialog } from "./ThemeSettingsDialog";
 import { ReadingInsights } from "./ReadingInsights";
 import { ManageLibraryDialog } from "./ManageLibraryDialog";
 import { PostImportDialog } from "./PostImportDialog";
+import { SelectionActionBar } from "./SelectionActionBar";
+import { BulkLabelsDialog } from "./BulkLabelsDialog";
+import { ShelfDialog } from "@/components/book-details/ShelfDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/toast";
 import { useOnboardingTour } from "@/hooks/useOnboardingTour";
 
@@ -66,12 +79,16 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     setFilter,
     clearFilters,
     activeFilterCount,
+    removeBooks,
+    assignBooksToShelf,
+    applyLabelChanges,
   } = useLibrary();
   const {
     isOpen: tourOpen,
     demoState,
     startDemoImport,
     applyDemoImport,
+    endDemo,
   } = useOnboardingTour();
 
   const [labels, setLabels] = useState<Label[]>([]);
@@ -80,6 +97,11 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   const [isManageLibraryOpen, setIsManageLibraryOpen] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importedBooks, setImportedBooks] = useState<Book[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkShelfOpen, setBulkShelfOpen] = useState(false);
+  const [bulkLabelsOpen, setBulkLabelsOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   useEffect(() => {
     const loadLabels = () => {
@@ -106,6 +128,88 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   // Treat the library as non-empty while the demo card is on screen so the
   // EmptyState doesn't render behind the spotlight.
   const showEmptyState = isEmpty && !demoState.bookCardVisible;
+
+  // --- Multi-select -----------------------------------------------------------
+
+  const selectedBooks = useMemo(
+    () => books.filter((b) => selectedIds.has(b.id)),
+    [books, selectedIds],
+  );
+  const allVisibleSelected = books.length > 0 && selectedBooks.length === books.length;
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleBookSelected = (bookId: string) => {
+    setSelectionMode(true);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(bookId)) {
+        next.delete(bookId);
+      } else {
+        next.add(bookId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(books.map((b) => b.id)));
+    }
+  };
+
+  const handleCardSelect = (book: Book, e?: React.MouseEvent) => {
+    if (selectionMode) {
+      toggleBookSelected(book.id);
+      return;
+    }
+    // Ctrl/Cmd+click enters selection mode without leaving the keyboard
+    if (e && (e.ctrlKey || e.metaKey)) {
+      toggleBookSelected(book.id);
+      return;
+    }
+    onBookSelect(book);
+  };
+
+  useEffect(() => {
+    if (!selectionMode) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        exitSelectionMode();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        setSelectedIds(new Set(books.map((b) => b.id)));
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectionMode, books]);
+
+  const handleBulkShelf = async (shelfId: string | null) => {
+    const count = selectedIds.size;
+    await assignBooksToShelf([...selectedIds], shelfId);
+    toast.success(`Updated shelf for ${count} book${count === 1 ? '' : 's'}`);
+  };
+
+  const handleBulkLabels = async (addLabelIds: Set<string>, removeLabelIds: Set<string>) => {
+    const count = selectedIds.size;
+    await applyLabelChanges([...selectedIds], addLabelIds, removeLabelIds);
+    setBulkLabelsOpen(false);
+    toast.success(`Updated labels on ${count} book${count === 1 ? '' : 's'}`);
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    setBulkDeleteOpen(false);
+    exitSelectionMode();
+    await removeBooks([...selectedIds]);
+    toast.success(`Deleted ${count} book${count === 1 ? '' : 's'}`);
+  };
 
   const handleRealImport = () => {
     importBooks((books) => {
@@ -220,6 +324,8 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         onClearFilters={clearFilters}
         activeFilterCount={activeFilterCount}
         bookCount={books.length + (demoBook ? 1 : 0)}
+        selectionMode={selectionMode}
+        onToggleSelectionMode={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
       />
 
       {/* Scrollable Content Area - only this section scrolls */}
@@ -252,8 +358,11 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
                     <BookCard
                       key={book.id}
                       book={book}
-                      onSelect={onBookSelect}
+                      onSelect={handleCardSelect}
                       labels={labels}
+                      selectionMode={selectionMode}
+                      selected={selectedIds.has(book.id)}
+                      onToggleSelect={(b) => toggleBookSelected(b.id)}
                     />
                   ))}
                   {demoBook && (
@@ -275,7 +384,19 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         </div>
       </main>
 
-      <FloatingActionButton onClick={handleImportClick} />
+      {selectionMode ? (
+        <SelectionActionBar
+          selectedCount={selectedIds.size}
+          allVisibleSelected={allVisibleSelected}
+          onToggleSelectAll={toggleSelectAllVisible}
+          onAssignShelf={() => setBulkShelfOpen(true)}
+          onEditLabels={() => setBulkLabelsOpen(true)}
+          onDelete={() => setBulkDeleteOpen(true)}
+          onExit={exitSelectionMode}
+        />
+      ) : (
+        <FloatingActionButton onClick={handleImportClick} />
+      )}
 
       <ThemeSettingsDialog
         isOpen={isSettingsOpen}
@@ -300,6 +421,48 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         dataTourMetadataId="import-dialog-metadata"
         dataTourShelfId="import-dialog-shelf"
       />
+
+      <ShelfDialog
+        isOpen={bulkShelfOpen}
+        // Highlight the shared shelf only when the whole selection agrees;
+        // otherwise nothing is highlighted ('' matches no shelf or Unfiled).
+        currentShelfId={
+          selectedBooks.every((b) => b.shelfId === selectedBooks[0]?.shelfId)
+            ? (selectedBooks[0]?.shelfId ?? null)
+            : ''
+        }
+        onSelectShelf={handleBulkShelf}
+        onClose={() => setBulkShelfOpen(false)}
+      />
+
+      <BulkLabelsDialog
+        isOpen={bulkLabelsOpen}
+        books={selectedBooks}
+        onApply={handleBulkLabels}
+        onClose={() => setBulkLabelsOpen(false)}
+      />
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selectedIds.size} book{selectedIds.size === 1 ? '' : 's'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The selected books and their reading progress will be permanently removed from your library.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
