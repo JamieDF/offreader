@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.3.0",
+    "date": "2026-09-29",
+    "items": [
+      "Added multi-select in the library: select books to assign shelves, manage labels, or delete them in bulk"
+    ]
+  },
+  {
     "version": "1.2.0",
     "date": "2026-09-20",
     "items": [
