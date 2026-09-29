@@ -379,6 +379,58 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     }
   }, [books]);
 
+  // Bulk operations — each writes the library JSON once, not once per book.
+
+  const assignBooksToShelf = useCallback(async (bookIds: string[], shelfId: string | null) => {
+    const idSet = new Set(bookIds);
+    const updatedBooks = libraryService.getBooks().map(book =>
+      idSet.has(book.id) ? { ...book, shelfId } : book
+    );
+    libraryService.updateBooks(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+  }, []);
+
+  // Applies explicit label changes to every selected book; labels the user
+  // didn't touch keep their per-book state.
+  const applyLabelChanges = useCallback(async (
+    bookIds: string[],
+    addLabelIds: Set<string>,
+    removeLabelIds: Set<string>
+  ) => {
+    const idSet = new Set(bookIds);
+    const updatedBooks = libraryService.getBooks().map(book => {
+      if (!idSet.has(book.id)) return book;
+      const labelIds = new Set(book.labelIds);
+      addLabelIds.forEach(id => labelIds.add(id));
+      removeLabelIds.forEach(id => labelIds.delete(id));
+      return { ...book, labelIds: [...labelIds] };
+    });
+    libraryService.updateBooks(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+  }, []);
+
+  const removeBooks = useCallback(async (bookIds: string[]) => {
+    const idSet = new Set(bookIds);
+    try {
+      await Promise.allSettled(bookIds.map(id => fileStorage.deleteFile(id)));
+
+      const updatedBooks = libraryService.getBooks().filter(book => !idSet.has(book.id));
+      libraryService.updateBooks(updatedBooks);
+      await saveStoredBooks(updatedBooks);
+
+      const storedData = await storageService.getItem('book-tracker-data');
+      if (storedData) {
+        const trackerData = JSON.parse(storedData);
+        bookIds.forEach(id => delete trackerData[id]);
+        await storageService.setItem('book-tracker-data', JSON.stringify(trackerData));
+      }
+
+      await Promise.allSettled(bookIds.map(id => storageService.removeItem(`offreader-book-${id}`)));
+    } catch (error) {
+      console.error('Failed to remove books:', error);
+    }
+  }, []);
+
   const lastReadBook = useMemo(() => {
     if (searchQuery !== "") return null;
 
@@ -411,6 +463,9 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     addBook,
     updateProgress,
     removeBook,
+    removeBooks,
+    assignBooksToShelf,
+    applyLabelChanges,
     updateBookShelf,
     updateBookLabels,
     addLabelToBook,
