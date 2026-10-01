@@ -22,6 +22,15 @@ export interface OffreaderFilesApi {
   fileExists(path: string): Promise<boolean>;
   /** File metadata, or null if unreadable/missing. */
   statFile(path: string): Promise<{ size: number; mtimeMs: number; name: string } | null>;
+  /** Native directory picker; resolves to a path or null. */
+  pickDirectory(): Promise<string | null>;
+  /** Recursive scan for book files under a directory, sorted by path. */
+  scanFolder(path: string): Promise<{ path: string; name: string; size: number; mtimeMs: number }[]>;
+  /** Watch a directory for book-file changes (debounced folder-changed events). */
+  watchFolder(path: string): Promise<void>;
+  unwatchFolder(path: string): Promise<void>;
+  /** Fires when a watched folder's book files change; returns unsubscribe. */
+  onFolderChanged(callback: (dirPath: string) => void): () => void;
 }
 
 declare global {

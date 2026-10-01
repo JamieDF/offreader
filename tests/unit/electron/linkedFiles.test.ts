@@ -72,3 +72,28 @@ describe('file-access IPC', () => {
     expect(dtsSrc).toContain('offreaderFiles?:');
   });
 });
+
+describe('folder sync', () => {
+  it('main process scans recursively and filters to book formats', () => {
+    expect(indexSrc).toContain("'offreader:scan-folder'");
+    expect(indexSrc).toContain('BOOK_EXTENSIONS');
+    expect(indexSrc).toContain('withFileTypes: true');
+  });
+
+  it('main process watches folders via chokidar with debounced events', () => {
+    // fs.watch is not recursive on Linux — chokidar is required.
+    expect(indexSrc).toContain('chokidar');
+    expect(indexSrc).toContain("'offreader:watch-folder'");
+    expect(indexSrc).toContain("'offreader:unwatch-folder'");
+    expect(indexSrc).toContain("'offreader:folder-changed'");
+    expect(indexSrc).toContain('ignoreInitial: true');
+  });
+
+  it('preload exposes directory picking, scanning, and watching', () => {
+    expect(preloadSrc).toContain("'offreader:pick-directory'");
+    expect(preloadSrc).toContain("'offreader:scan-folder'");
+    expect(preloadSrc).toContain("'offreader:watch-folder'");
+    expect(preloadSrc).toContain("'offreader:unwatch-folder'");
+    expect(preloadSrc).toContain("'offreader:folder-changed'");
+  });
+});

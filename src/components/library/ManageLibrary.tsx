@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GripVertical, Star, Trash2, Plus, X, Check, FolderInput, Tag, Link2, HardDrive } from "lucide-react";
+import { GripVertical, Star, Trash2, Plus, X, Check, FolderInput, Tag, Link2, HardDrive, FolderSync, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { saveStoredBooks } from "@/services/bookPersistence";
 import { toast } from "@/components/ui/toast";
 import { LABEL_COLORS } from "@/constants/labels";
 import { getImportMode, setImportMode, ImportMode } from "@/utils/importMode";
+import { getSyncFolders, addSyncFolder, removeSyncFolder, scanFolder, syncAllFolders } from "@/services/folderSync";
 
 export function ManageLibrary() {
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -26,6 +27,8 @@ export function ManageLibrary() {
   const [showNewLabel, setShowNewLabel] = useState(false);
   const [draggedShelfId, setDraggedShelfId] = useState<string | null>(null);
   const [importMode, setImportModeState] = useState<ImportMode>('linked');
+  const [syncFolders, setSyncFolders] = useState<string[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
   const isDesktop = typeof window !== 'undefined' && !!window.offreaderFiles;
 
   useEffect(() => {
@@ -36,6 +39,7 @@ export function ManageLibrary() {
 
     loadData();
     getImportMode().then(setImportModeState);
+    getSyncFolders().then(setSyncFolders);
 
     loadData();
     const unsubscribeShelf = shelfService.subscribe(loadData);
@@ -394,6 +398,87 @@ export function ManageLibrary() {
             ))}
             <p className="text-xs text-muted-foreground">
               Applies to new imports — existing books keep how they were added.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Sync folders — desktop only. Watched folders keep the library in
+          step with the filesystem; books are always linked, never copied. */}
+      {isDesktop && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <FolderSync className="h-4 w-4" />
+            <span>Sync folders</span>
+          </div>
+          <div className="space-y-2">
+            {syncFolders.map(dir => (
+              <div
+                key={dir}
+                className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+              >
+                <span className="flex-1 font-mono text-xs truncate" title={dir}>{dir}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Stop syncing ${dir}`}
+                  onClick={async () => setSyncFolders(await removeSyncFolder(dir))}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 justify-start"
+                disabled={isScanning}
+                onClick={async () => {
+                  const dir = await window.offreaderFiles?.pickDirectory();
+                  if (!dir) return;
+                  setSyncFolders(await addSyncFolder(dir));
+                  setIsScanning(true);
+                  try {
+                    const result = await scanFolder(dir);
+                    toast.success(
+                      result.added > 0
+                        ? `Added ${result.added} book${result.added === 1 ? '' : 's'} from ${dir}`
+                        : `Folder synced — no new books found`,
+                    );
+                  } finally {
+                    setIsScanning(false);
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add folder
+              </Button>
+              {syncFolders.length > 0 && (
+                <Button
+                  variant="outline"
+                  disabled={isScanning}
+                  onClick={async () => {
+                    setIsScanning(true);
+                    try {
+                      const result = await syncAllFolders();
+                      toast.success(
+                        `Rescan complete: ${result.added} added, ${result.moved} moved, ${result.missing} missing`,
+                      );
+                    } finally {
+                      setIsScanning(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
+                  Rescan
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Files are linked in place — nothing is copied. If a file is moved
+              or renamed, OffReader re-finds it by content.
             </p>
           </div>
         </div>

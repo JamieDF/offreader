@@ -31,4 +31,17 @@ contextBridge.exposeInMainWorld('offreaderFiles', {
   registerPath: (path: string) => ipcRenderer.invoke('offreader:register-file-path', path),
   fileExists: (path: string) => ipcRenderer.invoke('offreader:file-exists', path),
   statFile: (path: string) => ipcRenderer.invoke('offreader:stat-file', path),
+  /** Native directory picker; resolves to a path or null. */
+  pickDirectory: () => ipcRenderer.invoke('offreader:pick-directory'),
+  /** Recursive scan for book files under a directory. */
+  scanFolder: (path: string) => ipcRenderer.invoke('offreader:scan-folder', path),
+  /** Watch a directory for add/change/unlink of book files (debounced). */
+  watchFolder: (path: string) => ipcRenderer.invoke('offreader:watch-folder', path),
+  unwatchFolder: (path: string) => ipcRenderer.invoke('offreader:unwatch-folder', path),
+  /** Fires when a watched folder's book files change; returns unsubscribe. */
+  onFolderChanged: (callback: (dirPath: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, dirPath: string) => callback(dirPath);
+    ipcRenderer.on('offreader:folder-changed', listener);
+    return () => ipcRenderer.removeListener('offreader:folder-changed', listener);
+  },
 });

@@ -69,11 +69,16 @@ describe('window control IPC contract', () => {
 });
 
 describe('maximize state events', () => {
-  it('preload subscribes to the same event channel setup.ts sends on', () => {
-    const sent = channels(setupSrc, 'webContents\\.send');
+  it('preload subscribes to an event channel the main process sends on', () => {
+    // Events are sent from both setup.ts (window max/unmaximize) and
+    // index.ts (folder-changed).
+    const sent = new Set([
+      ...channels(setupSrc, 'webContents\\.send'),
+      ...channels(indexSrc, 'webContents\\.send'),
+    ]);
     const heard = channels(preloadSrc, 'ipcRenderer\\.on');
     for (const channel of heard) {
-      expect(sent.has(channel), `setup.ts never sends ${channel}`).toBe(true);
+      expect(sent.has(channel), `main process never sends ${channel}`).toBe(true);
     }
   });
 

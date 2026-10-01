@@ -5,9 +5,10 @@ import { app, dialog, ipcMain, MenuItem, net, protocol } from 'electron';
 import electronIsDev from 'electron-is-dev';
 import unhandled from 'electron-unhandled';
 import { autoUpdater } from 'electron-updater';
-import { access, stat } from 'node:fs/promises';
+import chokidar, { FSWatcher } from 'chokidar';
+import { access, readdir, stat } from 'node:fs/promises';
 import { constants } from 'node:fs';
-import { basename } from 'node:path';
+import { basename, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { ElectronCapacitorApp, setupContentSecurityPolicy, setupReloadWatcher } from './setup';
@@ -178,5 +179,75 @@ ipcMain.handle('offreader:stat-file', async (_event, sourcePath: string) => {
     return { size: s.size, mtimeMs: s.mtimeMs, name: basename(sourcePath) };
   } catch {
     return null;
+  }
+});
+
+// --- Folder sync ------------------------------------------------------------
+
+const BOOK_EXTENSIONS = new Set(['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz']);
+
+ipcMain.handle('offreader:pick-directory', async () => {
+  const win = myCapacitorApp.getMainWindow();
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    title: 'Choose a folder to sync',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return canceled || filePaths.length === 0 ? null : filePaths[0];
+});
+
+// Recursive walk filtered to book formats. Returns sorted entries with the
+// stat data the sync pass needs to skip unchanged files without re-hashing.
+ipcMain.handle('offreader:scan-folder', async (_event, dirPath: string) => {
+  if (typeof dirPath !== 'string' || !dirPath) return [];
+  const results: { path: string; name: string; size: number; mtimeMs: number }[] = [];
+  const pending = [dirPath];
+  while (pending.length > 0) {
+    const dir = pending.pop()!;
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      continue; // unreadable dir (permissions, dangling symlink) — skip
+    }
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(full);
+      } else if (entry.isFile() && BOOK_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
+        const s = await stat(full).catch(() => null);
+        if (s) results.push({ path: full, name: entry.name, size: s.size, mtimeMs: s.mtimeMs });
+      }
+    }
+  }
+  return results.sort((a, b) => a.path.localeCompare(b.path));
+});
+
+// chokidar, not fs.watch — recursive watching isn't supported on Linux's
+// inotify. Events are debounced so a batch of file ops yields one rescan.
+const folderWatchers = new Map<string, FSWatcher>();
+const FOLDER_EVENT_DEBOUNCE_MS = 750;
+
+ipcMain.handle('offreader:watch-folder', (_event, dirPath: string) => {
+  if (typeof dirPath !== 'string' || !dirPath || folderWatchers.has(dirPath)) return;
+  const win = myCapacitorApp.getMainWindow();
+  let timer: NodeJS.Timeout | null = null;
+  const notify = (changedPath?: string) => {
+    // Book formats only — ignores churn on unrelated files in the folder.
+    if (changedPath && !BOOK_EXTENSIONS.has(extname(changedPath).toLowerCase())) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      win?.webContents.send('offreader:folder-changed', dirPath);
+    }, FOLDER_EVENT_DEBOUNCE_MS);
+  };
+  const watcher = chokidar.watch(dirPath, { ignoreInitial: true, depth: 10 });
+  watcher.on('add', notify).on('change', notify).on('unlink', notify);
+  folderWatchers.set(dirPath, watcher);
+});
+
+ipcMain.handle('offreader:unwatch-folder', async (_event, dirPath: string) => {
+  const watcher = folderWatchers.get(dirPath);
+  if (watcher) {
+    await watcher.close();
+    folderWatchers.delete(dirPath);
   }
 });

@@ -22,6 +22,7 @@ import { SelectionActionBar } from "./SelectionActionBar";
 import { BulkLabelsDialog } from "./BulkLabelsDialog";
 import { ImportModeDialog } from "./ImportModeDialog";
 import { getImportMode, ImportMode } from "@/utils/importMode";
+import { getSyncFolders, scanFolder, syncAllFolders } from "@/services/folderSync";
 import { ShelfDialog } from "@/components/book-details/ShelfDialog";
 import {
   AlertDialog,
@@ -107,6 +108,34 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [importModeOpen, setImportModeOpen] = useState(false);
   const [defaultImportMode, setDefaultImportMode] = useState<ImportMode>('linked');
+
+  // Folder sync (Electron): re-scan configured folders once the library has
+  // loaded, register watchers, and rescan a folder when its files change.
+  // Deferred until init completes — scanning with an empty library would
+  // re-import everything as new.
+  useEffect(() => {
+    const files = window.offreaderFiles;
+    if (!files) return;
+
+    let started = false;
+    const start = async () => {
+      if (started || libraryService.getIsLoading()) return;
+      started = true;
+      const folders = await getSyncFolders();
+      await Promise.all(folders.map(f => files.watchFolder(f)));
+      await syncAllFolders();
+    };
+
+    start();
+    const unsubInit = libraryService.subscribe(start);
+    const unsubChanged = files.onFolderChanged((dirPath) => {
+      scanFolder(dirPath);
+    });
+    return () => {
+      unsubInit();
+      unsubChanged();
+    };
+  }, []);
 
   useEffect(() => {
     const loadLabels = () => {

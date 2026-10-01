@@ -1,20 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "@/components/ui/toast";
 import { Book } from "@/types/book";
 import { libraryService } from "@/services/LibraryService";
 import { storageService } from "@/services/storage";
 import { fileStorage } from "@/services/fileStorage";
-import { calculateReadingMetrics } from "@/utils/readingMetrics";
-import { extractBookMetadata } from "@/parsers/bookMetadataParser";
-import { PdfMetadata } from "@/parsers/pdfParser";
-import { EpubMetadata } from "@/parsers/epubParser";
-import { MobiMetadata } from "@/parsers/mobiParser";
-import { Azw3Metadata } from "@/parsers/azw3Parser";
-import { Fb2Metadata } from "@/parsers/fb2Parser";
-import { CbzMetadata } from "@/parsers/cbzParser";
 import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
-import { sha256Hex } from "@/utils/hash";
+import { importFileItems, toastImportError } from "@/services/bookImport";
+import { relinkBookFile } from "@/services/folderSync";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
 
@@ -162,143 +154,6 @@ export function useLibrary() {
 
 type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
 
-  const toastImportError = (fileName: string, error: unknown) => {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    let userMessage = `Failed to import "${fileName}"`;
-
-    if (errorMessage.includes('Insufficient storage') || errorMessage.includes('storage') || errorMessage.toLowerCase().includes('quota')) {
-      const requiredMB = /(\d+)MB/.exec(errorMessage)?.[1];
-      userMessage = `⚠️ Storage full: Need ${requiredMB || 'more'}MB available. Delete some books to free up space.`;
-    } else if (errorMessage.includes('network') || errorMessage.includes('offline')) {
-      userMessage = `❌ Connection failed. Check your internet and try again.`;
-    } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid')) {
-      userMessage = `❌ File may be corrupted. Try a different book.`;
-    } else if (errorMessage.includes('unsupported') || errorMessage.includes('format')) {
-      userMessage = `❌ File format not supported. Only EPUB, MOBI, AZW3, FB2, PDF, and CBZ files are supported.`;
-    } else if (errorMessage.includes('metadata')) {
-      userMessage = `❌ Could not read book information. The file might be corrupted.`;
-    }
-
-    toast.error(userMessage);
-  };
-
-  /**
-   * Shared pipeline for both import paths: hash → dedup → metadata → Book
-   * record → (managed only) copy bytes into the content-addressed store.
-   * Linked items keep their bytes at `sourcePath` — nothing is stored.
-   */
-  const importFileItems = useCallback(async (
-    items: { file: File; sourcePath?: string }[],
-    source: 'managed' | 'linked',
-    onImportComplete?: ImportCallback,
-  ) => {
-    const newlyImportedBooks: Book[] = [];
-
-    for (const { file, sourcePath } of items) {
-      try {
-        const fileName = file.name.replace(/\.[^/.]+$/, "");
-
-        // Content-hash first: identical bytes never get a second book.
-        const contentHash = await sha256Hex(file);
-        const existing = libraryService.getBooks().find(b => b.contentHash === contentHash);
-        if (existing) {
-          toast.info(`"${existing.title}" is already in your library`);
-          continue;
-        }
-
-        const bookId = uuidv4();
-
-        const extractedMeta = await extractBookMetadata(file);
-        const { title, author, publisher, pubDate, language, identifier, description, subjects, rights, chapters, totalChapters, format, coverImage } = extractedMeta as { title: string; author: string; publisher?: string; pubDate?: string; language?: string; identifier?: string; description?: string; subjects?: string[]; rights?: string; chapters: { label: string; href: string; index: number }[]; totalChapters: number; format: string; coverImage?: string };
-
-        const pdfMeta = format === 'PDF' ? (extractedMeta as PdfMetadata) : null;
-        const epubMeta = format === 'EPUB' ? (extractedMeta as EpubMetadata) : null;
-        const mobiMeta = format === 'MOBI' ? (extractedMeta as MobiMetadata) : null;
-        const azw3Meta = format === 'AZW3' ? (extractedMeta as Azw3Metadata) : null;
-        const fb2Meta = format === 'FB2' ? (extractedMeta as Fb2Metadata) : null;
-        const cbzMeta = format === 'CBZ' ? (extractedMeta as CbzMetadata) : null;
-        const { readingTime: calcReadingTime, pageCount: calcPageCount } = calculateReadingMetrics(file.size);
-        const readingTime = pdfMeta?.readingTime ?? epubMeta?.readingTime ?? mobiMeta?.readingTime
-          ?? azw3Meta?.readingTime ?? fb2Meta?.readingTime ?? cbzMeta?.readingTime ?? calcReadingTime;
-        const pageCount = pdfMeta?.pageCount ?? epubMeta?.pageCount ?? mobiMeta?.pageCount
-          ?? azw3Meta?.pageCount ?? fb2Meta?.pageCount ?? cbzMeta?.pageCount ?? calcPageCount;
-
-        const newBook: Book = {
-          id: bookId,
-          title: title || fileName,
-          author: author,
-          format: (format as Book['format']) ?? 'EPUB',
-          publisher: publisher,
-          pubDate: pubDate,
-          language: language,
-          identifier: identifier,
-          description: description || `Imported ${format}: ${fileName}`,
-          subjects: subjects,
-          rights: rights,
-          coverImage: coverImage || '',
-          filePath: '',
-          progress: 0,
-          chapters: chapters,
-          totalChapters: totalChapters,
-          fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-          estimatedReadingTime: readingTime,
-          pageCount: pageCount,
-          shelfId: null,
-          labelIds: [],
-          contentHash,
-          source,
-          sourcePath,
-        };
-
-        const updatedBooksWithTemp = [...books, newBook];
-        libraryService.updateBooks(updatedBooksWithTemp);
-
-        try {
-          await saveStoredBooks(updatedBooksWithTemp);
-        } catch (metadataError) {
-          console.error(`❌ Failed to save metadata:`, metadataError);
-          libraryService.updateBooks(books);
-          throw new Error(`Failed to save book metadata: ${metadataError}`);
-        }
-
-        if (source === 'managed') {
-          try {
-            await fileStorage.storeFile(file, contentHash);
-          } catch (fileError) {
-            console.error(`Failed to store file:`, fileError);
-
-            const cleanedBooks = books.filter(b => b.id !== bookId);
-            libraryService.updateBooks(cleanedBooks);
-            await saveStoredBooks(cleanedBooks);
-
-            throw new Error(`Failed to store book file: ${fileError}`);
-          }
-        }
-
-        const finalBook: Book = {
-          ...newBook,
-          filePath: ''
-        };
-
-        const finalBooks = [...books, finalBook];
-        libraryService.updateBooks(finalBooks);
-        await saveStoredBooks(finalBooks);
-
-        newlyImportedBooks.push(finalBook);
-
-       } catch (error) {
-          console.error(`❌ Failed to import ${file.name}:`, error);
-          toastImportError(file.name, error);
-        }
-    }
-
-    // After all files processed, call the callback if provided
-    if (newlyImportedBooks.length > 0) {
-      toast.success(`Successfully imported ${newlyImportedBooks.length} book${newlyImportedBooks.length > 1 ? 's' : ''}`);
-      onImportComplete?.(newlyImportedBooks);
-    }
-  }, [books]);
-
   const importBooks = useCallback(async (onImportComplete?: ImportCallback) => {
     const input = document.createElement("input");
     input.type = "file";
@@ -312,7 +167,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     };
 
     input.click();
-  }, [importFileItems]);
+  }, []);
 
   /**
    * Electron import: native picker → paths → bytes streamed over
@@ -341,33 +196,9 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     }
 
     await importFileItems(items, mode, onImportComplete);
-  }, [importFileItems]);
-
-  /**
-   * Point a missing linked book at a new source path. Re-hashes the file so a
-   * relink to genuinely different bytes updates identity too; progress and
-   * metadata are untouched.
-   */
-  const relinkBook = useCallback(async (bookId: string, newPath: string): Promise<boolean> => {
-    const files = window.offreaderFiles;
-    const book = libraryService.getBooks().find(b => b.id === bookId);
-    if (!files || !book || book.source !== 'linked') return false;
-
-    try {
-      const blob = await fileStorage.retrieveLinkedBlob(newPath);
-      const contentHash = await sha256Hex(blob);
-      const updatedBooks = libraryService.getBooks().map(b =>
-        b.id === bookId ? { ...b, sourcePath: newPath, contentHash, missing: undefined } : b
-      );
-      libraryService.updateBooksSilent(updatedBooks);
-      await saveStoredBooks(updatedBooks);
-      return true;
-    } catch (error) {
-      console.error(`Failed to relink book ${bookId}:`, error);
-      toast.error('Could not read the selected file');
-      return false;
-    }
   }, []);
+
+  const relinkBook = relinkBookFile;
 
   const addBook = useCallback(async (bookData: Omit<Book, 'id'>) => {
     const newBook: Book = {

@@ -5,7 +5,20 @@ of writing). This document captures the design decisions for the book-file
 storage rework and folder-sync features.
 
 **Stage status**: 0 ✅ persist+revoke · 1 ✅ content-addressed binary store ·
-2 ✅ linked-mode plumbing (Electron) · 3 folder sync · 4 follow-ons
+2 ✅ linked-mode plumbing (Electron) · 3 ✅ folder sync (Electron) ·
+4 follow-ons
+
+Stage 3 details as implemented: `offreader:scan-folder` walks a directory
+recursively for book extensions; `offreader:watch-folder` uses chokidar
+(`fs.watch` isn't recursive on Linux) and debounces into
+`offreader:folder-changed` renderer events. `src/services/folderSync.ts`
+owns the algorithm: known sourcePaths skip re-hashing, unknown files are
+read once — a hash match on a linked book repoints `sourcePath` (moved
+file), on a managed book means "already have it", otherwise the file
+imports via the shared pipeline in `bookImport.ts`. Unseen paths under a
+watched folder flag their books `missing`. Folders persist under
+`offreader-sync-folders` and are managed in `ManageLibrary`; `LibraryView`
+starts watchers + a startup rescan after `libraryService.initialize`.
 
 Stage 2 details as implemented: the `offreader-file://` scheme is registered
 privileged (`supportFetchAPI`, `stream`) in `electron/src/index.ts`; a
