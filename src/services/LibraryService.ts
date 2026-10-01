@@ -31,12 +31,13 @@ class LibraryService {
       const storedBooksData = await storageService.getItem('offreader-books');
       const storedBooks: Book[] = storedBooksData ? JSON.parse(storedBooksData) : [];
 
-      // Rehydrate file URLs and verify files exist
+      // Rehydrate file URLs and verify files exist (fileExists checks both the
+      // content-addressed store and the legacy UUID-keyed location)
       const validBooks = await Promise.all(
         storedBooks.map(async (book) => {
           try {
             // Check if file actually exists
-            const exists = await fileStorage.fileExists(book.id);
+            const exists = await fileStorage.fileExists(book.contentHash ?? book.id);
             if (!exists) {
               console.warn(`File missing for book ${book.id} (${book.title}), skipping`);
               return null;
@@ -55,12 +56,16 @@ class LibraryService {
 
       const loadedBooks = validBooks.filter((book): book is Book => book !== null);
 
-      // Migrate any books stored under the old .epub extension to their correct format extension
-      await fileStorage.migrateExtensions(loadedBooks.map(b => ({ id: b.id, format: b.format })));
+      // Move legacy UUID-keyed files into the content-addressed store
+      // (sets contentHash in place; also fixes pre-format-aware .epub names)
+      const migrated = await fileStorage.migrateLegacyFiles(loadedBooks);
+      if (migrated) {
+        await saveStoredBooks(loadedBooks);
+      }
 
       // Clean up orphaned files (files with no metadata)
-      const validBookIds = loadedBooks.map(b => b.id);
-      await fileStorage.cleanupOrphanFiles(validBookIds);
+      const validBookKeys = loadedBooks.map(b => b.contentHash ?? b.id);
+      await fileStorage.cleanupOrphanFiles(validBookKeys);
 
       this.books = loadedBooks;
       

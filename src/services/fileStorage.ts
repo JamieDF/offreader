@@ -1,5 +1,8 @@
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
+import { blobStore } from './blobStore';
+import { sha256Hex } from '@/utils/hash';
+import { Book } from '@/types/book';
 
 export interface StoredFile {
   id: string;
@@ -24,9 +27,35 @@ export interface StorageCheckResult {
 
 const KNOWN_EXTENSIONS = ['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz'] as const;
 
+/**
+ * Book-file storage.
+ *
+ * Two backends, one interface:
+ * - **Native (Android/iOS)**: real binary files at `Data/books/<key>.<ext>`.
+ *   Reads stream through `Capacitor.convertFileSrc` — no base64 round-trip.
+ *   `Directory.Data` is app-private, so stored books don't appear as anonymous
+ *   files in the user's file manager (the old `Directory.Documents` behavior).
+ * - **Web/Electron**: raw Blobs in the `offreader-files` IndexedDB store —
+ *   no base64, no persistence-format inflation.
+ *
+ * Keys are content hashes (`book.contentHash`) for new books. Books imported
+ * before this store existed keep UUID-keyed files in the legacy location
+ * (`Directory.Documents` on native / the Capacitor-FS web shim's IndexedDB);
+ * `migrateLegacyFiles` moves them to the new store and sets `contentHash`,
+ * and every read path falls back to the legacy location for stragglers.
+ */
 class CapacitorFileStorage {
   private readonly BOOKS_DIR = 'books';
   private readonly STORAGE_BUFFER_MB = 10;
+
+  /** Filesystem-backend only on real native platforms — on Electron the
+   *  Capacitor Filesystem plugin has no native implementation and silently
+   *  falls back to its web (IndexedDB, base64) shim, so Electron uses
+   *  blobStore alongside web. */
+  private usesNativeFs(): boolean {
+    const platform = Capacitor.getPlatform();
+    return platform === 'android' || platform === 'ios';
+  }
 
   private extForFormat(format?: string): string {
     if (format === 'PDF') return '.pdf';
@@ -39,11 +68,9 @@ class CapacitorFileStorage {
 
   private extForFile(file: File): string {
     const name = file.name.toLowerCase();
-    if (name.endsWith('.pdf')) return '.pdf';
-    if (name.endsWith('.mobi')) return '.mobi';
-    if (name.endsWith('.azw3')) return '.azw3';
-    if (name.endsWith('.fb2')) return '.fb2';
-    if (name.endsWith('.cbz')) return '.cbz';
+    for (const ext of KNOWN_EXTENSIONS) {
+      if (name.endsWith(ext)) return ext;
+    }
     return '.epub';
   }
 
@@ -56,13 +83,19 @@ class CapacitorFileStorage {
     return 'application/epub+zip';
   }
 
-  /** Returns the extension of a stored file, or null if not found under any known extension. */
-  private async findStoredExt(id: string): Promise<string | null> {
-    for (const ext of KNOWN_EXTENSIONS) {
+  /** Extensions to try, preferred (from format) first. */
+  private extOrder(format?: string): string[] {
+    const preferred = this.extForFormat(format);
+    return [preferred, ...KNOWN_EXTENSIONS.filter(e => e !== preferred)];
+  }
+
+  /** First extension under which `key` exists in `directory`, or null. */
+  private async findExtIn(directory: Directory, key: string, format?: string): Promise<string | null> {
+    for (const ext of this.extOrder(format)) {
       try {
         await Filesystem.stat({
-          path: `${this.BOOKS_DIR}/${id}${ext}`,
-          directory: Directory.Documents,
+          path: `${this.BOOKS_DIR}/${key}${ext}`,
+          directory,
         });
         return ext;
       } catch {
@@ -72,17 +105,188 @@ class CapacitorFileStorage {
     return null;
   }
 
-  async fileExists(id: string): Promise<boolean> {
-    return (await this.findStoredExt(id)) !== null;
+  /**
+   * Store book bytes under `key` (a content hash for new imports).
+   * `ext` overrides filename sniffing — migrations pass it explicitly since
+   * Blobs reconstructed from base64 have no name.
+   */
+  async storeFile(file: File | Blob, key: string, ext?: string): Promise<void> {
+    try {
+      const quotaCheck = await this.checkStorageQuota(file.size);
+      if (!quotaCheck.canStore) {
+        throw new Error(`Insufficient storage: ${quotaCheck.message}`);
+      }
+
+      const fileExt = ext ?? (file instanceof File ? this.extForFile(file) : '.epub');
+      await this.putFileBlob(file, key, fileExt);
+    } catch (error) {
+      console.error('Failed to store file:', error);
+      throw error;
+    }
   }
 
-  async cleanupOrphanFiles(validIds: string[]): Promise<number> {
-    const validIdSet = new Set(validIds);
+  /** The actual write — no quota check (migration reuses it for bytes already
+   *  counted against storage). */
+  private async putFileBlob(blob: Blob, key: string, ext: string): Promise<void> {
+    if (this.usesNativeFs()) {
+      await Filesystem.writeFile({
+        path: `${this.BOOKS_DIR}/${key}${ext}`,
+        data: blob,
+        directory: Directory.Data,
+        recursive: true,
+      });
+    } else {
+      await blobStore.put(`${key}${ext}`, blob);
+    }
+  }
+
+  /**
+   * The book's bytes as a Blob. Checks the new store first, then the legacy
+   * location, so pre-migration files remain readable.
+   */
+  async retrieveBlob(key: string, format?: string): Promise<Blob> {
+    if (this.usesNativeFs()) {
+      const ext = await this.findExtIn(Directory.Data, key, format);
+      if (ext) {
+        // Streams from disk via the WebView's file handler — the file never
+        // crosses the JS↔native bridge as base64.
+        const { uri } = await Filesystem.getUri({
+          path: `${this.BOOKS_DIR}/${key}${ext}`,
+          directory: Directory.Data,
+        });
+        const response = await fetch(Capacitor.convertFileSrc(uri));
+        if (response.ok) return response.blob();
+      }
+    } else {
+      for (const ext of this.extOrder(format)) {
+        const blob = await blobStore.get(`${key}${ext}`).catch(() => undefined);
+        if (blob) return blob;
+      }
+    }
+
+    // Legacy store: UUID-keyed base64 via Capacitor Filesystem.
+    for (const ext of this.extOrder(format)) {
+      try {
+        const fileData = await Filesystem.readFile({
+          path: `${this.BOOKS_DIR}/${key}${ext}`,
+          directory: Directory.Documents,
+        });
+        return this.base64ToBlob(fileData.data as string, this.mimeTypeForExt(ext));
+      } catch {
+        // try next extension
+      }
+    }
+
+    throw new Error(`File not found for key: ${key}`);
+  }
+
+  /** True if `key` exists in either the new store or the legacy location. */
+  async fileExists(key: string): Promise<boolean> {
+    if (this.usesNativeFs()) {
+      if (await this.findExtIn(Directory.Data, key) !== null) return true;
+    } else {
+      for (const ext of KNOWN_EXTENSIONS) {
+        if (await blobStore.has(`${key}${ext}`).catch(() => false)) return true;
+      }
+    }
+    return (await this.findExtIn(Directory.Documents, key)) !== null;
+  }
+
+  /** Delete `key` from both the new store and the legacy location. */
+  async deleteFile(key: string): Promise<void> {
+    if (this.usesNativeFs()) {
+      const ext = await this.findExtIn(Directory.Data, key);
+      if (ext) {
+        await Filesystem.deleteFile({
+          path: `${this.BOOKS_DIR}/${key}${ext}`,
+          directory: Directory.Data,
+        }).catch(() => {});
+      }
+    } else {
+      for (const ext of KNOWN_EXTENSIONS) {
+        await blobStore.delete(`${key}${ext}`).catch(() => {});
+      }
+    }
+
+    const legacyExt = await this.findExtIn(Directory.Documents, key);
+    if (legacyExt) {
+      await Filesystem.deleteFile({
+        path: `${this.BOOKS_DIR}/${key}${legacyExt}`,
+        directory: Directory.Documents,
+      }).catch(() => {});
+    }
+  }
+
+  /** All files in both stores — keys (without extension) in `id`. */
+  async listStoredFiles(): Promise<StoredFile[]> {
+    const files: StoredFile[] = [];
+
+    if (this.usesNativeFs()) {
+      files.push(...await this.listNativeFiles(Directory.Data));
+    } else {
+      for (const key of await blobStore.keys().catch(() => [])) {
+        const name = String(key);
+        const ext = KNOWN_EXTENSIONS.find(e => name.endsWith(e));
+        if (!ext) continue;
+        const blob = await blobStore.get(name).catch(() => undefined);
+        files.push({
+          id: name.slice(0, -ext.length),
+          filename: name,
+          mimeType: this.mimeTypeForExt(ext),
+          size: blob?.size ?? 0,
+          createdAt: '',
+        });
+      }
+    }
+
+    // Legacy location — same entry may appear in both during a partial
+    // migration; dedupe by filename.
+    const seen = new Set(files.map(f => f.filename));
+    for (const file of await this.listNativeFiles(Directory.Documents)) {
+      if (!seen.has(file.filename)) files.push(file);
+    }
+
+    return files;
+  }
+
+  private async listNativeFiles(directory: Directory): Promise<StoredFile[]> {
+    try {
+      const result = await Filesystem.readdir({
+        path: this.BOOKS_DIR,
+        directory,
+      });
+
+      const files: StoredFile[] = [];
+      for (const file of result.files) {
+        if (file.type !== 'file') continue;
+        const ext = KNOWN_EXTENSIONS.find(e => file.name.endsWith(e));
+        if (!ext) continue;
+
+        const stat = await Filesystem.stat({
+          path: `${this.BOOKS_DIR}/${file.name}`,
+          directory,
+        }).catch(() => ({ size: 0, ctime: 0 }));
+        files.push({
+          id: file.name.slice(0, -ext.length),
+          filename: file.name,
+          mimeType: this.mimeTypeForExt(ext),
+          size: stat.size || 0,
+          createdAt: stat.ctime ? new Date(stat.ctime).toISOString() : '',
+        });
+      }
+      return files;
+    } catch {
+      return [];
+    }
+  }
+
+  async cleanupOrphanFiles(validKeys: string[]): Promise<number> {
+    const validKeySet = new Set(validKeys);
     let cleanedCount = 0;
     try {
       const allFiles = await this.listStoredFiles();
       for (const file of allFiles) {
-        if (!validIdSet.has(file.id)) {
+        if (!validKeySet.has(file.id)) {
           console.warn(`Deleting orphaned file: ${file.id} (${file.filename})`);
           try {
             await this.deleteFile(file.id);
@@ -96,6 +300,49 @@ class CapacitorFileStorage {
       console.error('Failed to cleanup orphans:', error);
     }
     return cleanedCount;
+  }
+
+  /**
+   * Moves books stored in the legacy location (UUID-keyed base64 via
+   * Capacitor Filesystem in `Directory.Documents` / its web shim) into the
+   * new content-addressed store. Sets `book.contentHash` in place; the caller
+   * persists the updated records. Returns true if any book was migrated.
+   *
+   * Safe to run every startup — books with `contentHash` are skipped, and a
+   * per-book failure leaves the legacy file in place where the read path's
+   * fallback still finds it.
+   */
+  async migrateLegacyFiles(books: Book[]): Promise<boolean> {
+    let changed = false;
+    for (const book of books) {
+      if (book.contentHash) continue;
+
+      const legacyExt = await this.findExtIn(Directory.Documents, book.id);
+      if (!legacyExt) continue;
+
+      try {
+        const { data } = await Filesystem.readFile({
+          path: `${this.BOOKS_DIR}/${book.id}${legacyExt}`,
+          directory: Directory.Documents,
+        });
+        const blob = this.base64ToBlob(data as string, this.mimeTypeForExt(legacyExt));
+        const hash = await sha256Hex(blob);
+        // Store under the format-correct extension — this subsumes the old
+        // migrateExtensions pass (everything used to be saved as .epub).
+        const ext = this.extForFormat(book.format);
+        await this.putFileBlob(blob, hash, ext);
+        book.contentHash = hash;
+        changed = true;
+        await Filesystem.deleteFile({
+          path: `${this.BOOKS_DIR}/${book.id}${legacyExt}`,
+          directory: Directory.Documents,
+        }).catch(() => {});
+      } catch (error) {
+        console.error(`Failed to migrate file for book ${book.id}:`, error);
+        // Leave legacy file in place — retrieveBlob's fallback still finds it.
+      }
+    }
+    return changed;
   }
 
   async getStorageInfo(): Promise<StorageInfo> {
@@ -118,7 +365,7 @@ class CapacitorFileStorage {
 
   async checkStorageQuota(fileSize: number): Promise<StorageCheckResult> {
     const info = await this.getStorageInfo();
-    const requiredSpace = Math.ceil(fileSize * 1.33);
+    const requiredSpace = fileSize;
     const bufferBytes = this.STORAGE_BUFFER_MB * 1024 * 1024;
     const usableSpace = Math.max(0, info.available - bufferBytes);
     const canStore = requiredSpace <= usableSpace;
@@ -130,166 +377,6 @@ class CapacitorFileStorage {
       requiredMB,
       message: canStore ? undefined : `Requires ${requiredMB}MB but only ${availableMB}MB available`,
     };
-  }
-
-  async storeFile(file: File, id: string): Promise<string> {
-    try {
-      const quotaCheck = await this.checkStorageQuota(file.size);
-      if (!quotaCheck.canStore) {
-        throw new Error(`Insufficient storage: ${quotaCheck.message}`);
-      }
-
-      const ext = this.extForFile(file);
-      const base64Data = await this.fileToBase64(file);
-      const filePath = `${this.BOOKS_DIR}/${id}${ext}`;
-
-      await Filesystem.writeFile({
-        path: filePath,
-        data: base64Data,
-        directory: Directory.Documents,
-        recursive: true,
-      });
-
-      const result = await Filesystem.getUri({
-        path: filePath,
-        directory: Directory.Documents,
-      });
-      return result.uri;
-    } catch (error) {
-      console.error('Failed to store file:', error);
-      throw error;
-    }
-  }
-
-  async retrieveFile(id: string, format?: string): Promise<string> {
-    // Try format-specific extension first, then fall back through all known extensions
-    // so books stored before the format-aware fix (all as .epub) still load correctly.
-    const preferredExt = this.extForFormat(format);
-    const tryOrder = [
-      preferredExt,
-      ...KNOWN_EXTENSIONS.filter(e => e !== preferredExt),
-    ];
-
-    for (const ext of tryOrder) {
-      try {
-        const filePath = `${this.BOOKS_DIR}/${id}${ext}`;
-        const fileData = await Filesystem.readFile({
-          path: filePath,
-          directory: Directory.Documents,
-        });
-        const blob = this.base64ToBlob(fileData.data as string, this.mimeTypeForExt(ext));
-        return URL.createObjectURL(blob);
-      } catch {
-        // try next extension
-      }
-    }
-
-    throw new Error(`File not found for id: ${id}`);
-  }
-
-  async deleteFile(id: string): Promise<void> {
-    const ext = await this.findStoredExt(id);
-    if (!ext) return; // already gone
-    try {
-      await Filesystem.deleteFile({
-        path: `${this.BOOKS_DIR}/${id}${ext}`,
-        directory: Directory.Documents,
-      });
-    } catch (error) {
-      console.error('Failed to delete file:', error);
-      throw error;
-    }
-  }
-
-  async listStoredFiles(): Promise<StoredFile[]> {
-    try {
-      const result = await Filesystem.readdir({
-        path: this.BOOKS_DIR,
-        directory: Directory.Documents,
-      });
-
-      const files: StoredFile[] = [];
-      for (const file of result.files) {
-        if (file.type !== 'file') continue;
-        const ext = KNOWN_EXTENSIONS.find(e => file.name.endsWith(e));
-        if (!ext) continue;
-
-        const id = file.name.slice(0, -ext.length);
-        const stat = await Filesystem.stat({
-          path: `${this.BOOKS_DIR}/${file.name}`,
-          directory: Directory.Documents,
-        });
-        files.push({
-          id,
-          filename: file.name,
-          mimeType: this.mimeTypeForExt(ext),
-          size: stat.size || 0,
-          createdAt: stat.ctime ? new Date(stat.ctime).toISOString() : new Date().toISOString(),
-        });
-      }
-      return files;
-    } catch {
-      return [];
-    }
-  }
-
-  /**
-   * One-time migration: renames books stored under the old `.epub` extension to
-   * their correct extension based on the saved format metadata.
-   * Safe to call on every startup — skips books that are already correct.
-   */
-  async migrateExtensions(books: { id: string; format?: string }[]): Promise<void> {
-    for (const { id, format } of books) {
-      const correctExt = this.extForFormat(format);
-      if (correctExt === '.epub') continue; // already using the right name
-
-      const oldPath = `${this.BOOKS_DIR}/${id}.epub`;
-      const newPath = `${this.BOOKS_DIR}/${id}${correctExt}`;
-
-      // Check if the old .epub copy actually exists
-      try {
-        await Filesystem.stat({ path: oldPath, directory: Directory.Documents });
-      } catch {
-        continue; // not stored as .epub — nothing to migrate
-      }
-
-      // Skip if already migrated
-      try {
-        await Filesystem.stat({ path: newPath, directory: Directory.Documents });
-        // Correct extension already exists — clean up stale .epub copy
-        await Filesystem.deleteFile({ path: oldPath, directory: Directory.Documents }).catch(() => {});
-        continue;
-      } catch {
-        // correct path doesn't exist yet — proceed
-      }
-
-      try {
-        const data = await Filesystem.readFile({ path: oldPath, directory: Directory.Documents });
-        await Filesystem.writeFile({
-          path: newPath,
-          data: data.data as string,
-          directory: Directory.Documents,
-          recursive: true,
-        });
-        await Filesystem.deleteFile({ path: oldPath, directory: Directory.Documents });
-        console.log(`Migrated ${id}.epub → ${id}${correctExt}`);
-      } catch (err) {
-        console.error(`Failed to migrate ${id}:`, err);
-        // Leave old file in place — retrieveFile fallback will still find it
-      }
-    }
-  }
-
-  private async fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        resolve(result.split(',')[1]);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
   }
 
   private base64ToBlob(base64: string, mimeType: string): Blob {

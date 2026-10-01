@@ -52,4 +52,12 @@ export interface Book {
   pageCount?: number; // Estimated page count
   shelfId: string | null;
   labelIds: string[];
+  /** SHA-256 of the file bytes — storage key in the content-addressed store.
+   *  Absent on pre-migration records (file is keyed by `id` in the legacy store). */
+  contentHash?: string;
+  /** Where the file bytes live. 'managed' = app-owned store; 'linked' = read
+   *  in place from sourcePath (Electron folder sync). Defaults to 'managed'. */
+  source?: 'managed' | 'linked';
+  /** Absolute path of a linked book's source file. */
+  sourcePath?: string;
 }

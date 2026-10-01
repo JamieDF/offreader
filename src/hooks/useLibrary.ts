@@ -14,6 +14,7 @@ import { Azw3Metadata } from "@/parsers/azw3Parser";
 import { Fb2Metadata } from "@/parsers/fb2Parser";
 import { CbzMetadata } from "@/parsers/cbzParser";
 import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
+import { sha256Hex } from "@/utils/hash";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
 
@@ -177,6 +178,14 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
         try {
           const fileName = file.name.replace(/\.[^/.]+$/, "");
 
+          // Content-hash first: identical bytes never get a second book.
+          const contentHash = await sha256Hex(file);
+          const existing = libraryService.getBooks().find(b => b.contentHash === contentHash);
+          if (existing) {
+            toast.info(`"${existing.title}" is already in your library`);
+            continue;
+          }
+
           const bookId = uuidv4();
 
           const extractedMeta = await extractBookMetadata(file);
@@ -216,6 +225,8 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
             pageCount: pageCount,
             shelfId: null,
             labelIds: [],
+            contentHash,
+            source: 'managed',
           };
 
           const updatedBooksWithTemp = [...books, newBook];
@@ -229,10 +240,8 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
             throw new Error(`Failed to save book metadata: ${metadataError}`);
           }
 
-          let fileUrl: string;
-
           try {
-            fileUrl = await fileStorage.storeFile(file, bookId);
+            await fileStorage.storeFile(file, contentHash);
           } catch (fileError) {
             console.error(`Failed to store file:`, fileError);
 
@@ -245,7 +254,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
 
           const finalBook: Book = {
             ...newBook,
-            filePath: fileUrl
+            filePath: ''
           };
 
           const finalBooks = [...books, finalBook];
@@ -354,10 +363,18 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     await saveStoredBooks(updatedBooks);
   }, []); // Empty deps intentional — prevents re-render loops
 
+  /** The storage key for a book's file bytes — content hash post-migration,
+   *  book id for pre-migration records. */
+  const storageKey = (book: Book) => book.contentHash ?? book.id;
+
   const removeBook = useCallback(async (bookId: string) => {
     try {
-      // Delete the file from storage
-      await fileStorage.deleteFile(bookId);
+      const book = books.find(b => b.id === bookId);
+      // Delete the file only if no other book shares its bytes
+      const key = book ? storageKey(book) : bookId;
+      if (!books.some(b => b.id !== bookId && storageKey(b) === key)) {
+        await fileStorage.deleteFile(key);
+      }
 
       // Remove from library service
       const updatedBooks = books.filter((book) => book.id !== bookId);
@@ -412,9 +429,19 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
   const removeBooks = useCallback(async (bookIds: string[]) => {
     const idSet = new Set(bookIds);
     try {
-      await Promise.allSettled(bookIds.map(id => fileStorage.deleteFile(id)));
+      const allBooks = libraryService.getBooks();
+      const updatedBooks = allBooks.filter(book => !idSet.has(book.id));
+      // Only delete bytes no surviving book still references
+      const survivingKeys = new Set(updatedBooks.map(storageKey));
+      const keysToDelete = new Set(
+        allBooks.filter(b => idSet.has(b.id)).map(storageKey)
+      );
+      await Promise.allSettled(
+        [...keysToDelete]
+          .filter(key => !survivingKeys.has(key))
+          .map(key => fileStorage.deleteFile(key))
+      );
 
-      const updatedBooks = libraryService.getBooks().filter(book => !idSet.has(book.id));
       libraryService.updateBooks(updatedBooks);
       await saveStoredBooks(updatedBooks);
 

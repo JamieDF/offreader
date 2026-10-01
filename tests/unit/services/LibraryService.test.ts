@@ -89,7 +89,7 @@ describe('LibraryService', () => {
 
         await libraryService.initialize();
 
-        expect(fileStorage.retrieveFile).not.toHaveBeenCalled();
+        expect(fileStorage.retrieveBlob).not.toHaveBeenCalled();
         expect(libraryService.getBooks()[0]).toMatchObject({
           id: book.id,
           filePath: '',

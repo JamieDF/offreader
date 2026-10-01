@@ -348,17 +348,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         localStorage.setItem('epub-single-tap-hint-shown', 'true');
       }
 
-      const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
-      let fileBlob: Blob;
-      try {
-        const fileResponse = await fetch(fileUrl);
-        if (!fileResponse.ok) throw new Error(`Failed to fetch stored book: ${fileResponse.status}`);
-        fileBlob = await fileResponse.blob();
-      } finally {
-        // The blob URL only existed to hand bytes to fetch — revoke it as soon
-        // as the blob is materialized so the copy doesn't leak for the session.
-        URL.revokeObjectURL(fileUrl);
-      }
+      // contentHash addresses the content-addressed store; id covers books not
+      // yet migrated from the legacy UUID-keyed location.
+      const fileBlob = await fileStorage.retrieveBlob(book.contentHash ?? book.id, book.format);
       const readerFile = new File(
         [fileBlob],
         `${book.id}${extensionForFormat(book.format)}`,
