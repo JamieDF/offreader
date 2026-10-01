@@ -349,9 +349,16 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
 
       const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
-      const fileResponse = await fetch(fileUrl);
-      if (!fileResponse.ok) throw new Error(`Failed to fetch stored book: ${fileResponse.status}`);
-      const fileBlob = await fileResponse.blob();
+      let fileBlob: Blob;
+      try {
+        const fileResponse = await fetch(fileUrl);
+        if (!fileResponse.ok) throw new Error(`Failed to fetch stored book: ${fileResponse.status}`);
+        fileBlob = await fileResponse.blob();
+      } finally {
+        // The blob URL only existed to hand bytes to fetch — revoke it as soon
+        // as the blob is materialized so the copy doesn't leak for the session.
+        URL.revokeObjectURL(fileUrl);
+      }
       const readerFile = new File(
         [fileBlob],
         `${book.id}${extensionForFormat(book.format)}`,

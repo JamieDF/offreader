@@ -34,6 +34,11 @@ const AppContent = () => {
   useEffect(() => {
     const initialize = async () => {
       try {
+        // Ask the browser for persistent storage — without this, IndexedDB
+        // (which holds the whole library on web) can be silently evicted
+        // under disk pressure.
+        navigator.storage?.persist?.().catch(() => {});
+
         // Initialize services in parallel
         await Promise.all([
           libraryService.initialize(),
