@@ -1,8 +1,10 @@
+import { Capacitor } from "@capacitor/core";
 import { toast } from "@/components/ui/toast";
 import { Book } from "@/types/book";
 import { libraryService } from "@/services/LibraryService";
 import { storageService } from "@/services/storage";
 import { fileStorage } from "@/services/fileStorage";
+import { safFiles } from "@/services/safFiles";
 import { saveStoredBooks } from "@/services/bookPersistence";
 import { sha256Hex } from "@/utils/hash";
 import { importFileItems, ImportItem } from "@/services/bookImport";
@@ -16,6 +18,40 @@ import { importFileItems, ImportItem } from "@/services/bookImport";
  */
 
 const SYNC_FOLDERS_KEY = 'offreader-sync-folders';
+
+/** Folder sync exists on Electron (real paths + watchers) and Android (SAF
+ *  document trees, scan-on-open — SAF has no watch primitive). */
+export function supportsFolderSync(): boolean {
+  return !!window.offreaderFiles || Capacitor.getPlatform() === 'android';
+}
+
+/** Pick a sync folder — native directory dialog on desktop, SAF tree picker
+ *  on Android (returns a persisted content:// URI). */
+export async function pickSyncDirectory(): Promise<string | null> {
+  if (Capacitor.getPlatform() === 'android') {
+    try {
+      const { treeUri } = await safFiles.pickDirectory();
+      return treeUri;
+    } catch {
+      return null; // user cancelled
+    }
+  }
+  return window.offreaderFiles?.pickDirectory() ?? null;
+}
+
+/** True if `sourcePath` lives under the synced folder. On Android both are
+ *  content:// URIs: a tree `…/tree/<id>` yields documents `…/document/<id>%2F…`
+ *  so containment is a doc-id prefix test, not a path prefix. */
+export function isUnderFolder(sourcePath: string, folderPath: string): boolean {
+  if (folderPath.startsWith('content://')) {
+    const treeId = folderPath.split('/tree/')[1];
+    if (!treeId) return false;
+    return sourcePath.includes(`${encodeURIComponent(decodeURIComponent(treeId))}%2F`);
+  }
+  const sep = folderPath.includes('\\') ? '\\' : '/';
+  const prefix = folderPath.endsWith(sep) ? folderPath : folderPath + sep;
+  return sourcePath.startsWith(prefix);
+}
 
 export async function getSyncFolders(): Promise<string[]> {
   const stored = await storageService.getItem(SYNC_FOLDERS_KEY);
@@ -31,7 +67,7 @@ async function saveSyncFolders(folders: string[]): Promise<void> {
   await storageService.setItem(SYNC_FOLDERS_KEY, JSON.stringify(folders));
 }
 
-/** Add a folder to the sync list, start watching it, and scan it. */
+/** Add a folder to the sync list, start watching it (desktop), and scan it. */
 export async function addSyncFolder(dirPath: string): Promise<string[]> {
   const folders = await getSyncFolders();
   if (!folders.includes(dirPath)) {
@@ -67,10 +103,16 @@ export interface ScanResult {
  * it", otherwise the file imports as a new linked book.
  */
 export async function scanFolder(dirPath: string): Promise<ScanResult> {
-  const files = window.offreaderFiles;
-  if (!files) return { added: 0, moved: 0, missing: 0 };
-
-  const entries = await files.scanFolder(dirPath);
+  let entries: { path: string; name: string; size: number; mtimeMs: number }[];
+  if (dirPath.startsWith('content://')) {
+    if (Capacitor.getPlatform() !== 'android') return { added: 0, moved: 0, missing: 0 };
+    const { files } = await safFiles.listFiles({ treeUri: dirPath });
+    entries = files.map(f => ({ path: f.uri, name: f.name, size: f.size, mtimeMs: f.mtimeMs }));
+  } else {
+    const files = window.offreaderFiles;
+    if (!files) return { added: 0, moved: 0, missing: 0 };
+    entries = await files.scanFolder(dirPath);
+  }
   const books = libraryService.getBooks();
   const seenPaths = new Set<string>();
   const repoints = new Map<string, { sourcePath: string; contentHash: string }>();
@@ -109,12 +151,10 @@ export async function scanFolder(dirPath: string): Promise<ScanResult> {
 
   // Linked books rooted under this folder whose file wasn't seen → missing.
   // Excludes books repointed above (their new path was seen).
-  const sep = dirPath.includes('\\') ? '\\' : '/';
-  const prefix = dirPath.endsWith(sep) ? dirPath : dirPath + sep;
   const missingIds = books
     .filter(b =>
       b.source === 'linked' &&
-      b.sourcePath?.startsWith(prefix) &&
+      b.sourcePath && isUnderFolder(b.sourcePath, dirPath) &&
       !seenPaths.has(b.sourcePath) &&
       !repoints.has(b.id) &&
       !b.missing)
@@ -158,14 +198,67 @@ export async function syncAllFolders(): Promise<ScanResult> {
 }
 
 /**
- * Repoint a missing linked book at a new source path. Re-hashes the picked
- * file so relinking to different bytes updates identity too; progress and
+ * Convert linked books to managed: bytes are copied into the content-addressed
+ * store and the record flips to 'managed'. The source file is left untouched,
+ * and `sourcePath` is kept as provenance. Returns the count converted.
+ */
+export async function moveBooksToLibrary(bookIds: string[]): Promise<number> {
+  const idSet = new Set(bookIds);
+  const targets = libraryService.getBooks()
+    .filter(b => idSet.has(b.id) && b.source === 'linked' && b.sourcePath);
+  if (targets.length === 0) return 0;
+
+  const movedIds = new Set<string>();
+  for (const book of targets) {
+    try {
+      const blob = await fileStorage.retrieveLinkedBlob(book.sourcePath!);
+      // Key the copy under the existing contentHash — same bytes, same slot;
+      // ext comes from the format since the Blob has no filename.
+      const ext = book.format === 'PDF' ? '.pdf'
+        : book.format === 'MOBI' ? '.mobi'
+        : book.format === 'AZW3' ? '.azw3'
+        : book.format === 'FB2' ? '.fb2'
+        : book.format === 'CBZ' ? '.cbz'
+        : '.epub';
+      await fileStorage.storeFile(blob, book.contentHash ?? book.id, ext);
+      movedIds.add(book.id);
+    } catch (error) {
+      console.error(`Failed to move linked book ${book.id} into library:`, error);
+    }
+  }
+
+  if (movedIds.size > 0) {
+    const updatedBooks = libraryService.getBooks().map(b =>
+      movedIds.has(b.id) ? { ...b, source: 'managed' as const, missing: undefined } : b
+    );
+    libraryService.updateBooksSilent(updatedBooks);
+    await saveStoredBooks(updatedBooks);
+  }
+  return movedIds.size;
+}
+
+/**
+ * Repoint a missing linked book at a new source. Picks the file natively
+ * (open-file dialog on desktop, SAF document picker on Android), re-hashes
+ * it so relinking to different bytes updates identity too; progress and
  * metadata are untouched.
  */
-export async function relinkBookFile(bookId: string, newPath: string): Promise<boolean> {
-  const files = window.offreaderFiles;
+export async function relinkBookFile(bookId: string, newPath?: string): Promise<boolean> {
   const book = libraryService.getBooks().find(b => b.id === bookId);
-  if (!files || !book || book.source !== 'linked') return false;
+  if (!book || book.source !== 'linked') return false;
+
+  if (!newPath) {
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        newPath = (await safFiles.pickDocument()).uri;
+      } catch {
+        return false; // picker cancelled
+      }
+    } else {
+      newPath = await window.offreaderFiles?.pickBookFile() ?? undefined;
+      if (!newPath) return false;
+    }
+  }
 
   try {
     const blob = await fileStorage.retrieveLinkedBlob(newPath);

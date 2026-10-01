@@ -1,6 +1,7 @@
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
 import { blobStore } from './blobStore';
+import { safFiles } from './safFiles';
 import { sha256Hex } from '@/utils/hash';
 import { Book } from '@/types/book';
 
@@ -189,8 +190,20 @@ class CapacitorFileStorage {
    * A linked book's bytes, streamed straight from its source path over the
    * offreader-file:// scheme — never copied into app storage. Registers the
    * path first so the main-process allowlist lets the fetch through.
+   * On Android, `sourcePath` is a SAF content:// URI: the plugin copies the
+   * bytes into app cache (skipped when the cache is fresh) and the result
+   * streams back through convertFileSrc.
    */
   async retrieveLinkedBlob(sourcePath: string): Promise<Blob> {
+    if (Capacitor.getPlatform() === 'android') {
+      const { path } = await safFiles.resolveToCache({ uri: sourcePath });
+      const response = await fetch(Capacitor.convertFileSrc(`file://${path}`));
+      if (!response.ok) {
+        throw new Error(`Linked file is not available: ${sourcePath}`);
+      }
+      return response.blob();
+    }
+
     const files = window.offreaderFiles;
     if (!files) throw new Error('Linked books are only supported in the desktop app');
     await files.registerPath(sourcePath);
@@ -223,6 +236,14 @@ class CapacitorFileStorage {
     book: Pick<Book, 'id' | 'contentHash' | 'source' | 'sourcePath'>,
   ): Promise<boolean> {
     if (book.source === 'linked' && book.sourcePath) {
+      if (Capacitor.getPlatform() === 'android') {
+        try {
+          const { exists } = await safFiles.fileExists({ uri: book.sourcePath });
+          return exists;
+        } catch {
+          return false;
+        }
+      }
       return window.offreaderFiles?.fileExists(book.sourcePath) ?? false;
     }
     return this.fileExists(book.contentHash ?? book.id);

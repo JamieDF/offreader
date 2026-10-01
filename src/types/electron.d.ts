@@ -31,6 +31,15 @@ export interface OffreaderFilesApi {
   unwatchFolder(path: string): Promise<void>;
   /** Fires when a watched folder's book files change; returns unsubscribe. */
   onFolderChanged(callback: (dirPath: string) => void): () => void;
+  /** Takes the queued "open with" file paths (argv / second-instance /
+   *  macOS open-file). Pull-based — returns and clears the queue. */
+  takePendingFiles(): Promise<string[]>;
+  /** Nudge that new files were opened while the app is running. */
+  onFilesOpened(callback: () => void): () => void;
+  /** Write bytes to an arbitrary path (library export). */
+  writeFileToPath(destPath: string, data: Uint8Array): Promise<void>;
+  /** Copy a file natively (library export of linked books). */
+  copyFileToPath(sourcePath: string, destPath: string): Promise<void>;
 }
 
 declare global {

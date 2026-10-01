@@ -7,7 +7,9 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
-    protected void onCreate(android.os.Bundle savedInstanceState) {
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        // SAF file-access plugin — must register before the bridge exists.
+        registerPlugin(OffreaderFilesPlugin.class);
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }

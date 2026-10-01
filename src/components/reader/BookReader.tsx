@@ -24,8 +24,8 @@ interface BookReaderProps {
   bookId: string;
   book: Book;
   updateLibraryProgress: (bookId: string, progress: number) => void;
-  /** Repoints a linked book at a new source path; resolves true on success. */
-  relinkBook?: (bookId: string, newPath: string) => Promise<boolean>;
+  /** Picks a new source for a linked book and repoints it; true on success. */
+  relinkBook?: (bookId: string) => Promise<boolean>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -572,13 +572,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress, relinkBoo
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={async () => {
-                    const newPath = await window.offreaderFiles?.pickBookFile();
-                    if (!newPath) return;
-                    // Success updates the book record → this component's init
-                    // effect re-runs and retries the open automatically.
-                    await relinkBook(book.id, newPath);
-                  }}
+                  onClick={() => relinkBook(book.id)}
+                  // Success updates the book record → this component's init
+                  // effect re-runs and retries the open automatically.
                 >
                   Relink file…
                 </Button>

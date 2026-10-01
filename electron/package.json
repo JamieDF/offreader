@@ -51,6 +51,14 @@
       "capacitor.config.*",
       "app/**/*"
     ],
+    "fileAssociations": [
+      { "ext": "epub", "name": "EPUB ebook", "role": "Viewer" },
+      { "ext": "pdf", "name": "PDF document", "role": "Viewer" },
+      { "ext": "mobi", "name": "MOBI ebook", "role": "Viewer" },
+      { "ext": "azw3", "name": "AZW3 ebook", "role": "Viewer" },
+      { "ext": "fb2", "name": "FB2 ebook", "role": "Viewer" },
+      { "ext": "cbz", "name": "Comic book archive", "role": "Viewer" }
+    ],
     "linux": {
       "target": [
         "AppImage",

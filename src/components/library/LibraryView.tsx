@@ -22,7 +22,7 @@ import { SelectionActionBar } from "./SelectionActionBar";
 import { BulkLabelsDialog } from "./BulkLabelsDialog";
 import { ImportModeDialog } from "./ImportModeDialog";
 import { getImportMode, ImportMode } from "@/utils/importMode";
-import { getSyncFolders, scanFolder, syncAllFolders } from "@/services/folderSync";
+import { getSyncFolders, scanFolder, syncAllFolders, supportsFolderSync } from "@/services/folderSync";
 import { ShelfDialog } from "@/components/book-details/ShelfDialog";
 import {
   AlertDialog,
@@ -86,6 +86,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     removeBooks,
     assignBooksToShelf,
     applyLabelChanges,
+    moveBooksToLibrary,
   } = useLibrary();
   const {
     isOpen: tourOpen,
@@ -109,33 +110,45 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   const [importModeOpen, setImportModeOpen] = useState(false);
   const [defaultImportMode, setDefaultImportMode] = useState<ImportMode>('linked');
 
-  // Folder sync (Electron): re-scan configured folders once the library has
-  // loaded, register watchers, and rescan a folder when its files change.
-  // Deferred until init completes — scanning with an empty library would
-  // re-import everything as new.
+  // Folder sync: re-scan configured folders once the library has loaded.
+  // Desktop registers watchers + rescan-on-change; Android rescans SAF trees
+  // on open (SAF has no watch primitive). Deferred until init completes —
+  // scanning with an empty library would re-import everything as new.
   useEffect(() => {
+    if (!supportsFolderSync()) return;
     const files = window.offreaderFiles;
-    if (!files) return;
+
+    const importOpened = async () => {
+      const pending = (await files?.takePendingFiles()) ?? [];
+      if (pending.length > 0) {
+        await importBookPaths(pending, await getImportMode(), onImported);
+      }
+    };
 
     let started = false;
     const start = async () => {
       if (started || libraryService.getIsLoading()) return;
       started = true;
       const folders = await getSyncFolders();
-      await Promise.all(folders.map(f => files.watchFolder(f)));
+      await Promise.all(folders.map(f => files?.watchFolder(f)));
+      // "Open with" files queued before the renderer was ready
+      await importOpened();
       await syncAllFolders();
     };
 
     start();
     const unsubInit = libraryService.subscribe(start);
-    const unsubChanged = files.onFolderChanged((dirPath) => {
+    const unsubChanged = files?.onFolderChanged((dirPath) => {
       scanFolder(dirPath);
     });
+    // Files opened while running (second instance / macOS open-file)
+    const unsubOpened = files?.onFilesOpened(importOpened);
     return () => {
       unsubInit();
-      unsubChanged();
+      unsubChanged?.();
+      unsubOpened?.();
     };
-  }, []);
+  }, [importBookPaths]);
 
   useEffect(() => {
     const loadLabels = () => {
@@ -235,6 +248,14 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     await applyLabelChanges([...selectedIds], addLabelIds, removeLabelIds);
     setBulkLabelsOpen(false);
     toast.success(`Updated labels on ${count} book${count === 1 ? '' : 's'}`);
+  };
+
+  const handleMoveToLibrary = async () => {
+    const moved = await moveBooksToLibrary([...selectedIds]);
+    if (moved > 0) {
+      toast.success(`Copied ${moved} book${moved === 1 ? '' : 's'} into library storage`);
+      exitSelectionMode();
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -437,10 +458,12 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
       {selectionMode ? (
         <SelectionActionBar
           selectedCount={selectedIds.size}
+          linkedSelectedCount={selectedBooks.filter(b => b.source === 'linked').length}
           allVisibleSelected={allVisibleSelected}
           onToggleSelectAll={toggleSelectAllVisible}
           onAssignShelf={() => setBulkShelfOpen(true)}
           onEditLabels={() => setBulkLabelsOpen(true)}
+          onMoveToLibrary={handleMoveToLibrary}
           onDelete={() => setBulkDeleteOpen(true)}
           onExit={exitSelectionMode}
         />

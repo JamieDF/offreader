@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GripVertical, Star, Trash2, Plus, X, Check, FolderInput, Tag, Link2, HardDrive, FolderSync, RefreshCw } from "lucide-react";
+import { GripVertical, Star, Trash2, Plus, X, Check, FolderInput, Tag, Link2, HardDrive, FolderSync, RefreshCw, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,8 @@ import { saveStoredBooks } from "@/services/bookPersistence";
 import { toast } from "@/components/ui/toast";
 import { LABEL_COLORS } from "@/constants/labels";
 import { getImportMode, setImportMode, ImportMode } from "@/utils/importMode";
-import { getSyncFolders, addSyncFolder, removeSyncFolder, scanFolder, syncAllFolders } from "@/services/folderSync";
+import { getSyncFolders, addSyncFolder, removeSyncFolder, scanFolder, syncAllFolders, pickSyncDirectory, supportsFolderSync } from "@/services/folderSync";
+import { exportLibrary } from "@/services/exportLibrary";
 
 export function ManageLibrary() {
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -30,6 +31,7 @@ export function ManageLibrary() {
   const [syncFolders, setSyncFolders] = useState<string[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const isDesktop = typeof window !== 'undefined' && !!window.offreaderFiles;
+  const canSyncFolders = supportsFolderSync();
 
   useEffect(() => {
     const loadData = () => {
@@ -403,9 +405,10 @@ export function ManageLibrary() {
         </div>
       )}
 
-      {/* Sync folders — desktop only. Watched folders keep the library in
-          step with the filesystem; books are always linked, never copied. */}
-      {isDesktop && (
+      {/* Sync folders — desktop + Android. Watched folders (desktop) / SAF
+          document trees (Android) keep the library in step with the
+          filesystem; books are always linked, never copied. */}
+      {canSyncFolders && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
             <FolderSync className="h-4 w-4" />
@@ -436,7 +439,7 @@ export function ManageLibrary() {
                 className="flex-1 justify-start"
                 disabled={isScanning}
                 onClick={async () => {
-                  const dir = await window.offreaderFiles?.pickDirectory();
+                  const dir = await pickSyncDirectory();
                   if (!dir) return;
                   setSyncFolders(await addSyncFolder(dir));
                   setIsScanning(true);
@@ -481,6 +484,45 @@ export function ManageLibrary() {
               or renamed, OffReader re-finds it by content.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Backup — desktop only. Copies book files + a metadata manifest into
+          a chosen directory. */}
+      {isDesktop && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <Download className="h-4 w-4" />
+            <span>Backup</span>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            disabled={isScanning}
+            onClick={async () => {
+              const dir = await window.offreaderFiles?.pickDirectory();
+              if (!dir) return;
+              setIsScanning(true);
+              try {
+                const result = await exportLibrary(dir);
+                toast.success(
+                  result.failed > 0
+                    ? `Exported ${result.exported} books (${result.failed} failed) to ${dir}`
+                    : `Exported ${result.exported} books to ${dir}`,
+                );
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Export failed');
+              } finally {
+                setIsScanning(false);
+              }
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export library…
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Copies every book file plus an offreader-library.json manifest.
+          </p>
         </div>
       )}
     </div>

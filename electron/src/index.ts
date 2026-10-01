@@ -6,7 +6,7 @@ import electronIsDev from 'electron-is-dev';
 import unhandled from 'electron-unhandled';
 import { autoUpdater } from 'electron-updater';
 import chokidar, { FSWatcher } from 'chokidar';
-import { access, readdir, stat } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -26,6 +26,39 @@ protocol.registerSchemesAsPrivileged([
 // Only paths explicitly registered by the renderer (linked books / picked
 // files) may be served — keeps the scheme from becoming a read-anything hole.
 const allowedFilePaths = new Set<string>();
+
+const BOOK_EXTENSIONS = new Set(['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz']);
+
+// "Open with" / double-clicked book files land here until the renderer pulls
+// them via offreader:take-pending-files — pull-based so launch timing (cold
+// start vs second instance vs macOS open-file) can't drop events.
+const pendingOpenFiles: string[] = [];
+const collectOpenPaths = (argv: string[]) => {
+  for (const arg of argv) {
+    if (!arg.startsWith('-') && BOOK_EXTENSIONS.has(extname(arg).toLowerCase())) {
+      pendingOpenFiles.push(arg);
+    }
+  }
+};
+collectOpenPaths(process.argv);
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  // A second "open with" hit should deliver the file to the running instance.
+  app.quit();
+}
+app.on('second-instance', (_event, argv) => {
+  collectOpenPaths(argv);
+  myCapacitorApp.getMainWindow()?.webContents.send('offreader:files-opened');
+});
+app.on('open-file', (event, filePath) => {
+  // macOS "Open with"
+  event.preventDefault();
+  if (BOOK_EXTENSIONS.has(extname(filePath).toLowerCase())) {
+    pendingOpenFiles.push(filePath);
+    myCapacitorApp.getMainWindow()?.webContents.send('offreader:files-opened');
+  }
+});
 
 // Graceful handling of unhandled errors.
 unhandled();
@@ -184,8 +217,6 @@ ipcMain.handle('offreader:stat-file', async (_event, sourcePath: string) => {
 
 // --- Folder sync ------------------------------------------------------------
 
-const BOOK_EXTENSIONS = new Set(['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz']);
-
 ipcMain.handle('offreader:pick-directory', async () => {
   const win = myCapacitorApp.getMainWindow();
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -250,4 +281,24 @@ ipcMain.handle('offreader:unwatch-folder', async (_event, dirPath: string) => {
     await watcher.close();
     folderWatchers.delete(dirPath);
   }
+});
+
+// --- "Open with" ------------------------------------------------------------
+
+// Renderer pulls queued paths (from argv / second-instance / open-file);
+// returns and clears the queue.
+ipcMain.handle('offreader:take-pending-files', () => pendingOpenFiles.splice(0));
+
+// --- Library export -----------------------------------------------------------
+
+// Managed books' bytes live in renderer IndexedDB, so they arrive as a
+// buffer; linked books are copied natively — no bridge round-trip.
+ipcMain.handle('offreader:export-write-file', async (_event, destPath: string, data: Uint8Array) => {
+  await mkdir(join(destPath, '..'), { recursive: true });
+  await writeFile(destPath, Buffer.from(data));
+});
+
+ipcMain.handle('offreader:export-copy-file', async (_event, sourcePath: string, destPath: string) => {
+  await mkdir(join(destPath, '..'), { recursive: true });
+  await copyFile(sourcePath, destPath);
 });

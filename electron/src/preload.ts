@@ -44,4 +44,19 @@ contextBridge.exposeInMainWorld('offreaderFiles', {
     ipcRenderer.on('offreader:folder-changed', listener);
     return () => ipcRenderer.removeListener('offreader:folder-changed', listener);
   },
+  /** Takes the queued "open with" file paths (argv / second-instance / macOS
+   *  open-file). Pull-based — returns and clears the queue. */
+  takePendingFiles: () => ipcRenderer.invoke('offreader:take-pending-files'),
+  /** Nudge that new files were opened while the app is running. */
+  onFilesOpened: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('offreader:files-opened', listener);
+    return () => ipcRenderer.removeListener('offreader:files-opened', listener);
+  },
+  /** Write bytes to an arbitrary path (library export). */
+  writeFileToPath: (destPath: string, data: Uint8Array) =>
+    ipcRenderer.invoke('offreader:export-write-file', destPath, data),
+  /** Copy a file natively (library export of linked books). */
+  copyFileToPath: (sourcePath: string, destPath: string) =>
+    ipcRenderer.invoke('offreader:export-copy-file', sourcePath, destPath),
 });

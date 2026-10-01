@@ -6,7 +6,7 @@ import { storageService } from "@/services/storage";
 import { fileStorage } from "@/services/fileStorage";
 import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
 import { importFileItems, toastImportError } from "@/services/bookImport";
-import { relinkBookFile } from "@/services/folderSync";
+import { relinkBookFile, moveBooksToLibrary } from "@/services/folderSync";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
 
@@ -393,6 +393,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     importBooks,
     importBookPaths,
     relinkBook,
+    moveBooksToLibrary,
     addBook,
     updateProgress,
     removeBook,

@@ -1,12 +1,15 @@
-import { FolderInput, ListChecks, Tag, Trash2, X } from "lucide-react";
+import { FolderInput, HardDrive, ListChecks, Tag, Trash2, X } from "lucide-react";
 
 interface SelectionActionBarProps {
   selectedCount: number;
+  /** Selected books that are linked — enables the move-into-library action. */
+  linkedSelectedCount: number;
   /** All currently visible (filtered) books selected — makes the "All" toggle untick. */
   allVisibleSelected: boolean;
   onToggleSelectAll: () => void;
   onAssignShelf: () => void;
   onEditLabels: () => void;
+  onMoveToLibrary: () => void;
   onDelete: () => void;
   onExit: () => void;
 }
@@ -16,10 +19,12 @@ const actionBtn =
 
 export function SelectionActionBar({
   selectedCount,
+  linkedSelectedCount,
   allVisibleSelected,
   onToggleSelectAll,
   onAssignShelf,
   onEditLabels,
+  onMoveToLibrary,
   onDelete,
   onExit,
 }: SelectionActionBarProps) {
@@ -55,6 +60,19 @@ export function SelectionActionBar({
         <Tag className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Labels</span>
       </button>
+      {/* Copies linked books' bytes into OffReader storage — source files
+          are untouched. Only meaningful when the selection has linked books. */}
+      {linkedSelectedCount > 0 && (
+        <button
+          type="button"
+          onClick={onMoveToLibrary}
+          className={actionBtn}
+          title="Copy linked files into library storage"
+        >
+          <HardDrive className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Move into library</span>
+        </button>
+      )}
       <button
         type="button"
         onClick={onDelete}

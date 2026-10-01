@@ -6,7 +6,8 @@ storage rework and folder-sync features.
 
 **Stage status**: 0 ✅ persist+revoke · 1 ✅ content-addressed binary store ·
 2 ✅ linked-mode plumbing (Electron) · 3 ✅ folder sync (Electron) ·
-4 follow-ons
+4 ✅ follow-ons (Move-into-library bulk action, open-with associations,
+export/backup, Android SAF plugin — compile-verified, not device-tested)
 
 Stage 3 details as implemented: `offreader:scan-folder` walks a directory
 recursively for book extensions; `offreader:watch-folder` uses chokidar
@@ -19,6 +20,26 @@ imports via the shared pipeline in `bookImport.ts`. Unseen paths under a
 watched folder flag their books `missing`. Folders persist under
 `offreader-sync-folders` and are managed in `ManageLibrary`; `LibraryView`
 starts watchers + a startup rescan after `libraryService.initialize`.
+
+Stage 4 details as implemented:
+- **Move into library**: `folderSync.moveBooksToLibrary(ids)` copies linked
+  bytes into the store and flips `source` to 'managed' (source file
+  untouched, sourcePath kept as provenance). SelectionActionBar shows the
+  action when the selection has linked books.
+- **Open with**: `fileAssociations` in electron/package.json; argv /
+  `second-instance` / macOS `open-file` queue into `pendingOpenFiles`,
+  pulled by the renderer via `offreader:take-pending-files` (pull avoids
+  launch-timing races); `offreader:files-opened` nudges while running.
+- **Export**: `src/services/exportLibrary.ts` writes `Title - Author.ext`
+  per book plus `offreader-library.json` manifest into a picked dir;
+  linked books copy natively (`export-copy-file`), managed stream out of
+  IndexedDB (`export-write-file`).
+- **Android SAF**: `OffreaderFilesPlugin.java` (pickDirectory → persisted
+  document-tree permission, pickDocument for relink, listFiles tree walk,
+  fileExists/statFile, resolveToCache read-through). `sourcePath` stores
+  content:// URIs on Android; folderSync dispatches on platform and
+  `isUnderFolder` tests doc-id prefixes; SAF has no watch primitive so
+  Android rescans on app open.
 
 Stage 2 details as implemented: the `offreader-file://` scheme is registered
 privileged (`supportFetchAPI`, `stream`) in `electron/src/index.ts`; a
