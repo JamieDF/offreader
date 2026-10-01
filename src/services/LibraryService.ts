@@ -31,14 +31,21 @@ class LibraryService {
       const storedBooksData = await storageService.getItem('offreader-books');
       const storedBooks: Book[] = storedBooksData ? JSON.parse(storedBooksData) : [];
 
-      // Rehydrate file URLs and verify files exist (fileExists checks both the
-      // content-addressed store and the legacy UUID-keyed location)
+      // Rehydrate file URLs and verify files exist (bookFileExists checks both
+      // the content-addressed store and the legacy UUID-keyed location for
+      // managed books, and the source path for linked books)
       const validBooks = await Promise.all(
         storedBooks.map(async (book) => {
           try {
             // Check if file actually exists
-            const exists = await fileStorage.fileExists(book.contentHash ?? book.id);
+            const exists = await fileStorage.bookFileExists(book);
             if (!exists) {
+              // Linked books survive a missing source — the reader offers
+              // relink instead of silently dropping the record.
+              if (book.source === 'linked') {
+                console.warn(`Linked file missing for book ${book.id} (${book.title})`);
+                return { ...book, filePath: '', missing: true };
+              }
               console.warn(`File missing for book ${book.id} (${book.title}), skipping`);
               return null;
             }
@@ -46,7 +53,7 @@ class LibraryService {
             // Keep book content out of the native bridge until the user opens it.
             // The reader retrieves the file on demand, so creating startup blob
             // URLs would read every stored book into memory unnecessarily.
-            return { ...book, filePath: '' };
+            return { ...book, filePath: '', missing: undefined };
           } catch (error) {
             console.error(`Failed to retrieve file for book ${book.id}:`, error);
             return null;

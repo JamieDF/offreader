@@ -20,6 +20,8 @@ import { ManageLibraryDialog } from "./ManageLibraryDialog";
 import { PostImportDialog } from "./PostImportDialog";
 import { SelectionActionBar } from "./SelectionActionBar";
 import { BulkLabelsDialog } from "./BulkLabelsDialog";
+import { ImportModeDialog } from "./ImportModeDialog";
+import { getImportMode, ImportMode } from "@/utils/importMode";
 import { ShelfDialog } from "@/components/book-details/ShelfDialog";
 import {
   AlertDialog,
@@ -74,6 +76,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     sortBy,
     setSortBy,
     importBooks,
+    importBookPaths,
     isEmpty,
     filters,
     setFilter,
@@ -102,6 +105,8 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   const [bulkShelfOpen, setBulkShelfOpen] = useState(false);
   const [bulkLabelsOpen, setBulkLabelsOpen] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [importModeOpen, setImportModeOpen] = useState(false);
+  const [defaultImportMode, setDefaultImportMode] = useState<ImportMode>('linked');
 
   useEffect(() => {
     const loadLabels = () => {
@@ -211,11 +216,27 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     toast.success(`Deleted ${count} book${count === 1 ? '' : 's'}`);
   };
 
+  const onImported = (books: Book[]) => {
+    setImportedBooks(books);
+    setShowImportDialog(true);
+  };
+
   const handleRealImport = () => {
-    importBooks((books) => {
-      setImportedBooks(books);
-      setShowImportDialog(true);
-    });
+    // Desktop uses the native picker so files can be linked in place;
+    // the mode dialog defaults to the configured setting.
+    if (window.offreaderFiles) {
+      getImportMode().then(setDefaultImportMode);
+      setImportModeOpen(true);
+      return;
+    }
+    importBooks(onImported);
+  };
+
+  const handleImportModeChosen = async (mode: ImportMode) => {
+    setImportModeOpen(false);
+    const paths = await window.offreaderFiles?.pickBookFiles();
+    if (!paths?.length) return;
+    await importBookPaths(paths, mode, onImported);
   };
 
   // FAB / EmptyState click handler. During the tour, route the click into
@@ -442,6 +463,13 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         onClose={() => setBulkLabelsOpen(false)}
       />
 
+      <ImportModeDialog
+        isOpen={importModeOpen}
+        defaultMode={defaultImportMode}
+        onChoose={handleImportModeChosen}
+        onClose={() => setImportModeOpen(false)}
+      />
+
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -450,6 +478,8 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               The selected books and their reading progress will be permanently removed from your library.
+              {selectedBooks.some(b => b.source === 'linked') &&
+                ' Books linked to files outside OffReader will only be removed from the library — the files themselves are not deleted.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

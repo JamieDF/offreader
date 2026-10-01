@@ -10,9 +10,24 @@ export interface ElectronWindowApi {
   onMaximizedChange(callback: (maximized: boolean) => void): () => void;
 }
 
+/** Native file access for linked books and picker imports (Electron only). */
+export interface OffreaderFilesApi {
+  /** Native multi-file picker; resolves to absolute paths ([] if cancelled). */
+  pickBookFiles(): Promise<string[]>;
+  /** Native single-file picker; resolves to a path or null. */
+  pickBookFile(): Promise<string | null>;
+  /** Whitelists a path so offreader-file:// can serve it to the renderer. */
+  registerPath(path: string): Promise<void>;
+  /** True if the path exists and is readable. */
+  fileExists(path: string): Promise<boolean>;
+  /** File metadata, or null if unreadable/missing. */
+  statFile(path: string): Promise<{ size: number; mtimeMs: number; name: string } | null>;
+}
+
 declare global {
   interface Window {
     offreaderWindow?: ElectronWindowApi;
+    offreaderFiles?: OffreaderFilesApi;
   }
 }
 

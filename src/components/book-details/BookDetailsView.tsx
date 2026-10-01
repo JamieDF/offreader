@@ -146,7 +146,15 @@ export function BookDetailsView({ book, onRemove }: BookDetailsViewProps) {
                 This will permanently delete:
               </p>
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>The book file</li>
+                {book.source === 'linked' ? (
+                  <li>
+                    The library entry — the file at{' '}
+                    <span className="font-mono text-xs break-all">{book.sourcePath}</span>{' '}
+                    is <span className="font-medium">not</span> deleted
+                  </li>
+                ) : (
+                  <li>The book file</li>
+                )}
                 <li>All reading progress</li>
                 <li>All bookmarks</li>
                 <li>Reading statistics</li>

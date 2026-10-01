@@ -1,7 +1,24 @@
 # Storage & Sync Roadmap
 
-Status: planned (post-1.3.0). This document captures the design decisions for the
-book-file storage rework and folder-sync features.
+Status: in progress on `storage-rework`. Stages 0–2 landed (uncommitted at time
+of writing). This document captures the design decisions for the book-file
+storage rework and folder-sync features.
+
+**Stage status**: 0 ✅ persist+revoke · 1 ✅ content-addressed binary store ·
+2 ✅ linked-mode plumbing (Electron) · 3 folder sync · 4 follow-ons
+
+Stage 2 details as implemented: the `offreader-file://` scheme is registered
+privileged (`supportFetchAPI`, `stream`) in `electron/src/index.ts`; a
+main-process allowlist (`allowedFilePaths`) is populated via the
+`offreader:register-file-path` IPC before any fetch, and `protocol.handle`
+403s anything not registered. Linked-book reads go through
+`fileStorage.retrieveBookBlob(book)` → `retrieveLinkedBlob(sourcePath)` →
+`fetch(offreader-file://file/?p=<path>)`. Missing linked books are kept in
+the library with `Book.missing` and the reader offers a relink picker
+(`useLibrary.relinkBook`, which re-hashes the new file). The import-mode
+setting lives at `offreader-import-mode` (`src/utils/importMode.ts`) and is
+surfaced in `ImportModeDialog` (per-import choice) and `ManageLibrary`
+(default).
 
 ## Current architecture
 

@@ -24,6 +24,8 @@ interface BookReaderProps {
   bookId: string;
   book: Book;
   updateLibraryProgress: (bookId: string, progress: number) => void;
+  /** Repoints a linked book at a new source path; resolves true on success. */
+  relinkBook?: (bookId: string, newPath: string) => Promise<boolean>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,7 +75,7 @@ function showSingleTapHint() {
   }, 2000);
 }
 
-const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookReaderProps) => {
+const BookReader = ({ bookId: propBookId, book, updateLibraryProgress, relinkBook }: BookReaderProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -348,9 +350,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         localStorage.setItem('epub-single-tap-hint-shown', 'true');
       }
 
-      // contentHash addresses the content-addressed store; id covers books not
-      // yet migrated from the legacy UUID-keyed location.
-      const fileBlob = await fileStorage.retrieveBlob(book.contentHash ?? book.id, book.format);
+      // Resolves managed bytes from the content-addressed store (or the legacy
+      // UUID-keyed location pre-migration) and linked bytes from sourcePath.
+      const fileBlob = await fileStorage.retrieveBookBlob(book);
       const readerFile = new File(
         [fileBlob],
         `${book.id}${extensionForFormat(book.format)}`,
@@ -421,6 +423,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
 
       setIsLoading(false);
+      setError(null);
       isInitializedRef.current = true;
 
       // Build search index after reader is ready
@@ -560,7 +563,26 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
                 Back
               </Button>
               <p className="text-destructive font-medium mb-2">Error loading book</p>
-              <p className="text-muted-foreground text-sm">{error}</p>
+              <p className="text-muted-foreground text-sm">
+                {book.source === 'linked' && book.sourcePath
+                  ? `The linked file couldn't be read: ${book.sourcePath}`
+                  : error}
+              </p>
+              {book.source === 'linked' && relinkBook && (
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={async () => {
+                    const newPath = await window.offreaderFiles?.pickBookFile();
+                    if (!newPath) return;
+                    // Success updates the book record → this component's init
+                    // effect re-runs and retries the open automatically.
+                    await relinkBook(book.id, newPath);
+                  }}
+                >
+                  Relink file…
+                </Button>
+              )}
             </div>
           </div>
         )}

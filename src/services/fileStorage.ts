@@ -180,6 +180,54 @@ class CapacitorFileStorage {
     throw new Error(`File not found for key: ${key}`);
   }
 
+  /** URL that streams a whitelisted local path to the renderer (Electron). */
+  linkedFileUrl(sourcePath: string): string {
+    return `offreader-file://file/?p=${encodeURIComponent(sourcePath)}`;
+  }
+
+  /**
+   * A linked book's bytes, streamed straight from its source path over the
+   * offreader-file:// scheme — never copied into app storage. Registers the
+   * path first so the main-process allowlist lets the fetch through.
+   */
+  async retrieveLinkedBlob(sourcePath: string): Promise<Blob> {
+    const files = window.offreaderFiles;
+    if (!files) throw new Error('Linked books are only supported in the desktop app');
+    await files.registerPath(sourcePath);
+    const response = await fetch(this.linkedFileUrl(sourcePath));
+    if (!response.ok) {
+      throw new Error(`Linked file is not available: ${sourcePath}`);
+    }
+    return response.blob();
+  }
+
+  /**
+   * The book's bytes as a Blob, resolving through whichever backend owns them:
+   * linked books stream from `sourcePath`, stored books come from the
+   * content-addressed store (with the legacy fallback).
+   */
+  async retrieveBookBlob(
+    book: Pick<Book, 'id' | 'format' | 'contentHash' | 'source' | 'sourcePath'>,
+  ): Promise<Blob> {
+    if (book.source === 'linked' && book.sourcePath) {
+      return this.retrieveLinkedBlob(book.sourcePath);
+    }
+    return this.retrieveBlob(book.contentHash ?? book.id, book.format);
+  }
+
+  /**
+   * True if the book's bytes are reachable — for linked books that's the
+   * source path still existing on disk, for stored books the store key.
+   */
+  async bookFileExists(
+    book: Pick<Book, 'id' | 'contentHash' | 'source' | 'sourcePath'>,
+  ): Promise<boolean> {
+    if (book.source === 'linked' && book.sourcePath) {
+      return window.offreaderFiles?.fileExists(book.sourcePath) ?? false;
+    }
+    return this.fileExists(book.contentHash ?? book.id);
+  }
+
   /** True if `key` exists in either the new store or the legacy location. */
   async fileExists(key: string): Promise<boolean> {
     if (this.usesNativeFs()) {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Directory } from '@capacitor/filesystem';
 import { fileStorage } from '@/services/fileStorage';
 import { sha256Hex } from '@/utils/hash';
@@ -258,6 +258,82 @@ describe('CapacitorFileStorage', () => {
       expect(count).toBe(1);
       expect(blobMap.has('valid.epub')).toBe(true);
       expect(blobMap.has('orphan.epub')).toBe(false);
+    });
+  });
+
+  describe('linked books (offreader-file://)', () => {
+    const linkedBook = {
+      id: 'b1', source: 'linked', sourcePath: '/books/dune.epub', contentHash: 'h1',
+    } as never;
+
+    afterEach(() => {
+      delete (window as { offreaderFiles?: unknown }).offreaderFiles;
+    });
+
+    it('retrieveLinkedBlob registers the path then fetches the scheme URL', async () => {
+      const registerPath = vi.fn();
+      window.offreaderFiles = { registerPath } as never;
+      mockFetch.mockResolvedValue({ ok: true, blob: async () => new Blob(['x']) });
+
+      const blob = await fileStorage.retrieveLinkedBlob('/books/dune.epub');
+
+      expect(registerPath).toHaveBeenCalledWith('/books/dune.epub');
+      expect(mockFetch).toHaveBeenCalledWith(
+        `offreader-file://file/?p=${encodeURIComponent('/books/dune.epub')}`,
+      );
+      expect(blob.size).toBe(1);
+    });
+
+    it('retrieveLinkedBlob rejects when the source file is gone', async () => {
+      window.offreaderFiles = { registerPath: vi.fn() } as never;
+      mockFetch.mockResolvedValue({ ok: false, status: 403 });
+
+      await expect(fileStorage.retrieveLinkedBlob('/books/gone.epub'))
+        .rejects.toThrow('/books/gone.epub');
+    });
+
+    it('retrieveLinkedBlob throws without the desktop file API', async () => {
+      await expect(fileStorage.retrieveLinkedBlob('/books/dune.epub'))
+        .rejects.toThrow('desktop');
+    });
+
+    it('retrieveBookBlob routes linked books to the source path', async () => {
+      const registerPath = vi.fn();
+      window.offreaderFiles = { registerPath } as never;
+      mockFetch.mockResolvedValue({ ok: true, blob: async () => new Blob(['linked!']) });
+
+      const blob = await fileStorage.retrieveBookBlob(linkedBook);
+      expect(blob.size).toBe(7);
+      expect(registerPath).toHaveBeenCalledWith('/books/dune.epub');
+    });
+
+    it('retrieveBookBlob routes managed books to the store', async () => {
+      blobMap.set('m1.epub', new Blob(['managed']));
+      const blob = await fileStorage.retrieveBookBlob(
+        { id: 'b2', contentHash: 'm1', format: 'EPUB' } as never,
+      );
+      expect(blob.size).toBe(7);
+    });
+
+    it('bookFileExists checks the source path for linked books', async () => {
+      const fileExists = vi.fn().mockResolvedValue(true);
+      window.offreaderFiles = { fileExists } as never;
+
+      expect(await fileStorage.bookFileExists(linkedBook)).toBe(true);
+      expect(fileExists).toHaveBeenCalledWith('/books/dune.epub');
+      // Never touches the store for linked books
+      expect(mockStat).not.toHaveBeenCalled();
+    });
+
+    it('bookFileExists is false for linked books without the desktop API', async () => {
+      expect(await fileStorage.bookFileExists(linkedBook)).toBe(false);
+    });
+
+    it('bookFileExists checks the store key for managed books', async () => {
+      blobMap.set('m2.epub', new Blob(['x']));
+      expect(await fileStorage.bookFileExists(
+        { id: 'b3', contentHash: 'm2' } as never,
+      )).toBe(true);
     });
   });
 });

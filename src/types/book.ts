@@ -60,4 +60,8 @@ export interface Book {
   source?: 'managed' | 'linked';
   /** Absolute path of a linked book's source file. */
   sourcePath?: string;
+  /** Set at startup when a linked book's sourcePath can't be read — the book
+   *  stays in the library (progress/metadata intact) and the reader offers a
+   *  relink flow. Cleared on the next init once the file is reachable again. */
+  missing?: boolean;
 }
