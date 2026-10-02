@@ -104,3 +104,6 @@ dist-electron/
 
 *code-workspace
 electron/node_modules/electron/dist/
+
+# Local agent notes (user-specific, not for the repo)
+AGENTS.md

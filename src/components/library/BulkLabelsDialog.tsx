@@ -16,7 +16,7 @@ import { LABEL_COLORS } from "@/constants/labels";
 
 interface BulkLabelsDialogProps {
   isOpen: boolean;
-  /** The currently selected books — used to compute each label's tri-state. */
+  /** The currently selected books: used to compute each label's tri-state. */
   books: Book[];
   /** Called with the labels to add to, and remove from, every selected book. */
   onApply: (addLabelIds: Set<string>, removeLabelIds: Set<string>) => void;

@@ -3,7 +3,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 /**
  * JS surface of the Android SAF plugin (OffreaderFilesPlugin.java). A linked
  * "folder" on Android is a persisted document-tree URI (content://…), not a
- * filesystem path — scoped storage leaves no other way to enumerate user
+ * filesystem path: scoped storage leaves no other way to enumerate user
  * folders. Only callable on Android; the plugin is registered in
  * MainActivity.
  */
@@ -28,7 +28,7 @@ interface OffreaderFilesPluginType {
   resolveToCache(options: { uri: string }): Promise<{ path: string }>;
 }
 
-// Lazy — registering eagerly at module load would run native plumbing on web
+// Lazy: registering eagerly at module load would run native plumbing on web
 // too, and test mocks of @capacitor/core don't carry registerPlugin.
 let plugin: OffreaderFilesPluginType | null = null;
 function getPlugin(): OffreaderFilesPluginType {

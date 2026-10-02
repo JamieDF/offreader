@@ -120,11 +120,11 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress, relinkBoo
     }
   };
 
-  // Stable ref for settings — lets initReader use current settings without being a dep
+  // Stable ref for settings: lets initReader use current settings without being a dep
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
 
-  // Stable ref for updateLibraryProgress — prop may change identity on parent re-renders
+  // Stable ref for updateLibraryProgress: prop may change identity on parent re-renders
   const updateLibraryProgressRef = useRef(updateLibraryProgress);
   useEffect(() => { updateLibraryProgressRef.current = updateLibraryProgress; }, [updateLibraryProgress]);
 
@@ -283,7 +283,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress, relinkBoo
         attach(overlayer);
       });
 
-      // Re-runs per section load — tap listeners must be re-attached each time
+      // Re-runs per section load: tap listeners must be re-attached each time
       view.addEventListener('load', (e: Event) => {
         const { doc } = (e as CustomEvent<{ doc: Document }>).detail;
         let t0 = 0;

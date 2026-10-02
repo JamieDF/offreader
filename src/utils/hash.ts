@@ -1,6 +1,6 @@
 /**
  * SHA-256 of a Blob's contents, hex-encoded. Loads the whole blob into memory
- * once — acceptable since the reader materializes full files anyway, and it
+ * once: acceptable since the reader materializes full files anyway, and it
  * runs once per import/migration rather than per open.
  */
 export async function sha256Hex(blob: Blob): Promise<string> {

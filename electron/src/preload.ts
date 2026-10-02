@@ -45,7 +45,7 @@ contextBridge.exposeInMainWorld('offreaderFiles', {
     return () => ipcRenderer.removeListener('offreader:folder-changed', listener);
   },
   /** Takes the queued "open with" file paths (argv / second-instance / macOS
-   *  open-file). Pull-based — returns and clears the queue. */
+   *  open-file). Pull-based: returns and clears the queue. */
   takePendingFiles: () => ipcRenderer.invoke('offreader:take-pending-files'),
   /** Nudge that new files were opened while the app is running. */
   onFilesOpened: (callback: () => void) => {

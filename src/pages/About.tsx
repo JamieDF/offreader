@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { AboutContent } from '@/components/library/AboutContent';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 
-// True only when running in a plain web browser — not the Android app
+// True only when running in a plain web browser: not the Android app
 // or the Electron desktop build. We use it to surface the desktop
 // download link only where it's relevant. Capacitor.getPlatform()
 // returns 'web' in a browser, 'android' in the Android app, and

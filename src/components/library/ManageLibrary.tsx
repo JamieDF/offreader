@@ -355,7 +355,7 @@ export function ManageLibrary() {
         </div>
       </div>
 
-      {/* Import mode — desktop only; web/Android always store copies.
+      {/* Import mode: desktop only; web/Android always store copies.
           Affects future imports only: existing books keep their mode. */}
       {isDesktop && (
         <div className="space-y-3">
@@ -369,13 +369,13 @@ export function ManageLibrary() {
                 {
                   value: 'linked' as ImportMode,
                   label: 'Link in place',
-                  hint: "Read files from their current location — nothing is duplicated. Best for large existing collections.",
+                  hint: "Read files from their current location: nothing is duplicated. Best for large existing collections.",
                   icon: Link2,
                 },
                 {
                   value: 'managed' as ImportMode,
                   label: 'Copy into library',
-                  hint: "Duplicate files into OffReader storage — books keep working if the originals move.",
+                  hint: "Duplicate files into OffReader storage: books keep working if the originals move.",
                   icon: HardDrive,
                 },
               ]
@@ -399,13 +399,13 @@ export function ManageLibrary() {
               </button>
             ))}
             <p className="text-xs text-muted-foreground">
-              Applies to new imports — existing books keep how they were added.
+              Applies to new imports: existing books keep how they were added.
             </p>
           </div>
         </div>
       )}
 
-      {/* Sync folders — desktop + Android. Watched folders (desktop) / SAF
+      {/* Sync folders: desktop + Android. Watched folders (desktop) / SAF
           document trees (Android) keep the library in step with the
           filesystem; books are always linked, never copied. */}
       {canSyncFolders && (
@@ -448,7 +448,7 @@ export function ManageLibrary() {
                     toast.success(
                       result.added > 0
                         ? `Added ${result.added} book${result.added === 1 ? '' : 's'} from ${dir}`
-                        : `Folder synced — no new books found`,
+                        : `Folder synced: no new books found`,
                     );
                   } finally {
                     setIsScanning(false);
@@ -480,14 +480,14 @@ export function ManageLibrary() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Files are linked in place — nothing is copied. If a file is moved
+              Files are linked in place: nothing is copied. If a file is moved
               or renamed, OffReader re-finds it by content.
             </p>
           </div>
         </div>
       )}
 
-      {/* Backup — desktop only. Copies book files + a metadata manifest into
+      {/* Backup: desktop only. Copies book files + a metadata manifest into
           a chosen directory. */}
       {isDesktop && (
         <div className="space-y-3">

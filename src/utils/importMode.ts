@@ -6,7 +6,7 @@ export type ImportMode = NonNullable<Book['source']>;
 const IMPORT_MODE_KEY = 'offreader-import-mode';
 
 /**
- * Desktop default is 'linked' — read books in place from their source path
+ * Desktop default is 'linked': read books in place from their source path
  * rather than duplicating them into app storage. Only consulted on Electron;
  * other platforms always import managed copies. Returns 'managed' on
  * web/Android anyway so a stray stored value can't surprise anyone.

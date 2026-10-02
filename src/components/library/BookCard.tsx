@@ -96,7 +96,7 @@ export function BookCard({ book, onSelect, labels = [], dataTourId, selectionMod
             </div>
           )}
 
-          {/* Missing-source badge — a linked book whose file can't be read.
+          {/* Missing-source badge: a linked book whose file can't be read.
               Takes the corner over "Done" since it needs attention. */}
           {book.missing && !selectionMode && (
             <div className="absolute top-1.5 right-1.5 bg-destructive text-destructive-foreground text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -105,7 +105,7 @@ export function BookCard({ book, onSelect, labels = [], dataTourId, selectionMod
             </div>
           )}
 
-          {/* Completed badge — hidden while selecting (checkbox takes the corner) */}
+          {/* Completed badge: hidden while selecting (checkbox takes the corner) */}
           {book.progress === 100 && !book.missing && !selectionMode && (
             <div className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
               Done
@@ -143,7 +143,7 @@ export function BookCard({ book, onSelect, labels = [], dataTourId, selectionMod
         </div>
       </button>
 
-      {/* Selection checkbox — outside the card button so it's not nested
+      {/* Selection checkbox: outside the card button so it's not nested
           interactive content. Always visible in selection mode; on hover
           otherwise as an entry affordance on desktop. Not rendered when the
           card isn't selectable (e.g. the tour demo card). */}

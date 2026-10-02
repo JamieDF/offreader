@@ -1,12 +1,12 @@
 /**
  * Minimal IndexedDB-backed binary store for book files on web/Electron.
  *
- * Books are stored as raw Blobs keyed by `<contentHash>.<ext>` — no base64,
+ * Books are stored as raw Blobs keyed by `<contentHash>.<ext>`: no base64,
  * no Capacitor bridge. `get` returns the stored Blob directly so the reader
  * can wrap it in a File without any decode pass.
  *
  * (The Capacitor Filesystem web shim also uses IndexedDB, but persists base64
- * strings — this store exists to keep bytes as bytes.)
+ * strings: this store exists to keep bytes as bytes.)
  */
 
 const DB_NAME = 'offreader-files';
@@ -25,7 +25,7 @@ function openDb(): Promise<IDBDatabase> {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-    // If the DB fails to open, don't poison the cache — next call retries.
+    // If the DB fails to open, don't poison the cache: next call retries.
     dbPromise.catch(() => { dbPromise = null; });
   }
   return dbPromise;

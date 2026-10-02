@@ -148,7 +148,7 @@ export function BookDetailsView({ book, onRemove }: BookDetailsViewProps) {
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                 {book.source === 'linked' ? (
                   <li>
-                    The library entry — the file at{' '}
+                    The library entry: the file at{' '}
                     <span className="font-mono text-xs break-all">{book.sourcePath}</span>{' '}
                     is <span className="font-medium">not</span> deleted
                   </li>

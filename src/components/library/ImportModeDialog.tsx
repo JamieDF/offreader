@@ -22,7 +22,7 @@ const OPTIONS: { value: ImportMode; label: string; hint: string; icon: typeof Li
   {
     value: 'linked',
     label: 'Link in place',
-    hint: 'Read files from their current location — nothing is copied. If a file is moved or deleted, the book can be relinked.',
+    hint: 'Read files from their current location: nothing is copied. If a file is moved or deleted, the book can be relinked.',
     icon: Link2,
   },
   {

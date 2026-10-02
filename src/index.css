@@ -32,31 +32,6 @@
     --reader-page: 40 25% 98%;
   }
 
-  .theme-sepia {
-    --background: 38 45% 90%;
-    --foreground: 25 35% 20%;
-    --card: 38 40% 92%;
-    --card-foreground: 25 35% 20%;
-    --popover: 38 40% 92%;
-    --popover-foreground: 25 35% 20%;
-    --primary: 25 50% 35%;
-    --primary-foreground: 38 45% 95%;
-    --secondary: 35 30% 85%;
-    --secondary-foreground: 25 30% 25%;
-    --muted: 35 25% 88%;
-    --muted-foreground: 25 20% 45%;
-    --accent: 35 35% 82%;
-    --accent-foreground: 25 40% 25%;
-    --destructive: 0 65% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 35 30% 80%;
-    --input: 35 30% 80%;
-    --ring: 25 45% 45%;
-    --reader-bg: 38 45% 90%;
-    --reader-text: 25 35% 20%;
-    --reader-page: 38 40% 92%;
-  }
-
   .theme-dark, .dark {
     --background: 30 15% 8%;
     --foreground: 35 15% 85%;

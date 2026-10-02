@@ -265,9 +265,9 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     // Update library service silently and save to storage
     libraryService.updateBooksSilent(updatedBooks);
     await saveStoredBooks(updatedBooks);
-  }, []); // Empty deps intentional — prevents re-render loops
+  }, []); // Empty deps intentional: prevents re-render loops
 
-  /** The storage key for a book's file bytes — content hash post-migration,
+  /** The storage key for a book's file bytes: content hash post-migration,
    *  book id for pre-migration records. Linked books store no bytes, so
    *  they neither produce nor protect a storage key. */
   const storageKey = (book: Book) =>
@@ -302,7 +302,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     }
   }, [books]);
 
-  // Bulk operations — each writes the library JSON once, not once per book.
+  // Bulk operations: each writes the library JSON once, not once per book.
 
   const assignBooksToShelf = useCallback(async (bookIds: string[], shelfId: string | null) => {
     const idSet = new Set(bookIds);

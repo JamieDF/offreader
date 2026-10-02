@@ -1,4 +1,4 @@
-// Type stubs for foliate-js — no official @types package exists
+// Type stubs for foliate-js: no official @types package exists
 
 declare module 'foliate-js/pdfjs.js' {
   export const pdfjsLib: any

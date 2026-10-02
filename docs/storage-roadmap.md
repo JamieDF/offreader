@@ -1,20 +1,20 @@
 # Storage & Sync Roadmap
 
-Status: complete on `storage-rework` — all stages landed, committed, and
+Status: complete on `storage-rework`: all stages landed, committed, and
 pushed. This document captures the design decisions for the book-file
 storage rework and folder-sync features.
 
 **Stage status**: 0 ✅ persist+revoke · 1 ✅ content-addressed binary store ·
 2 ✅ linked-mode plumbing (Electron) · 3 ✅ folder sync (Electron) ·
 4 ✅ follow-ons (Move-into-library bulk action, open-with associations,
-export/backup, Android SAF plugin — compile-verified, not device-tested)
+export/backup, Android SAF plugin: compile-verified, not device-tested)
 
 Stage 3 details as implemented: `offreader:scan-folder` walks a directory
 recursively for book extensions; `offreader:watch-folder` uses chokidar
 (`fs.watch` isn't recursive on Linux) and debounces into
 `offreader:folder-changed` renderer events. `src/services/folderSync.ts`
 owns the algorithm: known sourcePaths skip re-hashing, unknown files are
-read once — a hash match on a linked book repoints `sourcePath` (moved
+read once: a hash match on a linked book repoints `sourcePath` (moved
 file), on a managed book means "already have it", otherwise the file
 imports via the shared pipeline in `bookImport.ts`. Unseen paths under a
 watched folder flag their books `missing`. Folders persist under
@@ -69,29 +69,29 @@ IndexedDB; on Android/Electron the plugin writes a real binary file.
 
 ## Known problems (audit)
 
-- **+33% size tax persisted on web** — IndexedDB stores the base64 string itself.
+- **+33% size tax persisted on web**: IndexedDB stores the base64 string itself.
   `checkStorageQuota` bakes this in (`fileSize * 1.33`).
-- **~3–4 transient copies on open** — base64 string → `atob` → `Uint8Array` →
+- **~3-4 transient copies on open**: base64 string → `atob` → `Uint8Array` →
   Blob → object URL → `fetch` → another Blob → `File` for foliate
   (`BookReader.tsx` ~line 351). A 50MB CBZ spikes 200MB+.
-- **`charCodeAt` decode loop** — O(n) JS loop, ~66M iterations for a 50MB file,
+- **`charCodeAt` decode loop**: O(n) JS loop, ~66M iterations for a 50MB file,
   seconds of jank on mobile. It's the standard base64→Blob idiom forced by the
   API; the fix is not decoding at all.
-- **Blob URLs never revoked** — `revokeObjectURL` appears nowhere; every opened
+- **Blob URLs never revoked**: `revokeObjectURL` appears nowhere; every opened
   book keeps its full blob alive for the session.
-- **No dedup** — filename key is `uuidv4()` per import; the same file imported
+- **No dedup**: filename key is `uuidv4()` per import; the same file imported
   twice is stored twice.
-- **`filePath` is vestigial** — stored on `Book`, blanked at init, never read.
+- **`filePath` is vestigial**: stored on `Book`, blanked at init, never read.
   `fileExists` probes up to 6 extensions per book at startup instead.
-- **Whole-library JSON rewrite per op** — every progress tick re-serializes all
+- **Whole-library JSON rewrite per op**: every progress tick re-serializes all
   book metadata. Fine at ~50 books, wasteful at 500.
-- **No `navigator.storage.persist()`** — the entire web-library is evictable
+- **No `navigator.storage.persist()`**: the entire web-library is evictable
   under browser disk pressure. "My books disappeared" failure mode.
-- **Android files land in public `Documents/books/<uuid>.ext`** — visible in
+- **Android files land in public `Documents/books/<uuid>.ext`**: visible in
   file managers' recent-files views. A user can delete an anonymous-UUID file
   → next launch drops the book silently (progress included). Public Documents
   files can also linger after uninstall and aren't covered by Auto Backup.
-- **`retrieveFile` swallows errors** — corrupted file looks like "not found".
+- **`retrieveFile` swallows errors**: corrupted file looks like "not found".
 
 ## Target design
 
@@ -102,18 +102,18 @@ IndexedDB; on Android/Electron the plugin writes a real binary file.
    (`getBookUrl(id) → url`):
    - Web/Electron: raw `Blob` in IndexedDB → `createObjectURL` direct.
    - Native: keep binary files; on open use `Filesystem.getUri` +
-     `Capacitor.convertFileSrc` so the WebView streams from disk — no bridge
+     `Capacitor.convertFileSrc` so the WebView streams from disk: no bridge
      copy, no base64.
    - Electron linked books: custom protocol (`offreader-file://`) via
-     `protocol.handle` streaming from disk — enables pdfjs range requests.
-3. **`Book.source: 'managed' | 'linked'` + `sourcePath`** — mode is a property
+     `protocol.handle` streaming from disk: enables pdfjs range requests.
+3. **`Book.source: 'managed' | 'linked'` + `sourcePath`**: mode is a property
    of the book's bytes, not the library. Mixed libraries are normal.
 4. **Revoke blob URLs** on reader unmount.
 5. **`navigator.storage.persist()`** on web/Electron.
 6. **Android: `Directory.Data` (app-private)** instead of `Directory.Documents`
-   — invisible to file managers, cleaned on uninstall, covered by Auto Backup.
+  : invisible to file managers, cleaned on uninstall, covered by Auto Backup.
    Migration moves existing files on first launch.
-7. **Per-book metadata store** (IndexedDB keys or SQLite) — later; makes progress
+7. **Per-book metadata store** (IndexedDB keys or SQLite): later; makes progress
    ticks cheap.
 8. **Read-through cache** acceptable for slow linked sources (SAF content URIs).
 
@@ -125,7 +125,7 @@ IndexedDB; on Android/Electron the plugin writes a real binary file.
 - Per-import override checkbox, iTunes-style ("Copy files to library" model).
 - Folder sync is always linked by definition.
 - **Asymmetric conversion**: linked→managed is possible ("Move into library"
-  action — good multi-select bulk op); managed→linked is impossible (no source
+  action: good multi-select bulk op); managed→linked is impossible (no source
   path exists). The setting only affects *new* imports; existing books keep
   their mode.
 - Linked default assumes the curated-folder user (e.g. 100GB+ Calibre-style
@@ -136,13 +136,13 @@ IndexedDB; on Android/Electron the plugin writes a real binary file.
 - **Web**: copy-only, always. Browsers can't durably reference arbitrary files.
   The 100GB-library use case is a desktop feature.
 - **Electron**: linked sync = `dialog.showOpenDialog` + index + `fs.watch`.
-  Cheapest linked implementation — do it first.
+  Cheapest linked implementation: do it first.
 - **Android**: linked mode possible via SAF `ACTION_OPEN_DOCUMENT_TREE` +
   persisted URI permission, but needs a custom Capacitor plugin (Filesystem
   doesn't expose document trees). More revocation surfaces (folder rename, SD
   eject, reinstall) and slower enumeration. Phase after Electron. Also
   motivated by the self-documenting-filename benefit.
-- Hashing a huge library on first index takes real time (disk-bound) — hash
+- Hashing a huge library on first index takes real time (disk-bound): hash
   lazily or use path+size+mtime as fast identity with hash as upgrade.
 
 ## Roadmap
@@ -162,20 +162,20 @@ IndexedDB; on Android/Electron the plugin writes a real binary file.
 
 Not done; deliberate follow-ups once the core lands:
 
-- **Per-book metadata store** — `offreader-books` is still one JSON array
+- **Per-book metadata store**: `offreader-books` is still one JSON array
   rewritten on every save (progress ticks serialize the whole library). Fine
   at ~50 books, wasteful at 500+. Move to per-book records (IndexedDB keys or
   SQLite). The audit entry above describes the problem.
-- **Lazy hashing for large folder indexing** — the folder scan currently reads
+- **Lazy hashing for large folder indexing**: the folder scan currently reads
   + hashes every unknown file eagerly. For a 100GB+ initial index this is
   disk-bound and slow; stage the fast identity (path+size+mtime) and hash
   in the background. See "Platform notes".
-- **SAF device validation** — the Android plugin compiles but URI permission
+- **SAF device validation**: the Android plugin compiles but URI permission
   persistence, tree listing, and `resolveToCache` on large files are
   untested on real hardware.
 
 ## Context
 
-User motivation: a 100GB+ existing epub/pdf library — copying it into managed
+User motivation: a 100GB+ existing epub/pdf library: copying it into managed
 storage is a non-starter, which is why linked mode is a first-class design
 constraint rather than a later nicety.

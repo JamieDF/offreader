@@ -31,7 +31,7 @@ vi.mock('@capacitor/core', () => ({
   },
 }));
 
-// In-memory blobStore — fake-indexeddb structuredClones stored values, which
+// In-memory blobStore: fake-indexeddb structuredClones stored values, which
 // degrades jsdom Blobs to plain objects; the Map keeps the real Blob intact.
 // blobStore itself is covered against real IDB in blobStore.test.ts.
 const blobMap = new Map<string, Blob>();

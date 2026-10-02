@@ -28,7 +28,7 @@ function getBlobStoreKeys(page: Page): Promise<string[]> {
   );
 }
 
-/** Pick files via the import dialog without clicking PostImportDialog's Done —
+/** Pick files via the import dialog without clicking PostImportDialog's Done , 
  *  for flows where nothing new imports (e.g. duplicates). */
 async function pickImportFiles(page: Page, filePaths: string[]): Promise<void> {
   const fileChooserPromise = page.waitForEvent('filechooser');

@@ -32,7 +32,7 @@ const Privacy = () => {
             <h2 className="text-sm font-semibold">Overview</h2>
             <p className="text-sm text-muted-foreground">
               OffReader is an offline ebook reader. We do not collect, store, or transmit any
-              personal data. Everything — your books, reading progress, bookmarks, and settings —
+              personal data. Everything (your books, reading progress, bookmarks, and settings)
               stays on your device.
             </p>
           </section>
@@ -63,7 +63,7 @@ const Privacy = () => {
               <li className="text-sm text-muted-foreground flex gap-2">
                 <span className="shrink-0">·</span>
                 <span>
-                  <strong className="text-foreground">Internet</strong> — used solely for delivering
+                  <strong className="text-foreground">Internet</strong>: used solely for delivering
                   the app and its updates. The app functions fully offline once installed. No data is
                   transmitted during use.
                 </span>

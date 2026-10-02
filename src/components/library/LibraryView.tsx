@@ -112,7 +112,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
 
   // Folder sync: re-scan configured folders once the library has loaded.
   // Desktop registers watchers + rescan-on-change; Android rescans SAF trees
-  // on open (SAF has no watch primitive). Deferred until init completes —
+  // on open (SAF has no watch primitive). Deferred until init completes , 
   // scanning with an empty library would re-import everything as new.
   useEffect(() => {
     if (!supportsFolderSync()) return;
@@ -290,7 +290,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   };
 
   // FAB / EmptyState click handler. During the tour, route the click into
-  // the demo flow instead of opening the OS file picker — driver.js's
+  // the demo flow instead of opening the OS file picker: driver.js's
   // overlay would otherwise block user gestures anyway.
   const handleImportClick = () => {
     if (tourOpen) {
@@ -531,7 +531,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
             <AlertDialogDescription>
               The selected books and their reading progress will be permanently removed from your library.
               {selectedBooks.some(b => b.source === 'linked') &&
-                ' Books linked to files outside OffReader will only be removed from the library — the files themselves are not deleted.'}
+                ' Books linked to files outside OffReader will only be removed from the library: the files themselves are not deleted.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

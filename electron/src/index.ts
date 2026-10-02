@@ -13,24 +13,14 @@ import { pathToFileURL } from 'node:url';
 
 import { ElectronCapacitorApp, setupContentSecurityPolicy, setupReloadWatcher } from './setup';
 
-// Linked books are read in place from their source path and served to the
-// WebView over a custom scheme — no copy into app storage, no base64
-// round-trip. Must be registered before app ready for fetch() support.
-protocol.registerSchemesAsPrivileged([
-  {
-    scheme: 'offreader-file',
-    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true },
-  },
-]);
-
 // Only paths explicitly registered by the renderer (linked books / picked
-// files) may be served — keeps the scheme from becoming a read-anything hole.
+// files) may be served: keeps the scheme from becoming a read-anything hole.
 const allowedFilePaths = new Set<string>();
 
 const BOOK_EXTENSIONS = new Set(['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz']);
 
 // "Open with" / double-clicked book files land here until the renderer pulls
-// them via offreader:take-pending-files — pull-based so launch timing (cold
+// them via offreader:take-pending-files: pull-based so launch timing (cold
 // start vs second instance vs macOS open-file) can't drop events.
 const pendingOpenFiles: string[] = [];
 const collectOpenPaths = (argv: string[]) => {
@@ -45,6 +35,7 @@ collectOpenPaths(process.argv);
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   // A second "open with" hit should deliver the file to the running instance.
+  // quit() doesn't unwind the async init below, so it's guarded by the lock.
   app.quit();
 }
 app.on('second-instance', (_event, argv) => {
@@ -77,6 +68,25 @@ const capacitorFileConfig: CapacitorElectronConfig = getCapacitorElectronConfig(
 // const myCapacitorApp = new ElectronCapacitorApp(capacitorFileConfig);
 const myCapacitorApp = new ElectronCapacitorApp(capacitorFileConfig, trayMenuTemplate, appMenuBarMenuTemplate);
 
+// Linked books are read in place from their source path and served to the
+// WebView over a custom scheme: no copy into app storage, no base64
+// round-trip. registerSchemesAsPrivileged may only effectively be called
+// once: a later call replaces earlier privileges: and electron-serve
+// registers its own scheme inside the ElectronCapacitorApp constructor.
+// This call must therefore come AFTER that construction and re-declare the
+// capacitor scheme's privileges alongside ours, or fetch() support for
+// offreader-file is lost.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'offreader-file',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true },
+  },
+  {
+    scheme: capacitorFileConfig.electron?.customUrlScheme ?? 'capacitor-electron',
+    privileges: { standard: true, secure: true, allowServiceWorkers: true, supportFetchAPI: true },
+  },
+]);
+
 // If deeplinking is enabled then we will set it up here.
 if (capacitorFileConfig.electron?.deepLinkingEnabled) {
   setupElectronDeepLinking(myCapacitorApp, {
@@ -89,19 +99,21 @@ if (electronIsDev) {
   setupReloadWatcher(myCapacitorApp);
 }
 
-// Run Application
+// Run Application: only for the instance holding the single-instance lock;
+// without this a second "open with" launch still builds a window before quit.
 (async () => {
+  if (!gotSingleInstanceLock) return;
   // Wait for electron app to be ready.
   await app.whenReady();
   // Streams whitelisted source files (linked books / picked imports) to the
-  // renderer over offreader-file://file/?p=<path> — no copy into app storage.
+  // renderer over offreader-file://file/?p=<path>: no copy into app storage.
   protocol.handle('offreader-file', async (request) => {
     const sourcePath = new URL(request.url).searchParams.get('p') ?? '';
     if (!allowedFilePaths.has(sourcePath)) {
       return new Response('Forbidden', { status: 403 });
     }
     const upstream = await net.fetch(pathToFileURL(sourcePath).toString());
-    // Wrap to add CORS — the request is cross-scheme from the app origin.
+    // Wrap to add CORS: the request is cross-scheme from the app origin.
     return new Response(upstream.body, {
       status: upstream.status,
       headers: {
@@ -238,7 +250,7 @@ ipcMain.handle('offreader:scan-folder', async (_event, dirPath: string) => {
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch {
-      continue; // unreadable dir (permissions, dangling symlink) — skip
+      continue; // unreadable dir (permissions, dangling symlink): skip
     }
     for (const entry of entries) {
       const full = join(dir, entry.name);
@@ -253,7 +265,7 @@ ipcMain.handle('offreader:scan-folder', async (_event, dirPath: string) => {
   return results.sort((a, b) => a.path.localeCompare(b.path));
 });
 
-// chokidar, not fs.watch — recursive watching isn't supported on Linux's
+// chokidar, not fs.watch: recursive watching isn't supported on Linux's
 // inotify. Events are debounced so a batch of file ops yields one rescan.
 const folderWatchers = new Map<string, FSWatcher>();
 const FOLDER_EVENT_DEBOUNCE_MS = 750;
@@ -263,7 +275,7 @@ ipcMain.handle('offreader:watch-folder', (_event, dirPath: string) => {
   const win = myCapacitorApp.getMainWindow();
   let timer: NodeJS.Timeout | null = null;
   const notify = (changedPath?: string) => {
-    // Book formats only — ignores churn on unrelated files in the folder.
+    // Book formats only: ignores churn on unrelated files in the folder.
     if (changedPath && !BOOK_EXTENSIONS.has(extname(changedPath).toLowerCase())) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
@@ -292,7 +304,7 @@ ipcMain.handle('offreader:take-pending-files', () => pendingOpenFiles.splice(0))
 // --- Library export -----------------------------------------------------------
 
 // Managed books' bytes live in renderer IndexedDB, so they arrive as a
-// buffer; linked books are copied natively — no bridge round-trip.
+// buffer; linked books are copied natively: no bridge round-trip.
 ipcMain.handle('offreader:export-write-file', async (_event, destPath: string, data: Uint8Array) => {
   await mkdir(join(destPath, '..'), { recursive: true });
   await writeFile(destPath, Buffer.from(data));

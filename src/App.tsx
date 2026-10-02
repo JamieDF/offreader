@@ -22,7 +22,7 @@ import { ElectronTitleBar } from "@/components/electron/ElectronTitleBar";
 
 const queryClient = new QueryClient();
 
-// The Electron build is frameless — the app draws its own titlebar and the
+// The Electron build is frameless: the app draws its own titlebar and the
 // shell remaps page-level `h-screen` to the area below it (see index.css).
 const isElectron = typeof window !== 'undefined' && window.Capacitor?.getPlatform() === 'electron';
 
@@ -34,7 +34,7 @@ const AppContent = () => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        // Ask the browser for persistent storage — without this, IndexedDB
+        // Ask the browser for persistent storage: without this, IndexedDB
         // (which holds the whole library on web) can be silently evicted
         // under disk pressure.
         navigator.storage?.persist?.().catch(() => {});

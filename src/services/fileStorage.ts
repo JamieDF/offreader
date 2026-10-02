@@ -33,10 +33,10 @@ const KNOWN_EXTENSIONS = ['.epub', '.pdf', '.mobi', '.azw3', '.fb2', '.cbz'] as 
  *
  * Two backends, one interface:
  * - **Native (Android/iOS)**: real binary files at `Data/books/<key>.<ext>`.
- *   Reads stream through `Capacitor.convertFileSrc` — no base64 round-trip.
+ *   Reads stream through `Capacitor.convertFileSrc`: no base64 round-trip.
  *   `Directory.Data` is app-private, so stored books don't appear as anonymous
  *   files in the user's file manager (the old `Directory.Documents` behavior).
- * - **Web/Electron**: raw Blobs in the `offreader-files` IndexedDB store —
+ * - **Web/Electron**: raw Blobs in the `offreader-files` IndexedDB store , 
  *   no base64, no persistence-format inflation.
  *
  * Keys are content hashes (`book.contentHash`) for new books. Books imported
@@ -49,7 +49,7 @@ class CapacitorFileStorage {
   private readonly BOOKS_DIR = 'books';
   private readonly STORAGE_BUFFER_MB = 10;
 
-  /** Filesystem-backend only on real native platforms — on Electron the
+  /** Filesystem-backend only on real native platforms: on Electron the
    *  Capacitor Filesystem plugin has no native implementation and silently
    *  falls back to its web (IndexedDB, base64) shim, so Electron uses
    *  blobStore alongside web. */
@@ -108,7 +108,7 @@ class CapacitorFileStorage {
 
   /**
    * Store book bytes under `key` (a content hash for new imports).
-   * `ext` overrides filename sniffing — migrations pass it explicitly since
+   * `ext` overrides filename sniffing: migrations pass it explicitly since
    * Blobs reconstructed from base64 have no name.
    */
   async storeFile(file: File | Blob, key: string, ext?: string): Promise<void> {
@@ -126,7 +126,7 @@ class CapacitorFileStorage {
     }
   }
 
-  /** The actual write — no quota check (migration reuses it for bytes already
+  /** The actual write: no quota check (migration reuses it for bytes already
    *  counted against storage). */
   private async putFileBlob(blob: Blob, key: string, ext: string): Promise<void> {
     if (this.usesNativeFs()) {
@@ -149,7 +149,7 @@ class CapacitorFileStorage {
     if (this.usesNativeFs()) {
       const ext = await this.findExtIn(Directory.Data, key, format);
       if (ext) {
-        // Streams from disk via the WebView's file handler — the file never
+        // Streams from disk via the WebView's file handler: the file never
         // crosses the JS↔native bridge as base64.
         const { uri } = await Filesystem.getUri({
           path: `${this.BOOKS_DIR}/${key}${ext}`,
@@ -188,7 +188,7 @@ class CapacitorFileStorage {
 
   /**
    * A linked book's bytes, streamed straight from its source path over the
-   * offreader-file:// scheme — never copied into app storage. Registers the
+   * offreader-file:// scheme: never copied into app storage. Registers the
    * path first so the main-process allowlist lets the fetch through.
    * On Android, `sourcePath` is a SAF content:// URI: the plugin copies the
    * bytes into app cache (skipped when the cache is fresh) and the result
@@ -229,7 +229,7 @@ class CapacitorFileStorage {
   }
 
   /**
-   * True if the book's bytes are reachable — for linked books that's the
+   * True if the book's bytes are reachable: for linked books that's the
    * source path still existing on disk, for stored books the store key.
    */
   async bookFileExists(
@@ -286,7 +286,7 @@ class CapacitorFileStorage {
     }
   }
 
-  /** All files in both stores — keys (without extension) in `id`. */
+  /** All files in both stores: keys (without extension) in `id`. */
   async listStoredFiles(): Promise<StoredFile[]> {
     const files: StoredFile[] = [];
 
@@ -308,7 +308,7 @@ class CapacitorFileStorage {
       }
     }
 
-    // Legacy location — same entry may appear in both during a partial
+    // Legacy location: same entry may appear in both during a partial
     // migration; dedupe by filename.
     const seen = new Set(files.map(f => f.filename));
     for (const file of await this.listNativeFiles(Directory.Documents)) {
@@ -377,7 +377,7 @@ class CapacitorFileStorage {
    * new content-addressed store. Sets `book.contentHash` in place; the caller
    * persists the updated records. Returns true if any book was migrated.
    *
-   * Safe to run every startup — books with `contentHash` are skipped, and a
+   * Safe to run every startup: books with `contentHash` are skipped, and a
    * per-book failure leaves the legacy file in place where the read path's
    * fallback still finds it.
    */
@@ -396,7 +396,7 @@ class CapacitorFileStorage {
         });
         const blob = this.base64ToBlob(data as string, this.mimeTypeForExt(legacyExt));
         const hash = await sha256Hex(blob);
-        // Store under the format-correct extension — this subsumes the old
+        // Store under the format-correct extension: this subsumes the old
         // migrateExtensions pass (everything used to be saved as .epub).
         const ext = this.extForFormat(book.format);
         await this.putFileBlob(blob, hash, ext);
@@ -408,7 +408,7 @@ class CapacitorFileStorage {
         }).catch(() => {});
       } catch (error) {
         console.error(`Failed to migrate file for book ${book.id}:`, error);
-        // Leave legacy file in place — retrieveBlob's fallback still finds it.
+        // Leave legacy file in place: retrieveBlob's fallback still finds it.
       }
     }
     return changed;

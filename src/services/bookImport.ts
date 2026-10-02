@@ -17,10 +17,10 @@ import { ImportMode } from "@/utils/importMode";
 
 export interface ImportItem {
   file: File;
-  /** Absolute source path for Electron imports — linked books keep reading
+  /** Absolute source path for Electron imports: linked books keep reading
    *  from it; managed books record it as provenance. */
   sourcePath?: string;
-  /** Pre-computed hash — folder sync hashes while scanning to detect moved
+  /** Pre-computed hash: folder sync hashes while scanning to detect moved
    *  files, so it passes the result through instead of hashing twice. */
   contentHash?: string;
 }
@@ -50,12 +50,15 @@ export function toastImportError(fileName: string, error: unknown) {
 /**
  * Shared pipeline for every import path: hash → dedup → metadata → Book
  * record → (managed only) copy bytes into the content-addressed store.
- * Linked items keep their bytes at `sourcePath` — nothing is stored.
+ * Linked items keep their bytes at `sourcePath`: nothing is stored.
  */
 export async function importFileItems(
   items: ImportItem[],
   source: ImportMode,
   onImportComplete?: ImportCallback,
+  /** When provided, per-file failures are reported here instead of toasted , 
+   *  folder sync uses this to dedupe failure notifications across rescans. */
+  onFileError?: (item: ImportItem, error: unknown) => void,
 ): Promise<Book[]> {
   const newlyImportedBooks: Book[] = [];
 
@@ -115,7 +118,7 @@ export async function importFileItems(
         sourcePath,
       };
 
-      // Always build from the live book list — `books` state is stale within
+      // Always build from the live book list: `books` state is stale within
       // a multi-file import loop.
       const updatedBooksWithTemp = [...libraryService.getBooks(), newBook];
       libraryService.updateBooks(updatedBooksWithTemp);
@@ -155,7 +158,11 @@ export async function importFileItems(
 
      } catch (error) {
         console.error(`❌ Failed to import ${file.name}:`, error);
-        toastImportError(file.name, error);
+        if (onFileError) {
+          onFileError({ file, sourcePath, contentHash: precomputedHash }, error);
+        } else {
+          toastImportError(file.name, error);
+        }
       }
   }
 

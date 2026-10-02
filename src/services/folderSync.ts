@@ -7,25 +7,40 @@ import { fileStorage } from "@/services/fileStorage";
 import { safFiles } from "@/services/safFiles";
 import { saveStoredBooks } from "@/services/bookPersistence";
 import { sha256Hex } from "@/utils/hash";
-import { importFileItems, ImportItem } from "@/services/bookImport";
+import { importFileItems, ImportItem, toastImportError } from "@/services/bookImport";
 
 /**
- * Folder sync — the linked-mode feature proper (Electron only). A watched
+ * Folder sync: the linked-mode feature proper (Electron only). A watched
  * folder's book files are cataloged in place: new files become linked books,
  * a file that moved or was renamed is re-found by content hash (the
  * `sourcePath` is repointed, progress intact), and a file that vanished marks
- * its book `missing` — never silently deleted.
+ * its book `missing`: never silently deleted.
  */
 
 const SYNC_FOLDERS_KEY = 'offreader-sync-folders';
+const SYNC_FAILURES_KEY = 'offreader-sync-failures';
+
+/** A file that failed to import. Retried only when mtime/size change: an
+ *  unchanged known-bad file is skipped silently so every rescan doesn't
+ *  re-toast the same error. */
+interface ScanFailure { mtimeMs: number; size: number }
+
+async function getSyncFailures(): Promise<Record<string, ScanFailure>> {
+  try {
+    const stored = await storageService.getItem(SYNC_FAILURES_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
 
 /** Folder sync exists on Electron (real paths + watchers) and Android (SAF
- *  document trees, scan-on-open — SAF has no watch primitive). */
+ *  document trees, scan-on-open: SAF has no watch primitive). */
 export function supportsFolderSync(): boolean {
   return !!window.offreaderFiles || Capacitor.getPlatform() === 'android';
 }
 
-/** Pick a sync folder — native directory dialog on desktop, SAF tree picker
+/** Pick a sync folder: native directory dialog on desktop, SAF tree picker
  *  on Android (returns a persisted content:// URI). */
 export async function pickSyncDirectory(): Promise<string | null> {
   if (Capacitor.getPlatform() === 'android') {
@@ -79,7 +94,7 @@ export async function addSyncFolder(dirPath: string): Promise<string[]> {
 }
 
 /** Remove a folder from the sync list and stop watching. Linked books that
- *  came from it stay in the library — they're still linked by path. */
+ *  came from it stay in the library: they're still linked by path. */
 export async function removeSyncFolder(dirPath: string): Promise<string[]> {
   const folders = (await getSyncFolders()).filter(p => p !== dirPath);
   await saveSyncFolders(folders);
@@ -98,7 +113,7 @@ export interface ScanResult {
 
 /**
  * Scan one folder: unchanged known paths are skipped cheaply (no read, no
- * hash); unknown files are read once for hashing — a hash that matches an
+ * hash); unknown files are read once for hashing: a hash that matches an
  * existing linked book means "moved", a managed match means "already have
  * it", otherwise the file imports as a new linked book.
  */
@@ -119,11 +134,31 @@ export async function scanFolder(dirPath: string): Promise<ScanResult> {
   const foundIds = new Set<string>(); // missing books whose file came back
   const toImport: ImportItem[] = [];
 
+  const failures = await getSyncFailures();
+  let failuresDirty = false;
+  const newlyFailed: { name: string; error: unknown }[] = [];
+  const entryByPath = new Map(entries.map(e => [e.path, e]));
+  const markFailed = (path: string, name: string, error: unknown) => {
+    const prev = failures[path];
+    const entry = entryByPath.get(path);
+    failures[path] = { mtimeMs: entry?.mtimeMs ?? 0, size: entry?.size ?? 0 };
+    failuresDirty = true;
+    if (!prev || prev.mtimeMs !== failures[path].mtimeMs || prev.size !== failures[path].size) {
+      newlyFailed.push({ name, error });
+    }
+  };
+
   for (const entry of entries) {
     const known = books.find(b => b.source === 'linked' && b.sourcePath === entry.path);
     if (known) {
       seenPaths.add(entry.path);
       if (known.missing) foundIds.add(known.id);
+      continue;
+    }
+
+    // Unchanged known-bad file: skip without re-reading or re-toasting.
+    const prevFail = failures[entry.path];
+    if (prevFail && prevFail.mtimeMs === entry.mtimeMs && prevFail.size === entry.size) {
       continue;
     }
 
@@ -134,9 +169,11 @@ export async function scanFolder(dirPath: string): Promise<ScanResult> {
       if (match) {
         seenPaths.add(entry.path);
         if (match.source === 'linked') {
-          // Same bytes, new location — repoint rather than reimport.
+          // Same bytes, new location: repoint rather than reimport.
           repoints.set(match.id, { sourcePath: entry.path, contentHash });
         }
+        delete failures[entry.path];
+        failuresDirty = true;
         continue;
       }
       toImport.push({
@@ -144,8 +181,13 @@ export async function scanFolder(dirPath: string): Promise<ScanResult> {
         sourcePath: entry.path,
         contentHash,
       });
+      if (failures[entry.path]) {
+        delete failures[entry.path];
+        failuresDirty = true;
+      }
     } catch (error) {
       console.error(`Sync: failed to read ${entry.path}:`, error);
+      markFailed(entry.path, entry.name, error);
     }
   }
 
@@ -175,8 +217,32 @@ export async function scanFolder(dirPath: string): Promise<ScanResult> {
   }
 
   const added = toImport.length > 0
-    ? (await importFileItems(toImport, 'linked')).length
+    ? (await importFileItems(toImport, 'linked', undefined, (item, error) => {
+        const path = item.sourcePath ?? item.file.name;
+        markFailed(path, item.file.name, error);
+      })).length
     : 0;
+
+  // Prune failure entries for files that no longer exist under this folder.
+  const entryPaths = new Set(entries.map(e => e.path));
+  for (const p of Object.keys(failures)) {
+    if (isUnderFolder(p, dirPath) && !entryPaths.has(p)) {
+      delete failures[p];
+      failuresDirty = true;
+    }
+  }
+  if (failuresDirty) {
+    await storageService.setItem(SYNC_FAILURES_KEY, JSON.stringify(failures));
+  }
+
+  // Toast only new failures: a file that's been failing unchanged across
+  // rescans stays quiet.
+  if (newlyFailed.length === 1) {
+    toastImportError(newlyFailed[0].name, newlyFailed[0].error);
+  } else if (newlyFailed.length > 1) {
+    toast.error(`Couldn't import ${newlyFailed.length} files from this folder`);
+  }
+
   return { added, moved: repoints.size, missing: missingIds.length };
 }
 
@@ -212,7 +278,7 @@ export async function moveBooksToLibrary(bookIds: string[]): Promise<number> {
   for (const book of targets) {
     try {
       const blob = await fileStorage.retrieveLinkedBlob(book.sourcePath!);
-      // Key the copy under the existing contentHash — same bytes, same slot;
+      // Key the copy under the existing contentHash: same bytes, same slot;
       // ext comes from the format since the Blob has no filename.
       const ext = book.format === 'PDF' ? '.pdf'
         : book.format === 'MOBI' ? '.mobi'

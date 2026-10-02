@@ -40,7 +40,7 @@ class LibraryService {
             // Check if file actually exists
             const exists = await fileStorage.bookFileExists(book);
             if (!exists) {
-              // Linked books survive a missing source — the reader offers
+              // Linked books survive a missing source: the reader offers
               // relink instead of silently dropping the record.
               if (book.source === 'linked') {
                 console.warn(`Linked file missing for book ${book.id} (${book.title})`);
@@ -71,7 +71,7 @@ class LibraryService {
       }
 
       // Clean up orphaned files (files with no metadata). Only managed books
-      // claim store keys — linked books store no bytes.
+      // claim store keys: linked books store no bytes.
       const validBookKeys = loadedBooks
         .filter(b => b.source !== 'linked')
         .map(b => b.contentHash ?? b.id);

@@ -84,7 +84,7 @@ export function OnboardingTour() {
           return;
         }
         if (stepId === 'dialog-metadata') {
-          // Stay in the dialog — just advance to step 4.
+          // Stay in the dialog: just advance to step 4.
           opts?.driver?.moveNext();
           return;
         }

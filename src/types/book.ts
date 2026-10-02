@@ -52,7 +52,7 @@ export interface Book {
   pageCount?: number; // Estimated page count
   shelfId: string | null;
   labelIds: string[];
-  /** SHA-256 of the file bytes — storage key in the content-addressed store.
+  /** SHA-256 of the file bytes: storage key in the content-addressed store.
    *  Absent on pre-migration records (file is keyed by `id` in the legacy store). */
   contentHash?: string;
   /** Where the file bytes live. 'managed' = app-owned store; 'linked' = read
@@ -60,7 +60,7 @@ export interface Book {
   source?: 'managed' | 'linked';
   /** Absolute path of a linked book's source file. */
   sourcePath?: string;
-  /** Set at startup when a linked book's sourcePath can't be read — the book
+  /** Set at startup when a linked book's sourcePath can't be read: the book
    *  stays in the library (progress/metadata intact) and the reader offers a
    *  relink flow. Cleared on the next init once the file is reachable again. */
   missing?: boolean;

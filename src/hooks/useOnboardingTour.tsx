@@ -64,7 +64,7 @@ const OnboardingTourContext = createContext<UseOnboardingTourResult | undefined>
  * the Welcome dialog and the About page).
  *
  * Auto-start rule: fresh install only (no last-visit AND no tour-completed).
- * Returning users don't see it automatically — they replay from About
+ * Returning users don't see it automatically: they replay from About
  * or the Welcome dialog.
  */
 export function OnboardingTourProvider({ children }: { children: ReactNode }) {

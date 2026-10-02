@@ -32,7 +32,7 @@ export interface OffreaderFilesApi {
   /** Fires when a watched folder's book files change; returns unsubscribe. */
   onFolderChanged(callback: (dirPath: string) => void): () => void;
   /** Takes the queued "open with" file paths (argv / second-instance /
-   *  macOS open-file). Pull-based — returns and clears the queue. */
+   *  macOS open-file). Pull-based: returns and clears the queue. */
   takePendingFiles(): Promise<string[]>;
   /** Nudge that new files were opened while the app is running. */
   onFilesOpened(callback: () => void): () => void;

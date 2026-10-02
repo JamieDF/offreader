@@ -8,6 +8,7 @@ import { Book } from '@/types/book';
 
 vi.mock('@/services/bookImport', () => ({
   importFileItems: vi.fn(async () => []),
+  toastImportError: vi.fn(),
 }));
 
 vi.mock('@/services/fileStorage', () => ({
@@ -69,6 +70,8 @@ describe('scanFolder', () => {
     expect(importFileItems).toHaveBeenCalledWith(
       [expect.objectContaining({ sourcePath: '/books/new.epub', contentHash: hash })],
       'linked',
+      undefined,
+      expect.any(Function),
     );
     expect(result.added).toBe(0); // importFileItems mocked to return []
   });
@@ -153,6 +156,27 @@ describe('scanFolder', () => {
 
     expect(result.missing).toBe(0);
     expect(libraryService.getBooks()[0].missing).toBeUndefined();
+  });
+
+  it('skips unchanged previously-failed files without re-reading them', async () => {
+    window.offreaderFiles = {
+      scanFolder: vi.fn(async () => [scanEntry('/books/bad.epub')]),
+    } as never;
+    vi.mocked(fileStorage.retrieveLinkedBlob).mockRejectedValue(new Error('unreadable'));
+
+    await scanFolder('/books');
+    expect(fileStorage.retrieveLinkedBlob).toHaveBeenCalledTimes(1);
+
+    // Feed the persisted failure map back on the next scan.
+    const failuresJson = mockSetItem.mock.calls
+      .find(([key]) => key === 'offreader-sync-failures')?.[1] as string;
+    expect(failuresJson).toContain('/books/bad.epub');
+    mockGetItem.mockImplementation(async (key) =>
+      key === 'offreader-sync-failures' ? failuresJson : null);
+    vi.mocked(fileStorage.retrieveLinkedBlob).mockClear();
+
+    await scanFolder('/books');
+    expect(fileStorage.retrieveLinkedBlob).not.toHaveBeenCalled();
   });
 });
 
