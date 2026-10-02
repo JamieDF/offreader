@@ -268,15 +268,17 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
   }, []); // Empty deps intentional — prevents re-render loops
 
   /** The storage key for a book's file bytes — content hash post-migration,
-   *  book id for pre-migration records. */
-  const storageKey = (book: Book) => book.contentHash ?? book.id;
+   *  book id for pre-migration records. Linked books store no bytes, so
+   *  they neither produce nor protect a storage key. */
+  const storageKey = (book: Book) =>
+    book.source === 'linked' ? undefined : (book.contentHash ?? book.id);
 
   const removeBook = useCallback(async (bookId: string) => {
     try {
       const book = books.find(b => b.id === bookId);
       // Delete the file only if no other book shares its bytes
       const key = book ? storageKey(book) : bookId;
-      if (!books.some(b => b.id !== bookId && storageKey(b) === key)) {
+      if (key && !books.some(b => b.id !== bookId && storageKey(b) === key)) {
         await fileStorage.deleteFile(key);
       }
 
@@ -335,14 +337,14 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     try {
       const allBooks = libraryService.getBooks();
       const updatedBooks = allBooks.filter(book => !idSet.has(book.id));
-      // Only delete bytes no surviving book still references
+      // Only delete bytes no surviving managed book still references
       const survivingKeys = new Set(updatedBooks.map(storageKey));
       const keysToDelete = new Set(
         allBooks.filter(b => idSet.has(b.id)).map(storageKey)
       );
       await Promise.allSettled(
         [...keysToDelete]
-          .filter(key => !survivingKeys.has(key))
+          .filter((key): key is string => key !== undefined && !survivingKeys.has(key))
           .map(key => fileStorage.deleteFile(key))
       );
 

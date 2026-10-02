@@ -70,8 +70,11 @@ class LibraryService {
         await saveStoredBooks(loadedBooks);
       }
 
-      // Clean up orphaned files (files with no metadata)
-      const validBookKeys = loadedBooks.map(b => b.contentHash ?? b.id);
+      // Clean up orphaned files (files with no metadata). Only managed books
+      // claim store keys — linked books store no bytes.
+      const validBookKeys = loadedBooks
+        .filter(b => b.source !== 'linked')
+        .map(b => b.contentHash ?? b.id);
       await fileStorage.cleanupOrphanFiles(validBookKeys);
 
       this.books = loadedBooks;

@@ -182,5 +182,48 @@ describe('useLibrary bulk operations', () => {
       expect((mockUpdateBooks.mock.calls[0][0] as Book[]).map(b => b.id)).toEqual(['b']);
       expect(mockSetItem).not.toHaveBeenCalled();
     });
+
+    it('does not delete bytes a surviving managed book still shares', async () => {
+      mockGetBooks.mockReturnValue([
+        makeBook({ id: 'm1', contentHash: 'H' }),
+        makeBook({ id: 'm2', contentHash: 'H' }),
+      ]);
+
+      const { result } = renderHook(() => useLibrary());
+      await act(async () => {
+        await result.current.removeBooks(['m1']);
+      });
+
+      expect(mockDeleteFile).not.toHaveBeenCalled();
+    });
+
+    it('does not let a surviving linked book protect managed bytes', async () => {
+      mockGetBooks.mockReturnValue([
+        makeBook({ id: 'm', contentHash: 'H' }),
+        makeBook({ id: 'l', contentHash: 'H', source: 'linked', sourcePath: '/x.epub' }),
+      ]);
+
+      const { result } = renderHook(() => useLibrary());
+      await act(async () => {
+        await result.current.removeBooks(['m']);
+      });
+
+      // The linked survivor has no stored bytes — the managed blob is orphaned
+      // and must be deleted rather than kept under the shared hash key.
+      expect(mockDeleteFile).toHaveBeenCalledWith('H');
+    });
+
+    it('never deletes bytes when removing a linked book', async () => {
+      mockGetBooks.mockReturnValue([
+        makeBook({ id: 'l', contentHash: 'H', source: 'linked', sourcePath: '/x.epub' }),
+      ]);
+
+      const { result } = renderHook(() => useLibrary());
+      await act(async () => {
+        await result.current.removeBooks(['l']);
+      });
+
+      expect(mockDeleteFile).not.toHaveBeenCalled();
+    });
   });
 });

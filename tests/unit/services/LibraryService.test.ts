@@ -124,6 +124,24 @@ describe('LibraryService', () => {
           sourcePath: '/books/dune.epub',
         });
       });
+
+      it('only counts managed books when claiming store keys for orphan cleanup', async () => {
+        const managed = makeBook({ id: 'm', source: 'managed', contentHash: 'hm' });
+        const linked = makeBook({
+          id: 'l',
+          source: 'linked',
+          sourcePath: '/books/x.epub',
+          contentHash: 'hl',
+        });
+        vi.mocked(storageService.getItem).mockResolvedValueOnce(
+          JSON.stringify([managed, linked]),
+        );
+        vi.mocked(fileStorage.bookFileExists).mockResolvedValue(true);
+
+        await libraryService.initialize();
+
+        expect(fileStorage.cleanupOrphanFiles).toHaveBeenCalledWith(['hm']);
+      });
     });
   });
 });

@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 
 interface SimpleToastProps {
   message: string;
-  type?: 'success' | 'error';
+  type?: 'success' | 'error' | 'info';
   duration?: number;
   onClose: () => void;
 }
@@ -25,9 +25,11 @@ export function SimpleToast({ message, type = 'success', duration = 4000, onClos
   }, [duration, onClose]);
 
   // Use theme-aware colors via CSS custom properties
-  const toastClasses = type === 'success' 
-    ? 'bg-primary text-primary-foreground' 
-    : 'bg-destructive text-destructive-foreground';
+  const toastClasses = type === 'success'
+    ? 'bg-primary text-primary-foreground'
+    : type === 'error'
+      ? 'bg-destructive text-destructive-foreground'
+      : 'bg-muted text-foreground border border-border';
 
   return (
     <div
@@ -64,6 +66,13 @@ export const toast = {
   error: (message: string, options?: { duration?: number }) => {
     const id = ++toastId;
     const props = { message, type: 'error' as const, duration: options?.duration };
+    toasts.push({ id, props });
+    updateToasts();
+    return id;
+  },
+  info: (message: string, options?: { duration?: number }) => {
+    const id = ++toastId;
+    const props = { message, type: 'info' as const, duration: options?.duration };
     toasts.push({ id, props });
     updateToasts();
     return id;
