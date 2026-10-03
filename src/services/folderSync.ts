@@ -212,7 +212,7 @@ export async function scanFolder(dirPath: string): Promise<ScanResult> {
       if (missingIds.includes(b.id)) return { ...b, missing: true };
       return b;
     });
-    libraryService.updateBooksSilent(updatedBooks);
+    libraryService.updateBooks(updatedBooks);
     await saveStoredBooks(updatedBooks);
   }
 
@@ -297,7 +297,7 @@ export async function moveBooksToLibrary(bookIds: string[]): Promise<number> {
     const updatedBooks = libraryService.getBooks().map(b =>
       movedIds.has(b.id) ? { ...b, source: 'managed' as const, missing: undefined } : b
     );
-    libraryService.updateBooksSilent(updatedBooks);
+    libraryService.updateBooks(updatedBooks);
     await saveStoredBooks(updatedBooks);
   }
   return movedIds.size;
@@ -332,7 +332,7 @@ export async function relinkBookFile(bookId: string, newPath?: string): Promise<
     const updatedBooks = libraryService.getBooks().map(b =>
       b.id === bookId ? { ...b, sourcePath: newPath, contentHash, missing: undefined } : b
     );
-    libraryService.updateBooksSilent(updatedBooks);
+    libraryService.updateBooks(updatedBooks);
     await saveStoredBooks(updatedBooks);
     return true;
   } catch (error) {
