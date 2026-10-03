@@ -292,6 +292,40 @@
   }
 }
 
+/* Slim themed scrollbars for every scrollable view: transparent track,
+   rounded thumb tinted from theme tokens. Firefox gets scrollbar-width and
+   scrollbar-color; Chromium and Electron get the ::-webkit rules. The
+   transparent border + background-clip trick floats the thumb inside its
+   gutter so it stays thin without overlaying content. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Typography custom properties with defaults */
 :root {
   --reader-font-size: 100%;
