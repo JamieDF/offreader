@@ -12,7 +12,7 @@ import { saveStoredBooks } from "@/services/bookPersistence";
 import { toast } from "@/components/ui/toast";
 import { LABEL_COLORS } from "@/constants/labels";
 import { getImportMode, setImportMode, ImportMode } from "@/utils/importMode";
-import { getSyncFolders, addSyncFolder, removeSyncFolder, scanFolder, syncAllFolders, pickSyncDirectory, supportsFolderSync } from "@/services/folderSync";
+import { getSyncFolders, addSyncFolder, removeSyncFolder, scanFolder, syncAllFolders, pickSyncDirectory, supportsFolderSync, folderDisplayName } from "@/services/folderSync";
 import { exportLibrary } from "@/services/exportLibrary";
 
 export function ManageLibrary() {
@@ -420,11 +420,11 @@ export function ManageLibrary() {
                 key={dir}
                 className="flex items-center gap-3 p-3 rounded-lg border bg-card"
               >
-                <span className="flex-1 font-mono text-xs truncate" title={dir}>{dir}</span>
+                <span className="flex-1 font-mono text-xs truncate" title={dir}>{folderDisplayName(dir)}</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  aria-label={`Stop syncing ${dir}`}
+                  aria-label={`Stop syncing ${folderDisplayName(dir)}`}
                   onClick={async () => setSyncFolders(await removeSyncFolder(dir))}
                   className="h-8 w-8 p-0"
                 >
@@ -447,7 +447,7 @@ export function ManageLibrary() {
                     const result = await scanFolder(dir);
                     toast.success(
                       result.added > 0
-                        ? `Added ${result.added} book${result.added === 1 ? '' : 's'} from ${dir}`
+                        ? `Added ${result.added} book${result.added === 1 ? '' : 's'} from ${folderDisplayName(dir)}`
                         : `Folder synced: no new books found`,
                     );
                   } finally {

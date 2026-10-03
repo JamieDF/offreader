@@ -17,8 +17,9 @@ export interface SafEntry {
 interface OffreaderFilesPluginType {
   /** SAF document-tree picker; resolves to a persisted tree URI. */
   pickDirectory(): Promise<{ treeUri: string }>;
-  /** Single-document picker (relinking); resolves to a document URI. */
-  pickDocument(): Promise<{ uri: string }>;
+  /** Document picker: single by default (relinking), multi-select when
+   *  `multiple` is set (library import). `uri` is always the first pick. */
+  pickDocument(options?: { multiple?: boolean }): Promise<{ uri: string; uris: string[] }>;
   /** Recursive listing of every file under a tree URI. */
   listFiles(options: { treeUri: string }): Promise<{ files: SafEntry[] }>;
   fileExists(options: { uri: string }): Promise<{ exists: boolean }>;
@@ -41,7 +42,7 @@ export function isAndroidSafAvailable(): boolean {
 
 export const safFiles: OffreaderFilesPluginType = {
   pickDirectory: () => getPlugin().pickDirectory(),
-  pickDocument: () => getPlugin().pickDocument(),
+  pickDocument: (options) => getPlugin().pickDocument(options),
   listFiles: (options) => getPlugin().listFiles(options),
   fileExists: (options) => getPlugin().fileExists(options),
   statFile: (options) => getPlugin().statFile(options),

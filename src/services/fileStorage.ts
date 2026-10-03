@@ -130,15 +130,28 @@ class CapacitorFileStorage {
    *  counted against storage). */
   private async putFileBlob(blob: Blob, key: string, ext: string): Promise<void> {
     if (this.usesNativeFs()) {
+      // Native writeFile requires string data (the plugin decodes it as
+      // base64); a Blob JSON-serializes as {} and is rejected as invalid
+      // input.
       await Filesystem.writeFile({
         path: `${this.BOOKS_DIR}/${key}${ext}`,
-        data: blob,
+        data: await this.blobToBase64(blob),
         directory: Directory.Data,
         recursive: true,
       });
     } else {
       await blobStore.put(`${key}${ext}`, blob);
     }
+  }
+
+  private async blobToBase64(blob: Blob): Promise<string> {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(binary);
   }
 
   /**

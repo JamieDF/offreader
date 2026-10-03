@@ -7,6 +7,7 @@ import { fileStorage } from "@/services/fileStorage";
 import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
 import { importFileItems, toastImportError } from "@/services/bookImport";
 import { relinkBookFile, moveBooksToLibrary } from "@/services/folderSync";
+import { isAndroidSafAvailable, safFiles } from "@/services/safFiles";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
 
@@ -155,13 +156,40 @@ export function useLibrary() {
 type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
 
   const importBooks = useCallback(async (onImportComplete?: ImportCallback) => {
+    // Android: a detached <input type=file> never reaches the WebView file
+    // chooser, and odd extensions get greyed out anyway. SAF's document
+    // picker shows everything and grants persisted read access; bytes come
+    // through the same content:// cache path linked books use.
+    if (isAndroidSafAvailable()) {
+      try {
+        const { uris } = await safFiles.pickDocument({ multiple: true });
+        const items = [];
+        for (const uri of uris) {
+          const [blob, stat] = await Promise.all([
+            fileStorage.retrieveLinkedBlob(uri),
+            safFiles.statFile({ uri }),
+          ]);
+          items.push({ file: new File([blob], stat?.name ?? 'book') });
+        }
+        await importFileItems(items, 'managed', onImportComplete);
+      } catch {
+        // Picker cancelled: nothing to do.
+      }
+      return;
+    }
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".epub,.mobi,.azw3,.fb2,.pdf,.cbz";
     input.multiple = true;
+    // Attach (invisibly) so the click reaches the WebView file chooser on
+    // every platform; detached inputs can be ignored.
+    input.style.display = 'none';
+    document.body.appendChild(input);
 
     input.onchange = async (event) => {
       const files = (event.target as HTMLInputElement).files;
+      input.remove();
       if (!files) return;
       await importFileItems([...files].map(file => ({ file })), 'managed', onImportComplete);
     };

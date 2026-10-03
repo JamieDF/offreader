@@ -68,6 +68,20 @@ export function isUnderFolder(sourcePath: string, folderPath: string): boolean {
   return sourcePath.startsWith(prefix);
 }
 
+/** Human-friendly folder label for toasts and lists: SAF tree URIs encode
+ *  the path in their id (…/tree/primary%3ABooks%2Fsub → "sub"); desktop
+ *  paths display unchanged. */
+export function folderDisplayName(folderPath: string): string {
+  if (folderPath.startsWith('content://')) {
+    const treeId = folderPath.split('/tree/')[1];
+    if (!treeId) return folderPath;
+    const decoded = decodeURIComponent(treeId);
+    const afterVolume = decoded.includes(':') ? decoded.slice(decoded.indexOf(':') + 1) : decoded;
+    return afterVolume.split('/').filter(Boolean).pop() ?? decoded;
+  }
+  return folderPath;
+}
+
 export async function getSyncFolders(): Promise<string[]> {
   const stored = await storageService.getItem(SYNC_FOLDERS_KEY);
   try {

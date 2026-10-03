@@ -69,7 +69,9 @@ public class OffreaderFilesPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    /** Single-document picker — used to relink a book whose file moved. */
+    /** Document picker: single by default (relink), multiple when the caller
+     *  asks (library import). Returns uris[] always; uri holds the first for
+     *  single-pick callers. */
     @PluginMethod
     public void pickDocument(PluginCall call) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -77,6 +79,9 @@ public class OffreaderFilesPlugin extends Plugin {
         intent.setType("*/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
             | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        if (call.getBoolean("multiple", false)) {
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        }
         startActivityForResult(call, intent, "pickDocumentResult");
     }
 
@@ -84,18 +89,32 @@ public class OffreaderFilesPlugin extends Plugin {
     private void pickDocumentResult(PluginCall call, ActivityResult result) {
         if (call == null) return;
         Intent data = result.getData();
-        if (data == null || data.getData() == null) {
+        if (data == null || (data.getData() == null && data.getClipData() == null)) {
             call.reject("No document selected");
             return;
         }
-        Uri docUri = data.getData();
+        JSArray uris = new JSArray();
+        if (data.getClipData() != null) {
+            for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                Uri u = data.getClipData().getItemAt(i).getUri();
+                persistPermission(u);
+                uris.put(u.toString());
+            }
+        } else {
+            persistPermission(data.getData());
+            uris.put(data.getData().toString());
+        }
+        JSObject ret = new JSObject();
+        ret.put("uris", uris);
+        ret.put("uri", uris.optString(0, null));
+        call.resolve(ret);
+    }
+
+    private void persistPermission(Uri uri) {
         try {
             getContext().getContentResolver().takePersistableUriPermission(
-                docUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } catch (SecurityException ignored) { }
-        JSObject ret = new JSObject();
-        ret.put("uri", docUri.toString());
-        call.resolve(ret);
     }
 
     @PluginMethod

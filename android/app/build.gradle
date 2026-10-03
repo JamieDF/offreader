@@ -27,6 +27,13 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Side-by-side installable with the release build: distinct
+            // package id and a "Dev" label (src/debug strings.xml) so the two
+            // never clash on-device.
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+        }
         release {
             signingConfig signingConfigs.release
             minifyEnabled false
