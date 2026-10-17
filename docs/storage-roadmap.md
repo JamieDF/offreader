@@ -162,17 +162,24 @@ IndexedDB; on Android/Electron the plugin writes a real binary file.
 
 Not done; deliberate follow-ups once the core lands:
 
-- **Per-book metadata store**: `offreader-books` is still one JSON array
-  rewritten on every save (progress ticks serialize the whole library). Fine
-  at ~50 books, wasteful at 500+. Move to per-book records (IndexedDB keys or
-  SQLite). The audit entry above describes the problem.
 - **Lazy hashing for large folder indexing**: the folder scan currently reads
   + hashes every unknown file eagerly. For a 100GB+ initial index this is
   disk-bound and slow; stage the fast identity (path+size+mtime) and hash
   in the background. See "Platform notes".
-- **SAF device validation**: the Android plugin compiles but URI permission
-  persistence, tree listing, and `resolveToCache` on large files are
-  untested on real hardware.
+
+## Landed since the stages above
+
+- **Per-book metadata store** (`src/services/bookMetaStore.ts`): IndexedDB
+  `offreader-metadata` DB with two stores. `books` holds one record per Book;
+  `tracking` holds resume position, bookmarks, and reading stats per book id.
+  Progress ticks now write one small record instead of re-serializing both
+  `offreader-books` and `book-tracker-data`. Bulk writes are single
+  transactions (write-all plus delete-absent, atomic). Legacy Preferences
+  blobs migrate on first `initialize`.
+- **SAF device validation**: verified on hardware via the dev build
+  (applicationIdSuffix `.dev`): folder pick, persisted permission,
+  sync scan, and `resolveToCache` reads all work. Managed import on
+  Android required base64 for native `writeFile` (Blob args are rejected).
 
 ## Context
 

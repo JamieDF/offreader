@@ -3,6 +3,7 @@ import { libraryService } from '@/services/LibraryService';
 import { Book } from '@/types/book';
 import { fileStorage } from '@/services/fileStorage';
 import { storageService } from '@/services/storage';
+import { bookMetaStore } from '@/services/bookMetaStore';
 
 // Mock the dependencies
 vi.mock('@/services/fileStorage');
@@ -19,9 +20,12 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
 });
 
 describe('LibraryService', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     libraryService.updateBooksSilent([]);
+    await bookMetaStore.writeBooks([]);
+    const all = await bookMetaStore.getAllTracking();
+    await bookMetaStore.deleteTracking(Object.keys(all));
   });
 
   describe('updateBooks vs updateBooksSilent', () => {

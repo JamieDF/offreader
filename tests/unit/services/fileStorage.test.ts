@@ -172,9 +172,11 @@ describe('CapacitorFileStorage', () => {
       const file = new File(['data'], 'book.pdf', { type: 'application/pdf' });
       await fileStorage.storeFile(file, 'hash9');
 
+      // Native writeFile only accepts string data: the blob crosses the
+      // bridge as base64 ('data' → 'ZGF0YQ==').
       expect(mockWriteFile).toHaveBeenCalledWith({
         path: 'books/hash9.pdf',
-        data: file,
+        data: 'ZGF0YQ==',
         directory: Directory.Data,
         recursive: true,
       });

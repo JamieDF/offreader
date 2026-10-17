@@ -17,6 +17,7 @@ vi.mock('@/services/fileStorage', () => ({
 
 vi.mock('@/services/bookPersistence', () => ({
   saveStoredBooks: vi.fn(async () => {}),
+  saveBook: vi.fn(async () => {}),
 }));
 
 const mockGetItem = vi.fn();

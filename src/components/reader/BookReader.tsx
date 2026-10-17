@@ -7,7 +7,7 @@ import { Overlayer } from 'foliate-js/overlayer.js';
 import { fileStorage } from '@/services/fileStorage';
 import { storageService } from '@/services/storage';
 import { libraryService } from '@/services/LibraryService';
-import { saveStoredBooks } from '@/services/bookPersistence';
+import { saveBook } from '@/services/bookPersistence';
 import { titleCase } from '@/utils/titleCase';
 import { buildReaderStylesheet } from '@/utils/readerStyles';
 import ReaderOverlay, { ReaderOverlayHandle, LocationInfo } from './ReaderOverlay';
@@ -371,12 +371,14 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress, relinkBoo
       setChapters(realChapters);
 
       if (realChapters.length > 0) {
-        const allBooks = libraryService.getBooks();
-        const updatedBooks = allBooks.map(b =>
-          b.id === propBookId ? { ...b, chapters: realChapters, totalChapters: realChapters.length } : b
-        );
-        libraryService.updateBooksSilent(updatedBooks);
-        await saveStoredBooks(updatedBooks);
+        const current = libraryService.getBooks().find(b => b.id === propBookId);
+        if (current) {
+          const updated = { ...current, chapters: realChapters, totalChapters: realChapters.length };
+          libraryService.updateBooksSilent(
+            libraryService.getBooks().map(b => b.id === updated.id ? updated : b)
+          );
+          await saveBook(updated);
+        }
       }
 
       if (view.renderer) {

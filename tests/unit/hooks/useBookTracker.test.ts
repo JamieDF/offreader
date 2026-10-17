@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useBookTracker } from '@/hooks/useBookTracker';
-import { storageService } from '@/services/storage';
+import { bookMetaStore } from '@/services/bookMetaStore';
 import { libraryService } from '@/services/LibraryService';
 
-vi.mock('@/services/storage', () => ({
-  storageService: {
-    getItem: vi.fn().mockResolvedValue(null),
-    setItem: vi.fn().mockResolvedValue(undefined),
+vi.mock('@/services/bookMetaStore', () => ({
+  bookMetaStore: {
+    getTracking: vi.fn().mockResolvedValue(undefined),
+    putTracking: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -18,25 +18,23 @@ vi.mock('@/services/LibraryService', () => ({
   },
 }));
 
-const mockGetItem = storageService.getItem as ReturnType<typeof vi.fn>;
+const mockGetTracking = bookMetaStore.getTracking as ReturnType<typeof vi.fn>;
 const mockGetBooks = libraryService.getBooks as ReturnType<typeof vi.fn>;
 
-function storedDataFor(bookId: string, overrides: Record<string, unknown> = {}): string {
-  return JSON.stringify({
-    [bookId]: {
-      progress: 50,
-      lastReadDate: null,
-      isFinished: false,
-      bookmarks: [],
-      currentChapter: 2,
-      ...overrides,
-    },
-  });
+function trackingEntryFor(overrides: Record<string, unknown> = {}) {
+  return {
+    progress: 50,
+    lastReadDate: null,
+    isFinished: false,
+    bookmarks: [],
+    currentChapter: 2,
+    ...overrides,
+  };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetItem.mockResolvedValue(null);
+  mockGetTracking.mockResolvedValue(undefined);
   mockGetBooks.mockReturnValue([]);
 });
 
@@ -97,7 +95,7 @@ describe('formatLastRead', () => {
 
   it('returns "Yesterday" for a lastReadDate one day ago', async () => {
     const yesterday = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
-    mockGetItem.mockResolvedValue(storedDataFor('book-1', { lastReadDate: yesterday }));
+    mockGetTracking.mockResolvedValue(trackingEntryFor({ lastReadDate: yesterday }));
 
     const { result } = renderHook(() => useBookTracker('book-1'));
     await act(async () => {});
@@ -107,7 +105,7 @@ describe('formatLastRead', () => {
 
   it('returns "N days ago" for dates within the past week', async () => {
     const fourDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
-    mockGetItem.mockResolvedValue(storedDataFor('book-1', { lastReadDate: fourDaysAgo }));
+    mockGetTracking.mockResolvedValue(trackingEntryFor({ lastReadDate: fourDaysAgo }));
 
     const { result } = renderHook(() => useBookTracker('book-1'));
     await act(async () => {});
@@ -117,7 +115,7 @@ describe('formatLastRead', () => {
 
   it('returns "N weeks ago" for dates between 7 and 30 days ago', async () => {
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-    mockGetItem.mockResolvedValue(storedDataFor('book-1', { lastReadDate: twoWeeksAgo }));
+    mockGetTracking.mockResolvedValue(trackingEntryFor({ lastReadDate: twoWeeksAgo }));
 
     const { result } = renderHook(() => useBookTracker('book-1'));
     await act(async () => {});
@@ -127,7 +125,7 @@ describe('formatLastRead', () => {
 
   it('returns a localeDateString for dates older than 30 days', async () => {
     const oldDate = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
-    mockGetItem.mockResolvedValue(storedDataFor('book-1', { lastReadDate: oldDate.toISOString() }));
+    mockGetTracking.mockResolvedValue(trackingEntryFor({ lastReadDate: oldDate.toISOString() }));
 
     const { result } = renderHook(() => useBookTracker('book-1'));
     await act(async () => {});

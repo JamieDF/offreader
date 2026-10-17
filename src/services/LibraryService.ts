@@ -1,7 +1,6 @@
 import { Book } from "@/types/book";
 import { fileStorage } from "./fileStorage";
-import { storageService } from "./storage";
-import { saveStoredBooks } from "./bookPersistence";
+import { getStoredBooks, migrateLegacyMetadata, saveStoredBooks } from "./bookPersistence";
 
 class LibraryService {
   private static instance: LibraryService;
@@ -28,8 +27,10 @@ class LibraryService {
       // Load from Capacitor storage
       await fileStorage.listStoredFiles();
 
-      const storedBooksData = await storageService.getItem('offreader-books');
-      const storedBooks: Book[] = storedBooksData ? JSON.parse(storedBooksData) : [];
+      // Copy any legacy Preferences blobs into the per-book store first,
+      // then load from it.
+      await migrateLegacyMetadata();
+      const storedBooks: Book[] = await getStoredBooks();
 
       // Rehydrate file URLs and verify files exist (bookFileExists checks both
       // the content-addressed store and the legacy UUID-keyed location for

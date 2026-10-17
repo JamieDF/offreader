@@ -6,8 +6,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { labelService } from "@/services/labelService";
 import { shelfService } from "@/services/shelfService";
 import { libraryService } from "@/services/LibraryService";
-import { storageService } from "@/services/storage";
-import { saveStoredBooks } from "@/services/bookPersistence";
+import { getStoredTrackerData, saveStoredBooks } from "@/services/bookPersistence";
 import { BookCard } from "./BookCard";
 import { LibraryHeader } from "./LibraryHeader";
 import { FilterToolbar } from "./FilterToolbar";
@@ -332,10 +331,9 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
 
   const handleResume = async (book: Book) => {
     try {
-      const trackerDataString = await storageService.getItem('book-tracker-data');
+      const allTrackerData = await getStoredTrackerData();
 
-      if (trackerDataString) {
-        const allTrackerData = JSON.parse(trackerDataString);
+      if (Object.keys(allTrackerData).length > 0) {
         const bookTrackerData = allTrackerData[book.id];
         const currentLocation = bookTrackerData?.currentLocation;
 

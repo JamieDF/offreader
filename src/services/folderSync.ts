@@ -5,7 +5,7 @@ import { libraryService } from "@/services/LibraryService";
 import { storageService } from "@/services/storage";
 import { fileStorage } from "@/services/fileStorage";
 import { safFiles } from "@/services/safFiles";
-import { saveStoredBooks } from "@/services/bookPersistence";
+import { saveBook, saveStoredBooks } from "@/services/bookPersistence";
 import { sha256Hex } from "@/utils/hash";
 import { importFileItems, ImportItem, toastImportError } from "@/services/bookImport";
 
@@ -343,11 +343,11 @@ export async function relinkBookFile(bookId: string, newPath?: string): Promise<
   try {
     const blob = await fileStorage.retrieveLinkedBlob(newPath);
     const contentHash = await sha256Hex(blob);
-    const updatedBooks = libraryService.getBooks().map(b =>
-      b.id === bookId ? { ...b, sourcePath: newPath, contentHash, missing: undefined } : b
+    const updated = { ...book, sourcePath: newPath, contentHash, missing: undefined };
+    libraryService.updateBooks(
+      libraryService.getBooks().map(b => b.id === bookId ? updated : b)
     );
-    libraryService.updateBooks(updatedBooks);
-    await saveStoredBooks(updatedBooks);
+    await saveBook(updated);
     return true;
   } catch (error) {
     console.error(`Failed to relink book ${bookId}:`, error);

@@ -4,7 +4,7 @@ import { Book } from "@/types/book";
 import { libraryService } from "@/services/LibraryService";
 import { storageService } from "@/services/storage";
 import { fileStorage } from "@/services/fileStorage";
-import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
+import { deleteBookTracking, getStoredTrackerData, saveBook, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
 import { importFileItems, toastImportError } from "@/services/bookImport";
 import { relinkBookFile, moveBooksToLibrary } from "@/services/folderSync";
 import { isAndroidSafAvailable, safFiles } from "@/services/safFiles";
@@ -284,15 +284,14 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
   const updateProgress = useCallback(async (bookId: string, progress: number) => {
     // Only update library service silently - don't notify listeners to prevent loops
     const currentBooks = libraryService.getBooks();
-    const updatedBooks = currentBooks.map(book =>
-      book.id === bookId
-        ? { ...book, progress: Math.min(100, Math.max(0, progress)) }
-        : book
-    );
+    const updatedBook = currentBooks.find(b => b.id === bookId);
+    if (!updatedBook) return;
+    const next = { ...updatedBook, progress: Math.min(100, Math.max(0, progress)) };
 
-    // Update library service silently and save to storage
-    libraryService.updateBooksSilent(updatedBooks);
-    await saveStoredBooks(updatedBooks);
+    // Silent service update plus a single-record write: the hot path must
+    // not re-serialize the whole library per relocate tick.
+    libraryService.updateBooksSilent(currentBooks.map(b => b.id === bookId ? next : b));
+    await saveBook(next);
   }, []); // Empty deps intentional: prevents re-render loops
 
   /** The storage key for a book's file bytes: content hash post-migration,
@@ -314,14 +313,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
       const updatedBooks = books.filter((book) => book.id !== bookId);
       libraryService.updateBooks(updatedBooks);
       await saveStoredBooks(updatedBooks);
-
-      // Clean up tracking data
-      const storedData = await storageService.getItem('book-tracker-data');
-      if (storedData) {
-        const trackerData = JSON.parse(storedData);
-        delete trackerData[bookId];
-        await storageService.setItem('book-tracker-data', JSON.stringify(trackerData));
-      }
+      await deleteBookTracking([bookId]);
 
       // Clean up any other stored data for this book
       await storageService.removeItem(`offreader-book-${bookId}`);
@@ -378,13 +370,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
 
       libraryService.updateBooks(updatedBooks);
       await saveStoredBooks(updatedBooks);
-
-      const storedData = await storageService.getItem('book-tracker-data');
-      if (storedData) {
-        const trackerData = JSON.parse(storedData);
-        bookIds.forEach(id => delete trackerData[id]);
-        await storageService.setItem('book-tracker-data', JSON.stringify(trackerData));
-      }
+      await deleteBookTracking(bookIds);
 
       await Promise.allSettled(bookIds.map(id => storageService.removeItem(`offreader-book-${id}`)));
     } catch (error) {

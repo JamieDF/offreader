@@ -4,7 +4,7 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { libraryService } from '@/services/LibraryService';
 import { storageService } from '@/services/storage';
 import { fileStorage } from '@/services/fileStorage';
-import { saveStoredBooks } from '@/services/bookPersistence';
+import { saveStoredBooks, deleteBookTracking } from '@/services/bookPersistence';
 import { Book } from '@/types/book';
 
 vi.mock('@/services/storage', () => ({
@@ -35,6 +35,8 @@ vi.mock('@/services/fileStorage', () => ({
 vi.mock('@/services/bookPersistence', () => ({
   getStoredTrackerData: vi.fn().mockResolvedValue({}),
   saveStoredBooks: vi.fn().mockResolvedValue(undefined),
+  saveBook: vi.fn().mockResolvedValue(undefined),
+  deleteBookTracking: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Imported at module level by useLibrary but only exercised by importBooks.
@@ -163,8 +165,7 @@ describe('useLibrary bulk operations', () => {
       expect(written.map(b => b.id)).toEqual(['c']);
       expect(mockSaveStoredBooks).toHaveBeenCalledTimes(1);
 
-      const trackerWrite = JSON.parse(mockSetItem.mock.calls[0][1]);
-      expect(trackerWrite).toEqual({ c: { progress: 80 } });
+      expect(deleteBookTracking).toHaveBeenCalledWith(['a', 'b']);
 
       expect(mockRemoveItem).toHaveBeenCalledWith('offreader-book-a');
       expect(mockRemoveItem).toHaveBeenCalledWith('offreader-book-b');

@@ -65,3 +65,15 @@ export interface Book {
    *  relink flow. Cleared on the next init once the file is reachable again. */
   missing?: boolean;
 }
+
+export interface Bookmark {
+  id: string;
+  /** CFI or href. */
+  location: string;
+  chapterTitle: string;
+  /** 0-100 progress within book. */
+  position: number;
+  /** ISO timestamp. */
+  createdAt: string;
+  note?: string;
+}
