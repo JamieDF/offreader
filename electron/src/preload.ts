@@ -18,3 +18,45 @@ contextBridge.exposeInMainWorld('offreaderWindow', {
     return () => ipcRenderer.removeListener('offreader:window-maximized-change', listener);
   },
 });
+
+// Native file access for linked books and picker imports. Channel names must
+// match the ipcMain.handle() calls in index.ts (tests/unit/electron/
+// titlebar.test.ts verifies channel-name agreement).
+contextBridge.exposeInMainWorld('offreaderFiles', {
+  /** Native multi-file picker; resolves to absolute paths ([] if cancelled). */
+  pickBookFiles: () => ipcRenderer.invoke('offreader:pick-book-files'),
+  /** Native single-file picker; resolves to a path or null. */
+  pickBookFile: () => ipcRenderer.invoke('offreader:pick-book-file'),
+  /** Whitelists a path so offreader-file:// can serve it to the renderer. */
+  registerPath: (path: string) => ipcRenderer.invoke('offreader:register-file-path', path),
+  fileExists: (path: string) => ipcRenderer.invoke('offreader:file-exists', path),
+  statFile: (path: string) => ipcRenderer.invoke('offreader:stat-file', path),
+  /** Native directory picker; resolves to a path or null. */
+  pickDirectory: () => ipcRenderer.invoke('offreader:pick-directory'),
+  /** Recursive scan for book files under a directory. */
+  scanFolder: (path: string) => ipcRenderer.invoke('offreader:scan-folder', path),
+  /** Watch a directory for add/change/unlink of book files (debounced). */
+  watchFolder: (path: string) => ipcRenderer.invoke('offreader:watch-folder', path),
+  unwatchFolder: (path: string) => ipcRenderer.invoke('offreader:unwatch-folder', path),
+  /** Fires when a watched folder's book files change; returns unsubscribe. */
+  onFolderChanged: (callback: (dirPath: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, dirPath: string) => callback(dirPath);
+    ipcRenderer.on('offreader:folder-changed', listener);
+    return () => ipcRenderer.removeListener('offreader:folder-changed', listener);
+  },
+  /** Takes the queued "open with" file paths (argv / second-instance / macOS
+   *  open-file). Pull-based: returns and clears the queue. */
+  takePendingFiles: () => ipcRenderer.invoke('offreader:take-pending-files'),
+  /** Nudge that new files were opened while the app is running. */
+  onFilesOpened: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('offreader:files-opened', listener);
+    return () => ipcRenderer.removeListener('offreader:files-opened', listener);
+  },
+  /** Write bytes to an arbitrary path (library export). */
+  writeFileToPath: (destPath: string, data: Uint8Array) =>
+    ipcRenderer.invoke('offreader:export-write-file', destPath, data),
+  /** Copy a file natively (library export of linked books). */
+  copyFileToPath: (sourcePath: string, destPath: string) =>
+    ipcRenderer.invoke('offreader:export-copy-file', sourcePath, destPath),
+});

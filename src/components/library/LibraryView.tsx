@@ -6,8 +6,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { labelService } from "@/services/labelService";
 import { shelfService } from "@/services/shelfService";
 import { libraryService } from "@/services/LibraryService";
-import { storageService } from "@/services/storage";
-import { saveStoredBooks } from "@/services/bookPersistence";
+import { getStoredTrackerData, saveStoredBooks } from "@/services/bookPersistence";
 import { BookCard } from "./BookCard";
 import { LibraryHeader } from "./LibraryHeader";
 import { FilterToolbar } from "./FilterToolbar";
@@ -20,6 +19,9 @@ import { ManageLibraryDialog } from "./ManageLibraryDialog";
 import { PostImportDialog } from "./PostImportDialog";
 import { SelectionActionBar } from "./SelectionActionBar";
 import { BulkLabelsDialog } from "./BulkLabelsDialog";
+import { ImportModeDialog } from "./ImportModeDialog";
+import { getImportMode, ImportMode } from "@/utils/importMode";
+import { enqueuePendingIndex, getSyncFolders, scanFolder, syncAllFolders, supportsFolderSync } from "@/services/folderSync";
 import { ShelfDialog } from "@/components/book-details/ShelfDialog";
 import {
   AlertDialog,
@@ -74,6 +76,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     sortBy,
     setSortBy,
     importBooks,
+    importBookPaths,
     isEmpty,
     filters,
     setFilter,
@@ -82,6 +85,7 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     removeBooks,
     assignBooksToShelf,
     applyLabelChanges,
+    moveBooksToLibrary,
   } = useLibrary();
   const {
     isOpen: tourOpen,
@@ -102,6 +106,50 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
   const [bulkShelfOpen, setBulkShelfOpen] = useState(false);
   const [bulkLabelsOpen, setBulkLabelsOpen] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [importModeOpen, setImportModeOpen] = useState(false);
+  const [defaultImportMode, setDefaultImportMode] = useState<ImportMode>('linked');
+
+  // Folder sync: re-scan configured folders once the library has loaded.
+  // Desktop registers watchers + rescan-on-change; Android rescans SAF trees
+  // on open (SAF has no watch primitive). Deferred until init completes , 
+  // scanning with an empty library would re-import everything as new.
+  useEffect(() => {
+    if (!supportsFolderSync()) return;
+    const files = window.offreaderFiles;
+
+    const importOpened = async () => {
+      const pending = (await files?.takePendingFiles()) ?? [];
+      if (pending.length > 0) {
+        await importBookPaths(pending, await getImportMode(), onImported);
+      }
+    };
+
+    let started = false;
+    const start = async () => {
+      if (started || libraryService.getIsLoading()) return;
+      started = true;
+      const folders = await getSyncFolders();
+      await Promise.all(folders.map(f => files?.watchFolder(f)));
+      // "Open with" files queued before the renderer was ready
+      await importOpened();
+      await syncAllFolders();
+      // Stubs left unindexed by an earlier session (quit mid-scan).
+      enqueuePendingIndex();
+    };
+
+    start();
+    const unsubInit = libraryService.subscribe(start);
+    const unsubChanged = files?.onFolderChanged((dirPath) => {
+      scanFolder(dirPath);
+    });
+    // Files opened while running (second instance / macOS open-file)
+    const unsubOpened = files?.onFilesOpened(importOpened);
+    return () => {
+      unsubInit();
+      unsubChanged?.();
+      unsubOpened?.();
+    };
+  }, [importBookPaths]);
 
   useEffect(() => {
     const loadLabels = () => {
@@ -203,6 +251,14 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     toast.success(`Updated labels on ${count} book${count === 1 ? '' : 's'}`);
   };
 
+  const handleMoveToLibrary = async () => {
+    const moved = await moveBooksToLibrary([...selectedIds]);
+    if (moved > 0) {
+      toast.success(`Copied ${moved} book${moved === 1 ? '' : 's'} into library storage`);
+      exitSelectionMode();
+    }
+  };
+
   const handleBulkDelete = async () => {
     const count = selectedIds.size;
     setBulkDeleteOpen(false);
@@ -211,15 +267,31 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
     toast.success(`Deleted ${count} book${count === 1 ? '' : 's'}`);
   };
 
+  const onImported = (books: Book[]) => {
+    setImportedBooks(books);
+    setShowImportDialog(true);
+  };
+
   const handleRealImport = () => {
-    importBooks((books) => {
-      setImportedBooks(books);
-      setShowImportDialog(true);
-    });
+    // Desktop uses the native picker so files can be linked in place;
+    // the mode dialog defaults to the configured setting.
+    if (window.offreaderFiles) {
+      getImportMode().then(setDefaultImportMode);
+      setImportModeOpen(true);
+      return;
+    }
+    importBooks(onImported);
+  };
+
+  const handleImportModeChosen = async (mode: ImportMode) => {
+    setImportModeOpen(false);
+    const paths = await window.offreaderFiles?.pickBookFiles();
+    if (!paths?.length) return;
+    await importBookPaths(paths, mode, onImported);
   };
 
   // FAB / EmptyState click handler. During the tour, route the click into
-  // the demo flow instead of opening the OS file picker — driver.js's
+  // the demo flow instead of opening the OS file picker: driver.js's
   // overlay would otherwise block user gestures anyway.
   const handleImportClick = () => {
     if (tourOpen) {
@@ -261,10 +333,9 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
 
   const handleResume = async (book: Book) => {
     try {
-      const trackerDataString = await storageService.getItem('book-tracker-data');
+      const allTrackerData = await getStoredTrackerData();
 
-      if (trackerDataString) {
-        const allTrackerData = JSON.parse(trackerDataString);
+      if (Object.keys(allTrackerData).length > 0) {
         const bookTrackerData = allTrackerData[book.id];
         const currentLocation = bookTrackerData?.currentLocation;
 
@@ -387,10 +458,12 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
       {selectionMode ? (
         <SelectionActionBar
           selectedCount={selectedIds.size}
+          linkedSelectedCount={selectedBooks.filter(b => b.source === 'linked').length}
           allVisibleSelected={allVisibleSelected}
           onToggleSelectAll={toggleSelectAllVisible}
           onAssignShelf={() => setBulkShelfOpen(true)}
           onEditLabels={() => setBulkLabelsOpen(true)}
+          onMoveToLibrary={handleMoveToLibrary}
           onDelete={() => setBulkDeleteOpen(true)}
           onExit={exitSelectionMode}
         />
@@ -442,6 +515,13 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
         onClose={() => setBulkLabelsOpen(false)}
       />
 
+      <ImportModeDialog
+        isOpen={importModeOpen}
+        defaultMode={defaultImportMode}
+        onChoose={handleImportModeChosen}
+        onClose={() => setImportModeOpen(false)}
+      />
+
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -450,6 +530,8 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               The selected books and their reading progress will be permanently removed from your library.
+              {selectedBooks.some(b => b.source === 'linked') &&
+                ' Books linked to files outside OffReader will only be removed from the library: the files themselves are not deleted.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

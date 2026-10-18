@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GripVertical, Star, Trash2, Plus, X, Check, FolderInput, Tag } from "lucide-react";
+import { GripVertical, Star, Trash2, Plus, X, Check, FolderInput, Tag, Link2, HardDrive, FolderSync, RefreshCw, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,9 @@ import { libraryService } from "@/services/LibraryService";
 import { saveStoredBooks } from "@/services/bookPersistence";
 import { toast } from "@/components/ui/toast";
 import { LABEL_COLORS } from "@/constants/labels";
+import { getImportMode, setImportMode, ImportMode } from "@/utils/importMode";
+import { getSyncFolders, addSyncFolder, removeSyncFolder, scanFolder, syncAllFolders, pickSyncDirectory, supportsFolderSync, folderDisplayName } from "@/services/folderSync";
+import { exportLibrary } from "@/services/exportLibrary";
 
 export function ManageLibrary() {
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -24,12 +27,21 @@ export function ManageLibrary() {
   const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0]);
   const [showNewLabel, setShowNewLabel] = useState(false);
   const [draggedShelfId, setDraggedShelfId] = useState<string | null>(null);
+  const [importMode, setImportModeState] = useState<ImportMode>('linked');
+  const [syncFolders, setSyncFolders] = useState<string[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const isDesktop = typeof window !== 'undefined' && !!window.offreaderFiles;
+  const canSyncFolders = supportsFolderSync();
 
   useEffect(() => {
     const loadData = () => {
       setShelves(shelfService.getShelves());
       setLabels(labelService.getLabels());
     };
+
+    loadData();
+    getImportMode().then(setImportModeState);
+    getSyncFolders().then(setSyncFolders);
 
     loadData();
     const unsubscribeShelf = shelfService.subscribe(loadData);
@@ -218,7 +230,7 @@ export function ManageLibrary() {
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateShelf();
-                  if (e.key === 'Escape') () => { setShowNewShelf(false); setNewShelfName(''); }
+                  if (e.key === 'Escape') { setShowNewShelf(false); setNewShelfName(''); }
                 }}
               />
               <label className="flex items-center gap-2 text-sm">
@@ -294,7 +306,7 @@ export function ManageLibrary() {
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateLabel();
-                  if (e.key === 'Escape') () => { setShowNewLabel(false); setNewLabelName(''); }
+                  if (e.key === 'Escape') { setShowNewLabel(false); setNewLabelName(''); }
                 }}
               />
               <div className="flex items-center gap-2">
@@ -342,6 +354,177 @@ export function ManageLibrary() {
           )}
         </div>
       </div>
+
+      {/* Import mode: desktop only; web/Android always store copies.
+          Affects future imports only: existing books keep their mode. */}
+      {isDesktop && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <Link2 className="h-4 w-4" />
+            <span>Import</span>
+          </div>
+          <div className="space-y-2">
+            {(
+              [
+                {
+                  value: 'linked' as ImportMode,
+                  label: 'Link in place',
+                  hint: "Read files from their current location: nothing is duplicated. Best for large existing collections.",
+                  icon: Link2,
+                },
+                {
+                  value: 'managed' as ImportMode,
+                  label: 'Copy into library',
+                  hint: "Duplicate files into OffReader storage: books keep working if the originals move.",
+                  icon: HardDrive,
+                },
+              ]
+            ).map(({ value, label, hint, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => {
+                  setImportModeState(value);
+                  setImportMode(value);
+                  toast.success(`New imports will ${value === 'linked' ? 'link to' : 'copy'} files`);
+                }}
+                className={`w-full text-left px-3 py-2.5 rounded-lg border-2 transition-colors flex gap-3 ${
+                  importMode === value ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-accent'
+                }`}
+              >
+                <Icon className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                <span>
+                  <span className="block text-sm font-medium">{label}</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">{hint}</span>
+                </span>
+              </button>
+            ))}
+            <p className="text-xs text-muted-foreground">
+              Applies to new imports: existing books keep how they were added.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Sync folders: desktop + Android. Watched folders (desktop) / SAF
+          document trees (Android) keep the library in step with the
+          filesystem; books are always linked, never copied. */}
+      {canSyncFolders && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <FolderSync className="h-4 w-4" />
+            <span>Sync folders</span>
+          </div>
+          <div className="space-y-2">
+            {syncFolders.map(dir => (
+              <div
+                key={dir}
+                className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+              >
+                <span className="flex-1 font-mono text-xs truncate" title={dir}>{folderDisplayName(dir)}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Stop syncing ${folderDisplayName(dir)}`}
+                  onClick={async () => setSyncFolders(await removeSyncFolder(dir))}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 justify-start"
+                disabled={isScanning}
+                onClick={async () => {
+                  const dir = await pickSyncDirectory();
+                  if (!dir) return;
+                  setSyncFolders(await addSyncFolder(dir));
+                  setIsScanning(true);
+                  try {
+                    const result = await scanFolder(dir);
+                    toast.success(
+                      result.added > 0
+                        ? `Added ${result.added} book${result.added === 1 ? '' : 's'} from ${folderDisplayName(dir)}`
+                        : `Folder synced: no new books found`,
+                    );
+                  } finally {
+                    setIsScanning(false);
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add folder
+              </Button>
+              {syncFolders.length > 0 && (
+                <Button
+                  variant="outline"
+                  disabled={isScanning}
+                  onClick={async () => {
+                    setIsScanning(true);
+                    try {
+                      const result = await syncAllFolders();
+                      toast.success(
+                        `Rescan complete: ${result.added} added, ${result.moved} moved, ${result.missing} missing`,
+                      );
+                    } finally {
+                      setIsScanning(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
+                  Rescan
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Files are linked in place: nothing is copied. If a file is moved
+              or renamed, OffReader re-finds it by content.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Backup: desktop only. Copies book files + a metadata manifest into
+          a chosen directory. */}
+      {isDesktop && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <Download className="h-4 w-4" />
+            <span>Backup</span>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            disabled={isScanning}
+            onClick={async () => {
+              const dir = await window.offreaderFiles?.pickDirectory();
+              if (!dir) return;
+              setIsScanning(true);
+              try {
+                const result = await exportLibrary(dir);
+                toast.success(
+                  result.failed > 0
+                    ? `Exported ${result.exported} books (${result.failed} failed) to ${dir}`
+                    : `Exported ${result.exported} books to ${dir}`,
+                );
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Export failed');
+              } finally {
+                setIsScanning(false);
+              }
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export library…
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Copies every book file plus an offreader-library.json manifest.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

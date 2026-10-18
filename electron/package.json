@@ -1,6 +1,6 @@
 {
   "name": "OffReader",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "OffReader: Ebook reader and library for web, linux and android",
   "author": {
     "name": "OffReader",
@@ -50,6 +50,38 @@
       "build/**/*",
       "capacitor.config.*",
       "app/**/*"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "epub",
+        "name": "EPUB ebook",
+        "role": "Viewer"
+      },
+      {
+        "ext": "pdf",
+        "name": "PDF document",
+        "role": "Viewer"
+      },
+      {
+        "ext": "mobi",
+        "name": "MOBI ebook",
+        "role": "Viewer"
+      },
+      {
+        "ext": "azw3",
+        "name": "AZW3 ebook",
+        "role": "Viewer"
+      },
+      {
+        "ext": "fb2",
+        "name": "FB2 ebook",
+        "role": "Viewer"
+      },
+      {
+        "ext": "cbz",
+        "name": "Comic book archive",
+        "role": "Viewer"
+      }
     ],
     "linux": {
       "target": [

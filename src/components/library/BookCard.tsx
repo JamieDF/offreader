@@ -1,6 +1,6 @@
 import { Progress } from "@/components/ui/progress";
 import { Book } from "@/types/book";
-import { BookOpen, Check, FolderInput } from "lucide-react";
+import { BookOpen, Check, FileWarning, FolderInput } from "lucide-react";
 import { useState, useEffect } from "react";
 import { titleCase } from "@/utils/titleCase";
 import { Label, Shelf } from "@/types/book";
@@ -96,8 +96,17 @@ export function BookCard({ book, onSelect, labels = [], dataTourId, selectionMod
             </div>
           )}
 
-          {/* Completed badge — hidden while selecting (checkbox takes the corner) */}
-          {book.progress === 100 && !selectionMode && (
+          {/* Missing-source badge: a linked book whose file can't be read.
+              Takes the corner over "Done" since it needs attention. */}
+          {book.missing && !selectionMode && (
+            <div className="absolute top-1.5 right-1.5 bg-destructive text-destructive-foreground text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
+              <FileWarning className="h-3 w-3" />
+              Missing
+            </div>
+          )}
+
+          {/* Completed badge: hidden while selecting (checkbox takes the corner) */}
+          {book.progress === 100 && !book.missing && !selectionMode && (
             <div className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
               Done
             </div>
@@ -134,7 +143,7 @@ export function BookCard({ book, onSelect, labels = [], dataTourId, selectionMod
         </div>
       </button>
 
-      {/* Selection checkbox — outside the card button so it's not nested
+      {/* Selection checkbox: outside the card button so it's not nested
           interactive content. Always visible in selection mode; on hover
           otherwise as an entry affordance on desktop. Not rendered when the
           card isn't selectable (e.g. the tour demo card). */}

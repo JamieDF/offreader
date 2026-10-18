@@ -71,7 +71,7 @@ export const extractPdfMetadata = async (file: File): Promise<PdfMetadata> => {
     const rawTitle = metadata?.get('dc:title') ?? pdfInfo?.Title ?? fileName
     const rawAuthor = metadata?.get('dc:creator') ?? pdfInfo?.Author ?? 'Unknown Author'
     const rawDescription = metadata?.get('dc:description') ?? pdfInfo?.Subject ?? ''
-    // PDF metadata values can be arrays or objects — coerce to string
+    // PDF metadata values can be arrays or objects: coerce to string
     title = String(rawTitle)
     author = String(rawAuthor)
     description = String(rawDescription)

@@ -11,7 +11,7 @@ import { EditMetadataDialog } from "./EditMetadataDialog";
 import { labelService } from "@/services/labelService";
 import { shelfService } from "@/services/shelfService";
 import { libraryService } from "@/services/LibraryService";
-import { saveStoredBooks } from "@/services/bookPersistence";
+import { saveBook } from "@/services/bookPersistence";
 
 interface BookHeroProps {
   book: Book;
@@ -51,44 +51,40 @@ export function BookHero({ book }: BookHeroProps) {
   const currentShelf = shelves.find(s => s.id === currentBook.shelfId);
 
   const handleShelfChange = async (shelfId: string | null) => {
-    const books = libraryService.getBooks();
-    const updatedBooks = books.map(b =>
-      b.id === currentBook.id ? { ...b, shelfId } : b
+    const updated = { ...currentBook, shelfId };
+    libraryService.updateBooksSilent(
+      libraryService.getBooks().map(b => b.id === updated.id ? updated : b)
     );
-    libraryService.updateBooksSilent(updatedBooks);
-    await saveStoredBooks(updatedBooks);
+    await saveBook(updated);
     libraryService.notifyListeners();
   };
 
   const handleAddLabel = async (labelId: string) => {
     if (currentBook.labelIds.includes(labelId)) return;
 
-    const books = libraryService.getBooks();
-    const updatedBooks = books.map(b =>
-      b.id === currentBook.id ? { ...b, labelIds: [...b.labelIds, labelId] } : b
+    const updated = { ...currentBook, labelIds: [...currentBook.labelIds, labelId] };
+    libraryService.updateBooksSilent(
+      libraryService.getBooks().map(b => b.id === updated.id ? updated : b)
     );
-    libraryService.updateBooksSilent(updatedBooks);
-    await saveStoredBooks(updatedBooks);
+    await saveBook(updated);
     libraryService.notifyListeners();
   };
 
   const handleRemoveLabel = async (labelId: string) => {
-    const books = libraryService.getBooks();
-    const updatedBooks = books.map(b =>
-      b.id === currentBook.id ? { ...b, labelIds: b.labelIds.filter(id => id !== labelId) } : b
+    const updated = { ...currentBook, labelIds: currentBook.labelIds.filter(id => id !== labelId) };
+    libraryService.updateBooksSilent(
+      libraryService.getBooks().map(b => b.id === updated.id ? updated : b)
     );
-    libraryService.updateBooksSilent(updatedBooks);
-    await saveStoredBooks(updatedBooks);
+    await saveBook(updated);
     libraryService.notifyListeners();
   };
 
   const handleSaveMetadata = async (updates: { title: string; author: string; description: string }) => {
-    const books = libraryService.getBooks();
-    const updatedBooks = books.map(b =>
-      b.id === currentBook.id ? { ...b, ...updates } : b
+    const updated = { ...currentBook, ...updates };
+    libraryService.updateBooksSilent(
+      libraryService.getBooks().map(b => b.id === updated.id ? updated : b)
     );
-    libraryService.updateBooksSilent(updatedBooks);
-    await saveStoredBooks(updatedBooks);
+    await saveBook(updated);
     libraryService.notifyListeners();
   };
 

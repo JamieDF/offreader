@@ -91,7 +91,7 @@ const extractMobiCover = async (arrayBuffer: ArrayBuffer): Promise<string> => {
     const exthFlags = dataView.getUint32(firstRecordOffset + 128, false);
 
     if ((exthFlags & 0x40) === 0) {
-      // No EXTH — try first image record as fallback
+      // No EXTH: try first image record as fallback
       if (firstImageRecordIndex > 0 && firstImageRecordIndex < 1000) {
         try {
           const imageOffset = readPdbRecordOffset(firstImageRecordIndex);
@@ -208,7 +208,7 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
 
     if (arrayBuffer.byteLength < 84) throw new Error('File too small for MOBI header');
 
-    // Find MOBI header — try PDB record 0 offset first, fall back to manual search
+    // Find MOBI header: try PDB record 0 offset first, fall back to manual search
     let mobiHeaderStart = safeReadUint32(dataView, 80, false);
 
     if (!mobiHeaderStart || mobiHeaderStart > arrayBuffer.byteLength || mobiHeaderStart < 100) {
@@ -242,10 +242,10 @@ export const extractMobiMetadata = async (file: File): Promise<MobiMetadata> => 
       }
       return false;
     };
-    // isMobi may be false for some files — continue anyway
+    // isMobi may be false for some files: continue anyway
     checkMobiSig(mobiHeaderStart);
 
-    // Find EXTH header — search from end of MOBI header then broadly
+    // Find EXTH header: search from end of MOBI header then broadly
     const headerLength = safeReadUint32(dataView, mobiHeaderStart + 20, false);
     const exthSearchStart = headerLength ? mobiHeaderStart + headerLength : mobiHeaderStart + 232;
     const exthSearchEnd = Math.min(exthSearchStart + 5000, arrayBuffer.byteLength - 4);

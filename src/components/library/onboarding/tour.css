@@ -1,4 +1,4 @@
-/* Driver.js popover overrides — match the shadcn theme tokens.
+/* Driver.js popover overrides: match the shadcn theme tokens.
  *
  * Driver.js injects its popover into <body>, so it inherits any CSS custom
  * properties on <html> (where ReaderSettingsProvider applies the active
@@ -185,7 +185,7 @@
   border: 5px solid hsl(var(--popover));
 }
 
-/* Mobile layout — per-step popover positions.
+/* Mobile layout: per-step popover positions.
  *
  * The popover is tagged with `data-tour-step` set by OnboardingTour's
  * onPopoverRender, so we can position it differently for each step.

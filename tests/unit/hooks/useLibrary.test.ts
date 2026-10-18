@@ -4,7 +4,7 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { libraryService } from '@/services/LibraryService';
 import { storageService } from '@/services/storage';
 import { fileStorage } from '@/services/fileStorage';
-import { saveStoredBooks } from '@/services/bookPersistence';
+import { saveStoredBooks, deleteBookTracking } from '@/services/bookPersistence';
 import { Book } from '@/types/book';
 
 vi.mock('@/services/storage', () => ({
@@ -35,6 +35,8 @@ vi.mock('@/services/fileStorage', () => ({
 vi.mock('@/services/bookPersistence', () => ({
   getStoredTrackerData: vi.fn().mockResolvedValue({}),
   saveStoredBooks: vi.fn().mockResolvedValue(undefined),
+  saveBook: vi.fn().mockResolvedValue(undefined),
+  deleteBookTracking: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Imported at module level by useLibrary but only exercised by importBooks.
@@ -123,7 +125,7 @@ describe('useLibrary bulk operations', () => {
       const written = mockUpdateBooks.mock.calls[0][0] as Book[];
       expect(written.find(b => b.id === 'a')!.labelIds.sort()).toEqual(['a-only', 'new-label']);
       expect(written.find(b => b.id === 'b')!.labelIds.sort()).toEqual(['b-only', 'new-label']);
-      // 'c' not selected — untouched
+      // 'c' not selected: untouched
       expect(written.find(b => b.id === 'c')!.labelIds).toEqual(['shared']);
       expect(mockSaveStoredBooks).toHaveBeenCalledTimes(1);
     });
@@ -163,8 +165,7 @@ describe('useLibrary bulk operations', () => {
       expect(written.map(b => b.id)).toEqual(['c']);
       expect(mockSaveStoredBooks).toHaveBeenCalledTimes(1);
 
-      const trackerWrite = JSON.parse(mockSetItem.mock.calls[0][1]);
-      expect(trackerWrite).toEqual({ c: { progress: 80 } });
+      expect(deleteBookTracking).toHaveBeenCalledWith(['a', 'b']);
 
       expect(mockRemoveItem).toHaveBeenCalledWith('offreader-book-a');
       expect(mockRemoveItem).toHaveBeenCalledWith('offreader-book-b');
@@ -181,6 +182,49 @@ describe('useLibrary bulk operations', () => {
 
       expect((mockUpdateBooks.mock.calls[0][0] as Book[]).map(b => b.id)).toEqual(['b']);
       expect(mockSetItem).not.toHaveBeenCalled();
+    });
+
+    it('does not delete bytes a surviving managed book still shares', async () => {
+      mockGetBooks.mockReturnValue([
+        makeBook({ id: 'm1', contentHash: 'H' }),
+        makeBook({ id: 'm2', contentHash: 'H' }),
+      ]);
+
+      const { result } = renderHook(() => useLibrary());
+      await act(async () => {
+        await result.current.removeBooks(['m1']);
+      });
+
+      expect(mockDeleteFile).not.toHaveBeenCalled();
+    });
+
+    it('does not let a surviving linked book protect managed bytes', async () => {
+      mockGetBooks.mockReturnValue([
+        makeBook({ id: 'm', contentHash: 'H' }),
+        makeBook({ id: 'l', contentHash: 'H', source: 'linked', sourcePath: '/x.epub' }),
+      ]);
+
+      const { result } = renderHook(() => useLibrary());
+      await act(async () => {
+        await result.current.removeBooks(['m']);
+      });
+
+      // The linked survivor has no stored bytes: the managed blob is orphaned
+      // and must be deleted rather than kept under the shared hash key.
+      expect(mockDeleteFile).toHaveBeenCalledWith('H');
+    });
+
+    it('never deletes bytes when removing a linked book', async () => {
+      mockGetBooks.mockReturnValue([
+        makeBook({ id: 'l', contentHash: 'H', source: 'linked', sourcePath: '/x.epub' }),
+      ]);
+
+      const { result } = renderHook(() => useLibrary());
+      await act(async () => {
+        await result.current.removeBooks(['l']);
+      });
+
+      expect(mockDeleteFile).not.toHaveBeenCalled();
     });
   });
 });

@@ -3,6 +3,7 @@ import { libraryService } from '@/services/LibraryService';
 import { Book } from '@/types/book';
 import { fileStorage } from '@/services/fileStorage';
 import { storageService } from '@/services/storage';
+import { bookMetaStore } from '@/services/bookMetaStore';
 
 // Mock the dependencies
 vi.mock('@/services/fileStorage');
@@ -19,9 +20,12 @@ const makeBook = (overrides: Partial<Book> = {}): Book => ({
 });
 
 describe('LibraryService', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     libraryService.updateBooksSilent([]);
+    await bookMetaStore.writeBooks([]);
+    const all = await bookMetaStore.getAllTracking();
+    await bookMetaStore.deleteTracking(Object.keys(all));
   });
 
   describe('updateBooks vs updateBooksSilent', () => {
@@ -85,15 +89,62 @@ describe('LibraryService', () => {
       it('does not read full book files while rehydrating the library', async () => {
         const book = makeBook({ id: 'book-1', filePath: '/old-url' });
         vi.mocked(storageService.getItem).mockResolvedValueOnce(JSON.stringify([book]));
-        vi.mocked(fileStorage.fileExists).mockResolvedValueOnce(true);
+        vi.mocked(fileStorage.bookFileExists).mockResolvedValueOnce(true);
 
         await libraryService.initialize();
 
-        expect(fileStorage.retrieveFile).not.toHaveBeenCalled();
+        expect(fileStorage.retrieveBlob).not.toHaveBeenCalled();
         expect(libraryService.getBooks()[0]).toMatchObject({
           id: book.id,
           filePath: '',
         });
+      });
+
+      it('drops managed books whose stored file is gone', async () => {
+        const book = makeBook({ id: 'gone-1', source: 'managed', contentHash: 'h' });
+        vi.mocked(storageService.getItem).mockResolvedValueOnce(JSON.stringify([book]));
+        vi.mocked(fileStorage.bookFileExists).mockResolvedValueOnce(false);
+
+        await libraryService.initialize();
+
+        expect(libraryService.getBooks()).toHaveLength(0);
+      });
+
+      it('keeps linked books with a missing source, flagged missing', async () => {
+        const book = makeBook({
+          id: 'linked-1',
+          source: 'linked',
+          sourcePath: '/books/dune.epub',
+          contentHash: 'h',
+        });
+        vi.mocked(storageService.getItem).mockResolvedValueOnce(JSON.stringify([book]));
+        vi.mocked(fileStorage.bookFileExists).mockResolvedValueOnce(false);
+
+        await libraryService.initialize();
+
+        expect(libraryService.getBooks()[0]).toMatchObject({
+          id: 'linked-1',
+          missing: true,
+          sourcePath: '/books/dune.epub',
+        });
+      });
+
+      it('only counts managed books when claiming store keys for orphan cleanup', async () => {
+        const managed = makeBook({ id: 'm', source: 'managed', contentHash: 'hm' });
+        const linked = makeBook({
+          id: 'l',
+          source: 'linked',
+          sourcePath: '/books/x.epub',
+          contentHash: 'hl',
+        });
+        vi.mocked(storageService.getItem).mockResolvedValueOnce(
+          JSON.stringify([managed, linked]),
+        );
+        vi.mocked(fileStorage.bookFileExists).mockResolvedValue(true);
+
+        await libraryService.initialize();
+
+        expect(fileStorage.cleanupOrphanFiles).toHaveBeenCalledWith(['hm']);
       });
     });
   });

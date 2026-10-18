@@ -1,7 +1,6 @@
 import { Book } from "@/types/book";
 import { fileStorage } from "./fileStorage";
-import { storageService } from "./storage";
-import { saveStoredBooks } from "./bookPersistence";
+import { getStoredBooks, migrateLegacyMetadata, saveStoredBooks } from "./bookPersistence";
 
 class LibraryService {
   private static instance: LibraryService;
@@ -28,16 +27,26 @@ class LibraryService {
       // Load from Capacitor storage
       await fileStorage.listStoredFiles();
 
-      const storedBooksData = await storageService.getItem('offreader-books');
-      const storedBooks: Book[] = storedBooksData ? JSON.parse(storedBooksData) : [];
+      // Copy any legacy Preferences blobs into the per-book store first,
+      // then load from it.
+      await migrateLegacyMetadata();
+      const storedBooks: Book[] = await getStoredBooks();
 
-      // Rehydrate file URLs and verify files exist
+      // Rehydrate file URLs and verify files exist (bookFileExists checks both
+      // the content-addressed store and the legacy UUID-keyed location for
+      // managed books, and the source path for linked books)
       const validBooks = await Promise.all(
         storedBooks.map(async (book) => {
           try {
             // Check if file actually exists
-            const exists = await fileStorage.fileExists(book.id);
+            const exists = await fileStorage.bookFileExists(book);
             if (!exists) {
+              // Linked books survive a missing source: the reader offers
+              // relink instead of silently dropping the record.
+              if (book.source === 'linked') {
+                console.warn(`Linked file missing for book ${book.id} (${book.title})`);
+                return { ...book, filePath: '', missing: true };
+              }
               console.warn(`File missing for book ${book.id} (${book.title}), skipping`);
               return null;
             }
@@ -45,7 +54,7 @@ class LibraryService {
             // Keep book content out of the native bridge until the user opens it.
             // The reader retrieves the file on demand, so creating startup blob
             // URLs would read every stored book into memory unnecessarily.
-            return { ...book, filePath: '' };
+            return { ...book, filePath: '', missing: undefined };
           } catch (error) {
             console.error(`Failed to retrieve file for book ${book.id}:`, error);
             return null;
@@ -55,12 +64,19 @@ class LibraryService {
 
       const loadedBooks = validBooks.filter((book): book is Book => book !== null);
 
-      // Migrate any books stored under the old .epub extension to their correct format extension
-      await fileStorage.migrateExtensions(loadedBooks.map(b => ({ id: b.id, format: b.format })));
+      // Move legacy UUID-keyed files into the content-addressed store
+      // (sets contentHash in place; also fixes pre-format-aware .epub names)
+      const migrated = await fileStorage.migrateLegacyFiles(loadedBooks);
+      if (migrated) {
+        await saveStoredBooks(loadedBooks);
+      }
 
-      // Clean up orphaned files (files with no metadata)
-      const validBookIds = loadedBooks.map(b => b.id);
-      await fileStorage.cleanupOrphanFiles(validBookIds);
+      // Clean up orphaned files (files with no metadata). Only managed books
+      // claim store keys: linked books store no bytes.
+      const validBookKeys = loadedBooks
+        .filter(b => b.source !== 'linked')
+        .map(b => b.contentHash ?? b.id);
+      await fileStorage.cleanupOrphanFiles(validBookKeys);
 
       this.books = loadedBooks;
       

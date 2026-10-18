@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.offreader.reader"><img src="https://img.shields.io/badge/Google_Play-Get_it_on_Google_Play-green?logo=google-play&logoColor=white" alt="Get it on Google Play" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version 1.3.0" />
+  <img src="https://img.shields.io/badge/version-1.4.0-blue.svg" alt="Version 1.4.0" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome" />
 </p>
 
@@ -30,6 +30,10 @@ There are other great projects that do something similar, but I wanted to build 
 ## Features
 
 - Import EPUB, MOBI, AZW3, FB2, CBZ, and PDF files from your device
+- **Sync folders** on desktop and Android: link an existing ebook folder in place instead of copying files; new, moved, and deleted files stay in step automatically
+- **Managed or linked imports** on desktop: copy books into app storage or keep them where they are, and convert later
+- **Library backup**: export your book files and metadata for migration or safekeeping
+- **Open with** support on desktop: open ebook files straight from your file manager
 - **Organize with Shelves**: assign each book to one shelf; create, rename, reorder, and delete shelves
 - **Tag with Labels**: assign multiple colored labels per book; filter your library by shelf or labels
 - **10+ reader themes** (light, sepia, dark, day, parchment, neon, noir, meadow, coast, storm) plus typography controls (font, size, line height, spacing)
@@ -50,11 +54,13 @@ There are other great projects that do something similar, but I wanted to build 
 
 All books and settings stay on your device; nothing is uploaded anywhere.
 
-| Platform | Book files | App data (settings, progress, library) |
-|----------|-----------|----------------------------------------|
-| **Web browser** | Browser's File System Access API or IndexedDB fallback | `localStorage` |
-| **Android** | App's internal storage (`/data/data/com.offreader.reader/files/`) | `SharedPreferences` |
-| **AppImage / Linux desktop** | IndexedDB blob store (`~/.config/OffReader/IndexedDB/capacitor-electron_-_0.indexeddb.blob/`) | `localStorage` via LevelDB (`~/.config/OffReader/Local Storage/`) |
+Imported books are stored in a **content-addressed store** keyed by file hash, so identical files are never stored twice. On desktop and Android you can instead **link** books (or whole folders) in place: nothing is copied, and OffReader reads from the original location.
+
+| Platform | Managed book files | Linked books | App data (settings, progress, library) |
+|----------|--------------------|--------------|----------------------------------------|
+| **Web browser** | IndexedDB blob store | n/a | IndexedDB (`offreader-metadata`) + `localStorage` |
+| **Android** | App's internal storage (`/data/data/com.offreader.reader/files/`) | Read in place via Storage Access Framework | IndexedDB (`offreader-metadata`) + `SharedPreferences` |
+| **AppImage / Linux desktop** | IndexedDB blob store (`~/.config/OffReader/IndexedDB/capacitor-electron_-_0.indexeddb.blob/`) | Read in place from synced folders | IndexedDB (`offreader-metadata`) + `localStorage` via LevelDB (`~/.config/OffReader/Local Storage/`) |
 
 To locate the actual storage on a Linux desktop:
 
@@ -62,7 +68,8 @@ To locate the actual storage on a Linux desktop:
 # Book files (as IndexedDB blobs)
 ~/.config/OffReader/IndexedDB/capacitor-electron_-_0.indexeddb.blob/
 
-# App settings, reading progress, library metadata
+# Book metadata, settings, reading progress
+~/.config/OffReader/IndexedDB/   (offreader-metadata database)
 ~/.config/OffReader/Local Storage/leveldb/
 ```
 
@@ -97,6 +104,8 @@ Open [http://localhost:5173](http://localhost:5173) in your browser. Tap **Impor
 | Assign a shelf | Tap the **Shelf** button on the book detail page |
 | Add labels | Tap the **+** button next to Labels on the book detail page |
 | Organize library | Open **Manage Library** from settings to create/edit shelves and labels |
+| Sync a folder | **Manage Library** → **Add folder** (desktop and Android) |
+| Export library | **Manage Library** → **Export library** (desktop) |
 | Navigate pages | Arrow keys, swipe, or the on-screen buttons |
 | Show controls | Tap anywhere on the page |
 | Change theme / font | Open settings from the reader toolbar |

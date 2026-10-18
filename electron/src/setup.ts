@@ -235,8 +235,8 @@ export function setupContentSecurityPolicy(customScheme: string): void {
         ...details.responseHeaders,
         'Content-Security-Policy': [
           electronIsDev
-            ? `default-src ${customScheme}://* 'unsafe-inline' devtools://* 'unsafe-eval' data: blob:; connect-src ${customScheme}://* blob: https://fonts.googleapis.com https://fonts.gstatic.com; style-src-elem 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:`
-            : `default-src ${customScheme}://* 'unsafe-inline' data: blob:; connect-src ${customScheme}://* blob: https://fonts.googleapis.com https://fonts.gstatic.com; style-src-elem 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:`,
+            ? `default-src ${customScheme}://* 'unsafe-inline' devtools://* 'unsafe-eval' data: blob:; connect-src ${customScheme}://* offreader-file: blob: https://fonts.googleapis.com https://fonts.gstatic.com; style-src-elem 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:`
+            : `default-src ${customScheme}://* 'unsafe-inline' data: blob:; connect-src ${customScheme}://* offreader-file: blob: https://fonts.googleapis.com https://fonts.gstatic.com; style-src-elem 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' blob: https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:`,
         ],
       },
     });

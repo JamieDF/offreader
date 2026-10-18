@@ -7,7 +7,7 @@ import { Overlayer } from 'foliate-js/overlayer.js';
 import { fileStorage } from '@/services/fileStorage';
 import { storageService } from '@/services/storage';
 import { libraryService } from '@/services/LibraryService';
-import { saveStoredBooks } from '@/services/bookPersistence';
+import { saveBook } from '@/services/bookPersistence';
 import { titleCase } from '@/utils/titleCase';
 import { buildReaderStylesheet } from '@/utils/readerStyles';
 import ReaderOverlay, { ReaderOverlayHandle, LocationInfo } from './ReaderOverlay';
@@ -24,6 +24,8 @@ interface BookReaderProps {
   bookId: string;
   book: Book;
   updateLibraryProgress: (bookId: string, progress: number) => void;
+  /** Picks a new source for a linked book and repoints it; true on success. */
+  relinkBook?: (bookId: string) => Promise<boolean>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,7 +75,7 @@ function showSingleTapHint() {
   }, 2000);
 }
 
-const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookReaderProps) => {
+const BookReader = ({ bookId: propBookId, book, updateLibraryProgress, relinkBook }: BookReaderProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,11 +120,11 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
     }
   };
 
-  // Stable ref for settings — lets initReader use current settings without being a dep
+  // Stable ref for settings: lets initReader use current settings without being a dep
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
 
-  // Stable ref for updateLibraryProgress — prop may change identity on parent re-renders
+  // Stable ref for updateLibraryProgress: prop may change identity on parent re-renders
   const updateLibraryProgressRef = useRef(updateLibraryProgress);
   useEffect(() => { updateLibraryProgressRef.current = updateLibraryProgress; }, [updateLibraryProgress]);
 
@@ -281,7 +283,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         attach(overlayer);
       });
 
-      // Re-runs per section load — tap listeners must be re-attached each time
+      // Re-runs per section load: tap listeners must be re-attached each time
       view.addEventListener('load', (e: Event) => {
         const { doc } = (e as CustomEvent<{ doc: Document }>).detail;
         let t0 = 0;
@@ -348,10 +350,9 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
         localStorage.setItem('epub-single-tap-hint-shown', 'true');
       }
 
-      const fileUrl = await fileStorage.retrieveFile(book.id, book.format);
-      const fileResponse = await fetch(fileUrl);
-      if (!fileResponse.ok) throw new Error(`Failed to fetch stored book: ${fileResponse.status}`);
-      const fileBlob = await fileResponse.blob();
+      // Resolves managed bytes from the content-addressed store (or the legacy
+      // UUID-keyed location pre-migration) and linked bytes from sourcePath.
+      const fileBlob = await fileStorage.retrieveBookBlob(book);
       const readerFile = new File(
         [fileBlob],
         `${book.id}${extensionForFormat(book.format)}`,
@@ -370,12 +371,14 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       setChapters(realChapters);
 
       if (realChapters.length > 0) {
-        const allBooks = libraryService.getBooks();
-        const updatedBooks = allBooks.map(b =>
-          b.id === propBookId ? { ...b, chapters: realChapters, totalChapters: realChapters.length } : b
-        );
-        libraryService.updateBooksSilent(updatedBooks);
-        await saveStoredBooks(updatedBooks);
+        const current = libraryService.getBooks().find(b => b.id === propBookId);
+        if (current) {
+          const updated = { ...current, chapters: realChapters, totalChapters: realChapters.length };
+          libraryService.updateBooksSilent(
+            libraryService.getBooks().map(b => b.id === updated.id ? updated : b)
+          );
+          await saveBook(updated);
+        }
       }
 
       if (view.renderer) {
@@ -422,6 +425,7 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
       }
 
       setIsLoading(false);
+      setError(null);
       isInitializedRef.current = true;
 
       // Build search index after reader is ready
@@ -561,7 +565,22 @@ const BookReader = ({ bookId: propBookId, book, updateLibraryProgress }: BookRea
                 Back
               </Button>
               <p className="text-destructive font-medium mb-2">Error loading book</p>
-              <p className="text-muted-foreground text-sm">{error}</p>
+              <p className="text-muted-foreground text-sm">
+                {book.source === 'linked' && book.sourcePath
+                  ? `The linked file couldn't be read: ${book.sourcePath}`
+                  : error}
+              </p>
+              {book.source === 'linked' && relinkBook && (
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => relinkBook(book.id)}
+                  // Success updates the book record → this component's init
+                  // effect re-runs and retries the open automatically.
+                >
+                  Relink file…
+                </Button>
+              )}
             </div>
           </div>
         )}

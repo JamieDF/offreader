@@ -7,7 +7,7 @@ const Reader = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const bookId = searchParams.get("bookId");
-  const { allBooks, isLoading, updateProgress } = useLibrary();
+  const { allBooks, isLoading, updateProgress, relinkBook } = useLibrary();
   const [isReady, setIsReady] = useState(false);
 
   // Navigate away if no bookId
@@ -58,7 +58,7 @@ const Reader = () => {
     return null; // Will navigate away in useEffect
   }
 
-  return <BookReader bookId={bookId} book={book} updateLibraryProgress={updateProgress} />;
+  return <BookReader bookId={bookId} book={book} updateLibraryProgress={updateProgress} relinkBook={relinkBook} />;
 };
 
 export default Reader;

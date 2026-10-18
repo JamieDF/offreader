@@ -1,15 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
-import { storageService } from "@/services/storage";
 import { libraryService } from "@/services/LibraryService";
+import { Bookmark } from "@/types/book";
+import { bookMetaStore, TrackerEntry } from "@/services/bookMetaStore";
 
-export interface Bookmark {
-  id: string;
-  location: string; // CFI or href
-  chapterTitle: string;
-  position: number; // 0-100 progress within book
-  createdAt: string; // ISO timestamp
-  note?: string; // Optional user note
-}
+export type { Bookmark };
 
 export interface BookStats {
   progress: number; // 0-100
@@ -27,38 +21,9 @@ export interface BookStats {
   bookmarks: Bookmark[];
 }
 
-// Mock storage for book tracking data
-const STORAGE_KEY = "book-tracker-data";
-
-interface StoredBookData {
-  [bookId: string]: {
-    progress: number;
-    lastReadDate: string | null;
-    currentChapter?: number;
-    currentChapterLabel?: string;
-    currentPage?: number;
-    totalPagesInChapter?: number;
-    isFinished: boolean;
-    currentLocation?: string; // CFI or href for resume position
-    bookmarks: Bookmark[];
-    totalChapters?: number;
-    fileSize?: string;
-    format?: string;
-  };
-}
-
-async function getStoredData(): Promise<StoredBookData> {
-  try {
-    const data = await storageService.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : {};
-  } catch {
-    return {};
-  }
-}
-
-async function saveStoredData(data: StoredBookData) {
-  await storageService.setItem(STORAGE_KEY, JSON.stringify(data));
-}
+// Tracking state lives in the per-book metadata store: one small record
+// per book instead of a library-wide JSON blob rewritten per page turn.
+type StoredBookData = TrackerEntry;
 
 export function useBookTracker(bookId: string, initialProgress?: number) {
   const [stats, setStats] = useState<BookStats>(() => {
@@ -84,8 +49,7 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
     const loadStoredData = async () => {
       try {
         // Load stored tracking data
-        const stored = await getStoredData();
-        const bookTrackingData = stored[bookId];
+        const bookTrackingData: StoredBookData | undefined = await bookMetaStore.getTracking(bookId);
         
         // Load book data from library service
         const libraryBooks = libraryService.getBooks();
@@ -137,8 +101,7 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
   useEffect(() => {
     const saveData = async () => {
       try {
-        const storedData = await getStoredData();
-        storedData[bookId] = {
+        await bookMetaStore.putTracking(bookId, {
           progress: stats.progress,
           lastReadDate: stats.lastReadDate?.toISOString() ?? null,
           currentChapter: stats.currentChapter,
@@ -148,8 +111,7 @@ export function useBookTracker(bookId: string, initialProgress?: number) {
           isFinished: stats.isFinished,
           currentLocation: stats.currentLocation,
           bookmarks: stats.bookmarks,
-        };
-        await saveStoredData(storedData);
+        });
         window.dispatchEvent(new Event("book-updated"));
       } catch (error) {
         console.error('Failed to save data:', error);

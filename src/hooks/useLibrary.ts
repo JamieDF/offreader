@@ -1,19 +1,13 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "@/components/ui/toast";
 import { Book } from "@/types/book";
 import { libraryService } from "@/services/LibraryService";
 import { storageService } from "@/services/storage";
 import { fileStorage } from "@/services/fileStorage";
-import { calculateReadingMetrics } from "@/utils/readingMetrics";
-import { extractBookMetadata } from "@/parsers/bookMetadataParser";
-import { PdfMetadata } from "@/parsers/pdfParser";
-import { EpubMetadata } from "@/parsers/epubParser";
-import { MobiMetadata } from "@/parsers/mobiParser";
-import { Azw3Metadata } from "@/parsers/azw3Parser";
-import { Fb2Metadata } from "@/parsers/fb2Parser";
-import { CbzMetadata } from "@/parsers/cbzParser";
-import { getStoredTrackerData, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
+import { deleteBookTracking, getStoredTrackerData, saveBook, saveStoredBooks, StoredBookData } from "@/services/bookPersistence";
+import { importFileItems, toastImportError } from "@/services/bookImport";
+import { relinkBookFile, moveBooksToLibrary } from "@/services/folderSync";
+import { isAndroidSafAvailable, safFiles } from "@/services/safFiles";
 
 export type SortOption = "recent" | "title" | "author" | "progress";
 
@@ -162,130 +156,77 @@ export function useLibrary() {
 type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
 
   const importBooks = useCallback(async (onImportComplete?: ImportCallback) => {
+    // Android: a detached <input type=file> never reaches the WebView file
+    // chooser, and odd extensions get greyed out anyway. SAF's document
+    // picker shows everything and grants persisted read access; bytes come
+    // through the same content:// cache path linked books use.
+    if (isAndroidSafAvailable()) {
+      try {
+        const { uris } = await safFiles.pickDocument({ multiple: true });
+        const items = [];
+        for (const uri of uris) {
+          const [blob, stat] = await Promise.all([
+            fileStorage.retrieveLinkedBlob(uri),
+            safFiles.statFile({ uri }),
+          ]);
+          items.push({ file: new File([blob], stat?.name ?? 'book') });
+        }
+        await importFileItems(items, 'managed', onImportComplete);
+      } catch {
+        // Picker cancelled: nothing to do.
+      }
+      return;
+    }
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".epub,.mobi,.azw3,.fb2,.pdf,.cbz";
     input.multiple = true;
+    // Attach (invisibly) so the click reaches the WebView file chooser on
+    // every platform; detached inputs can be ignored.
+    input.style.display = 'none';
+    document.body.appendChild(input);
 
     input.onchange = async (event) => {
       const files = (event.target as HTMLInputElement).files;
+      input.remove();
       if (!files) return;
-
-      const newlyImportedBooks: Book[] = [];
-
-      for (const file of files) {
-        try {
-          const fileName = file.name.replace(/\.[^/.]+$/, "");
-
-          const bookId = uuidv4();
-
-          const extractedMeta = await extractBookMetadata(file);
-          const { title, author, publisher, pubDate, language, identifier, description, subjects, rights, chapters, totalChapters, format, coverImage } = extractedMeta as { title: string; author: string; publisher?: string; pubDate?: string; language?: string; identifier?: string; description?: string; subjects?: string[]; rights?: string; chapters: { label: string; href: string; index: number }[]; totalChapters: number; format: string; coverImage?: string };
-
-          const pdfMeta = format === 'PDF' ? (extractedMeta as PdfMetadata) : null;
-          const epubMeta = format === 'EPUB' ? (extractedMeta as EpubMetadata) : null;
-          const mobiMeta = format === 'MOBI' ? (extractedMeta as MobiMetadata) : null;
-          const azw3Meta = format === 'AZW3' ? (extractedMeta as Azw3Metadata) : null;
-          const fb2Meta = format === 'FB2' ? (extractedMeta as Fb2Metadata) : null;
-          const cbzMeta = format === 'CBZ' ? (extractedMeta as CbzMetadata) : null;
-          const { readingTime: calcReadingTime, pageCount: calcPageCount } = calculateReadingMetrics(file.size);
-          const readingTime = pdfMeta?.readingTime ?? epubMeta?.readingTime ?? mobiMeta?.readingTime
-            ?? azw3Meta?.readingTime ?? fb2Meta?.readingTime ?? cbzMeta?.readingTime ?? calcReadingTime;
-          const pageCount = pdfMeta?.pageCount ?? epubMeta?.pageCount ?? mobiMeta?.pageCount
-            ?? azw3Meta?.pageCount ?? fb2Meta?.pageCount ?? cbzMeta?.pageCount ?? calcPageCount;
-
-          const newBook: Book = {
-            id: bookId,
-            title: title || fileName,
-            author: author,
-            format: (format as Book['format']) ?? 'EPUB',
-            publisher: publisher,
-            pubDate: pubDate,
-            language: language,
-            identifier: identifier,
-            description: description || `Imported ${format}: ${fileName}`,
-            subjects: subjects,
-            rights: rights,
-            coverImage: coverImage || '',
-            filePath: '',
-            progress: 0,
-            chapters: chapters,
-            totalChapters: totalChapters,
-            fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-            estimatedReadingTime: readingTime,
-            pageCount: pageCount,
-            shelfId: null,
-            labelIds: [],
-          };
-
-          const updatedBooksWithTemp = [...books, newBook];
-          libraryService.updateBooks(updatedBooksWithTemp);
-
-          try {
-            await saveStoredBooks(updatedBooksWithTemp);
-          } catch (metadataError) {
-            console.error(`❌ Failed to save metadata:`, metadataError);
-            libraryService.updateBooks(books);
-            throw new Error(`Failed to save book metadata: ${metadataError}`);
-          }
-
-          let fileUrl: string;
-
-          try {
-            fileUrl = await fileStorage.storeFile(file, bookId);
-          } catch (fileError) {
-            console.error(`Failed to store file:`, fileError);
-
-            const cleanedBooks = books.filter(b => b.id !== bookId);
-            libraryService.updateBooks(cleanedBooks);
-            await saveStoredBooks(cleanedBooks);
-
-            throw new Error(`Failed to store book file: ${fileError}`);
-          }
-
-          const finalBook: Book = {
-            ...newBook,
-            filePath: fileUrl
-          };
-
-          const finalBooks = [...books, finalBook];
-          libraryService.updateBooks(finalBooks);
-          await saveStoredBooks(finalBooks);
-
-          newlyImportedBooks.push(finalBook);
-
-         } catch (error) {
-            console.error(`❌ Failed to import ${file.name}:`, error);
-
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            let userMessage = `Failed to import "${file.name}"`;
-
-            if (errorMessage.includes('Insufficient storage') || errorMessage.includes('storage') || errorMessage.toLowerCase().includes('quota')) {
-              const requiredMB = /(\d+)MB/.exec(errorMessage)?.[1];
-              userMessage = `⚠️ Storage full: Need ${requiredMB || 'more'}MB available. Delete some books to free up space.`;
-            } else if (errorMessage.includes('network') || errorMessage.includes('offline')) {
-              userMessage = `❌ Connection failed. Check your internet and try again.`;
-            } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid')) {
-              userMessage = `❌ File may be corrupted. Try a different book.`;
-            } else if (errorMessage.includes('unsupported') || errorMessage.includes('format')) {
-              userMessage = `❌ File format not supported. Only EPUB, MOBI, AZW3, FB2, PDF, and CBZ files are supported.`;
-            } else if (errorMessage.includes('metadata')) {
-              userMessage = `❌ Could not read book information. The file might be corrupted.`;
-            }
-
-            toast.error(userMessage);
-          }
-      }
-
-      // After all files processed, call the callback if provided
-      if (newlyImportedBooks.length > 0) {
-        toast.success(`Successfully imported ${newlyImportedBooks.length} book${newlyImportedBooks.length > 1 ? 's' : ''}`);
-        onImportComplete?.(newlyImportedBooks);
-      }
+      await importFileItems([...files].map(file => ({ file })), 'managed', onImportComplete);
     };
 
     input.click();
-  }, [books]);
+  }, []);
+
+  /**
+   * Electron import: native picker → paths → bytes streamed over
+   * offreader-file:// → same pipeline. `mode` decides whether bytes are
+   * copied into the store ('managed') or read in place ('linked').
+   */
+  const importBookPaths = useCallback(async (
+    paths: string[],
+    mode: 'managed' | 'linked',
+    onImportComplete?: ImportCallback,
+  ) => {
+    const files = window.offreaderFiles;
+    if (!files || paths.length === 0) return;
+
+    const items: { file: File; sourcePath: string }[] = [];
+    for (const path of paths) {
+      try {
+        const stat = await files.statFile(path);
+        const blob = await fileStorage.retrieveLinkedBlob(path);
+        const name = stat?.name ?? path.split(/[\\/]/).pop() ?? 'book';
+        items.push({ file: new File([blob], name), sourcePath: path });
+      } catch (error) {
+        console.error(`Failed to read ${path}:`, error);
+        toastImportError(path.split(/[\\/]/).pop() ?? path, error);
+      }
+    }
+
+    await importFileItems(items, mode, onImportComplete);
+  }, []);
+
+  const relinkBook = relinkBookFile;
 
   const addBook = useCallback(async (bookData: Omit<Book, 'id'>) => {
     const newBook: Book = {
@@ -343,34 +284,36 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
   const updateProgress = useCallback(async (bookId: string, progress: number) => {
     // Only update library service silently - don't notify listeners to prevent loops
     const currentBooks = libraryService.getBooks();
-    const updatedBooks = currentBooks.map(book =>
-      book.id === bookId
-        ? { ...book, progress: Math.min(100, Math.max(0, progress)) }
-        : book
-    );
+    const updatedBook = currentBooks.find(b => b.id === bookId);
+    if (!updatedBook) return;
+    const next = { ...updatedBook, progress: Math.min(100, Math.max(0, progress)) };
 
-    // Update library service silently and save to storage
-    libraryService.updateBooksSilent(updatedBooks);
-    await saveStoredBooks(updatedBooks);
-  }, []); // Empty deps intentional — prevents re-render loops
+    // Silent service update plus a single-record write: the hot path must
+    // not re-serialize the whole library per relocate tick.
+    libraryService.updateBooksSilent(currentBooks.map(b => b.id === bookId ? next : b));
+    await saveBook(next);
+  }, []); // Empty deps intentional: prevents re-render loops
+
+  /** The storage key for a book's file bytes: content hash post-migration,
+   *  book id for pre-migration records. Linked books store no bytes, so
+   *  they neither produce nor protect a storage key. */
+  const storageKey = (book: Book) =>
+    book.source === 'linked' ? undefined : (book.contentHash ?? book.id);
 
   const removeBook = useCallback(async (bookId: string) => {
     try {
-      // Delete the file from storage
-      await fileStorage.deleteFile(bookId);
+      const book = books.find(b => b.id === bookId);
+      // Delete the file only if no other book shares its bytes
+      const key = book ? storageKey(book) : bookId;
+      if (key && !books.some(b => b.id !== bookId && storageKey(b) === key)) {
+        await fileStorage.deleteFile(key);
+      }
 
       // Remove from library service
       const updatedBooks = books.filter((book) => book.id !== bookId);
       libraryService.updateBooks(updatedBooks);
       await saveStoredBooks(updatedBooks);
-
-      // Clean up tracking data
-      const storedData = await storageService.getItem('book-tracker-data');
-      if (storedData) {
-        const trackerData = JSON.parse(storedData);
-        delete trackerData[bookId];
-        await storageService.setItem('book-tracker-data', JSON.stringify(trackerData));
-      }
+      await deleteBookTracking([bookId]);
 
       // Clean up any other stored data for this book
       await storageService.removeItem(`offreader-book-${bookId}`);
@@ -379,7 +322,7 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     }
   }, [books]);
 
-  // Bulk operations — each writes the library JSON once, not once per book.
+  // Bulk operations: each writes the library JSON once, not once per book.
 
   const assignBooksToShelf = useCallback(async (bookIds: string[], shelfId: string | null) => {
     const idSet = new Set(bookIds);
@@ -412,18 +355,22 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
   const removeBooks = useCallback(async (bookIds: string[]) => {
     const idSet = new Set(bookIds);
     try {
-      await Promise.allSettled(bookIds.map(id => fileStorage.deleteFile(id)));
+      const allBooks = libraryService.getBooks();
+      const updatedBooks = allBooks.filter(book => !idSet.has(book.id));
+      // Only delete bytes no surviving managed book still references
+      const survivingKeys = new Set(updatedBooks.map(storageKey));
+      const keysToDelete = new Set(
+        allBooks.filter(b => idSet.has(b.id)).map(storageKey)
+      );
+      await Promise.allSettled(
+        [...keysToDelete]
+          .filter((key): key is string => key !== undefined && !survivingKeys.has(key))
+          .map(key => fileStorage.deleteFile(key))
+      );
 
-      const updatedBooks = libraryService.getBooks().filter(book => !idSet.has(book.id));
       libraryService.updateBooks(updatedBooks);
       await saveStoredBooks(updatedBooks);
-
-      const storedData = await storageService.getItem('book-tracker-data');
-      if (storedData) {
-        const trackerData = JSON.parse(storedData);
-        bookIds.forEach(id => delete trackerData[id]);
-        await storageService.setItem('book-tracker-data', JSON.stringify(trackerData));
-      }
+      await deleteBookTracking(bookIds);
 
       await Promise.allSettled(bookIds.map(id => storageService.removeItem(`offreader-book-${id}`)));
     } catch (error) {
@@ -460,6 +407,9 @@ type ImportCallback = ((importedBooks: Book[]) => void) | undefined;
     sortBy,
     setSortBy,
     importBooks,
+    importBookPaths,
+    relinkBook,
+    moveBooksToLibrary,
     addBook,
     updateProgress,
     removeBook,

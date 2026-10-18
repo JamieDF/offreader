@@ -15,7 +15,7 @@ changes to the originating files must be merged manually.
 ## foliate-view.js
 
 **Origin:** `view.js` in the foliate-js GitHub repository.  
-**npm status:** Not exported from the npm package — taken directly from GitHub.  
+**npm status:** Not exported from the npm package: taken directly from GitHub.  
 **Upstream ref:** https://github.com/johnfactotum/foliate-js/blob/main/view.js
 
 ### Deviations from upstream
@@ -39,7 +39,7 @@ merging upstream changes.
 ## foliate-pdf.js
 
 **Origin:** `pdf.js` in the foliate-js GitHub repository.  
-**npm status:** Does not exist in the npm package — taken directly from GitHub.  
+**npm status:** Does not exist in the npm package: taken directly from GitHub.  
 **Upstream ref:** https://github.com/johnfactotum/foliate-js/blob/main/pdf.js
 
 ### Deviations from upstream
@@ -57,7 +57,7 @@ merging upstream changes.
 ## foliate-fxl.js
 
 **Origin:** `fixed-layout.js` in the foliate-js npm package (`foliate-js/fixed-layout.js`).  
-**npm status:** Published in the npm package — taken from there.  
+**npm status:** Published in the npm package: taken from there.  
 **Upstream ref:** https://github.com/johnfactotum/foliate-js/blob/main/fixed-layout.js
 
 ### Deviations from upstream
@@ -73,13 +73,13 @@ merging upstream changes.
 
 **Note:** The foliate-js GitHub repository is noticeably more active and up to date
 than the npm releases. Future syncs should consider pulling directly from the GitHub
-`main` branch rather than waiting for an npm release — particularly for `pdf.js`
+`main` branch rather than waiting for an npm release: particularly for `pdf.js`
 which has never been published to npm at all. This is another argument for
 maintaining a proper fork rather than depending on the npm package.
 
 These local copies were last synchronised against **foliate-js v1.0.1** (npm).
 The `pdf.js` upstream ref is from the GitHub `main` branch at the time of that
-npm release — it has no independent version number.
+npm release: it has no independent version number.
 
 When upgrading foliate-js, pin the version in `package.json` explicitly and
 diff the new package files against the local copies before installing:
