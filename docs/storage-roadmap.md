@@ -160,14 +160,20 @@ IndexedDB; on Android/Electron the plugin writes a real binary file.
 
 ## Deferred work
 
-Not done; deliberate follow-ups once the core lands:
-
-- **Lazy hashing for large folder indexing**: the folder scan currently reads
-  + hashes every unknown file eagerly. For a 100GB+ initial index this is
-  disk-bound and slow; stage the fast identity (path+size+mtime) and hash
-  in the background. See "Platform notes".
+Nothing outstanding.
 
 ## Landed since the stages above
+
+- **Lazy folder indexing** (`src/services/folderSync.ts`): `scanFolder` is
+  stat-only. Unknown files become stub books instantly (title from
+  filename, `sourceSize`/`sourceMtimeMs` recorded, no `contentHash`), and a
+  single-file background index queue does the read + hash + metadata parse
+  per stub. When the hash lands it resolves identity: matching a missing
+  linked book repoints it (the stub was a moved file) and matching a live
+  book drops the stub as a duplicate. Unreadable files drop their stub into
+  the failures map; vanished files mark the stub `missing`. Pending work is
+  derivable (`linked` + no `contentHash`), so `enqueuePendingIndex` resumes
+  an interrupted index at startup with no persisted queue state.
 
 - **Per-book metadata store** (`src/services/bookMetaStore.ts`): IndexedDB
   `offreader-metadata` DB with two stores. `books` holds one record per Book;

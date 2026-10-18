@@ -60,6 +60,11 @@ export interface Book {
   source?: 'managed' | 'linked';
   /** Absolute path of a linked book's source file. */
   sourcePath?: string;
+  /** Byte size of the linked source file at last scan: cheap identity for
+   *  change/move detection before resorting to a content hash. */
+  sourceSize?: number;
+  /** mtime (ms) of the linked source file at last scan. */
+  sourceMtimeMs?: number;
   /** Set at startup when a linked book's sourcePath can't be read: the book
    *  stays in the library (progress/metadata intact) and the reader offers a
    *  relink flow. Cleared on the next init once the file is reachable again. */

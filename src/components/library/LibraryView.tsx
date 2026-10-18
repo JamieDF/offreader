@@ -21,7 +21,7 @@ import { SelectionActionBar } from "./SelectionActionBar";
 import { BulkLabelsDialog } from "./BulkLabelsDialog";
 import { ImportModeDialog } from "./ImportModeDialog";
 import { getImportMode, ImportMode } from "@/utils/importMode";
-import { getSyncFolders, scanFolder, syncAllFolders, supportsFolderSync } from "@/services/folderSync";
+import { enqueuePendingIndex, getSyncFolders, scanFolder, syncAllFolders, supportsFolderSync } from "@/services/folderSync";
 import { ShelfDialog } from "@/components/book-details/ShelfDialog";
 import {
   AlertDialog,
@@ -133,6 +133,8 @@ export function LibraryView({ onBookSelect }: LibraryViewProps) {
       // "Open with" files queued before the renderer was ready
       await importOpened();
       await syncAllFolders();
+      // Stubs left unindexed by an earlier session (quit mid-scan).
+      enqueuePendingIndex();
     };
 
     start();
