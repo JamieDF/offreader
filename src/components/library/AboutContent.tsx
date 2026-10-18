@@ -6,7 +6,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { BookOpen, ChevronDown, ExternalLink, Library, Tag, Upload, WifiOff } from 'lucide-react';
+import { BookOpen, ChevronDown, ExternalLink, FolderSync, Library, Tag, Upload, WifiOff } from 'lucide-react';
+import { supportsFolderSync } from '@/services/folderSync';
 
 interface ChangelogEntry {
   version: string;
@@ -142,6 +143,12 @@ export function AboutContent({
             <Library className="w-4 h-4 mt-0.5 text-primary shrink-0" />
             <span>Open Manage Library to create and switch between shelves</span>
           </li>
+          {supportsFolderSync() && (
+            <li className="flex items-start gap-3 text-sm">
+              <FolderSync className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+              <span>Add a folder in Manage Library to link books in place without copying; new and moved files stay in step automatically</span>
+            </li>
+          )}
           <li className="flex items-start gap-3 text-sm">
             <Tag className="w-4 h-4 mt-0.5 text-primary shrink-0" />
             <span>Apply multiple labels to a book from its details page</span>

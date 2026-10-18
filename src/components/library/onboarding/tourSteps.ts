@@ -1,4 +1,5 @@
 import type { Side, Alignment } from 'driver.js';
+import { supportsFolderSync } from '@/services/folderSync';
 
 export type TourSide = Side;
 export type TourAlign = Alignment;
@@ -90,7 +91,15 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'settings',
     targetSelector: pickSettingsTarget,
     title: 'Settings',
-    body: 'SORT_SEARCH_MANAGE_LIBRARY|Appearance and Settings (theme, font, accessibility)|Reading Insights|About',
+    body: [
+      'SORT_SEARCH_MANAGE_LIBRARY',
+      'Appearance and Settings (theme, font, accessibility)',
+      'Reading Insights',
+      'About',
+      // Folder sync only exists on the desktop and Android apps; on web
+      // this bullet is simply absent.
+      ...(supportsFolderSync() ? ['Manage Library also syncs ebook folders in place'] : []),
+    ].join('|'),
     side: 'bottom',
     align: 'end',
   },
