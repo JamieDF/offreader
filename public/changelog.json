@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-10-18",
+    "items": [
+      "Sync folders and linked imports on desktop and Android: keep books in place without copying, and stay in step as files change",
+      "Move linked books into managed storage and export your library for backup",
+      "Open ebooks straight from the file manager on desktop",
+      "Faster library storage for very large libraries"
+    ]
+  },
+  {
     "version": "1.3.0",
     "date": "2026-09-29",
     "items": [
